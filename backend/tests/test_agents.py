@@ -380,8 +380,8 @@ async def test_monthly_review_on_the_first_with_last_months_data(client):
                                  "start": "2026-04-01", "end": "2027-03-31",
                                  "checkins": [{"at": ist(2026, 9, 30), "value": 8, "note": ""}, {"at": ist(2026, 10, 28), "value": 10, "note": ""},
                                               {"at": ist(2026, 11, 3), "value": 13, "note": ""}]})
-    await db().scores.insert_many([{"_id": "s1", "ws": uid, "at": ist(2026, 9, 3), "score": 48, "fixes": [{"about": "Follow-up"}]},
-                                   {"_id": "s2", "ws": uid, "at": ist(2026, 10, 20), "score": 62, "fixes": [{"about": "Reply speed"}]}])
+    await db().scores.insert_many([{"_id": "s1", "ws": uid, "token": "tok-s1", "at": ist(2026, 9, 3), "score": 48, "fixes": [{"about": "Follow-up"}]},
+                                   {"_id": "s2", "ws": uid, "token": "tok-s2", "at": ist(2026, 10, 20), "score": 62, "fixes": [{"about": "Reply speed"}]}])
     await db().tasks.insert_many([{"_id": "t1", "ws": uid, "title": "x", "status": "open", "due": "2026-10-20"},
                                   {"_id": "t2", "ws": uid, "title": "y", "status": "done", "done_at": ist(2026, 10, 9)}])
     await db().dues.insert_many([
