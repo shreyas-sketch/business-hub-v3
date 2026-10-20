@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { ago, api } from "../api.js";
 import { Busy, Field, FormError, Locked, Sheet, canAct, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Pill, Tabs, ToolOutput } from "../v2.jsx";
+import PostActions, { usePostedRefs } from "./PostActions.jsx";
 import "./member.css";
 
 const saves = (m) => (m >= 60 ? `${+(m / 60).toFixed(1)} ${m === 60 ? "hour" : "hours"}` : `${m} minutes`);
@@ -13,6 +14,30 @@ function Input({ i, value, onChange }) {
   if (i.type === "textarea") return <textarea className="textarea" maxLength={6000} {...p} />;
   if (i.type === "select") return <select className="select" {...p}>{i.options.map((o) => <option key={o} value={o}>{o}</option>)}</select>;
   return <input className="input" maxLength={600} {...p} />;
+}
+
+/** The Content Agent's draft, post by post: Mark as posted and Make the design on each. Each post, reel or carousel inside a
+    section is its own post (ref out:{draft id}:{section}-{n}); weekly themes aren't posts. */
+function ContentPosts({ outputId, out }) {
+  const [refs, reloadRefs] = usePostedRefs([outputId ? `out:${outputId}` : null], !!outputId);
+  const posts = (out?.sections || []).flatMap((s, si) => (/theme/i.test(s.heading || "") ? [] : (s.points || []).map((pt, pi) => {
+    const text = String(pt || "");
+    const cut = text.search(/[.!?—:]\s/);
+    return { i: `${si}-${pi}`, hook: cut > 10 && cut < 120 ? text.slice(0, cut + 1) : text.slice(0, 90), caption: text, section: s.heading };
+  }))).filter((p) => p.caption);
+  if (!outputId || !posts.length) return null;
+  return (
+    <div className="stack pa-posts">
+      <span className="label">Posted any of these? Mark them, so your dashboard counts them</span>
+      {posts.map((p) => (
+        <div key={p.i} className="panel flat pa-post">
+          <b className="pa-hook">{p.hook}</b>{p.section && <span className="small muted">{p.section}</span>}
+          {p.caption && <span className="small muted pa-cap">{p.caption.slice(0, 160)}{p.caption.length > 160 ? "…" : ""}</span>}
+          <PostActions postRef={`out:${outputId}:${p.i}`} post={p} posted={refs[`out:${outputId}:${p.i}`] || null} onChange={reloadRefs} />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function History({ t, items }) {
@@ -28,6 +53,7 @@ function History({ t, items }) {
           </button>
           <span className="small muted">{ago(o.created_at)}</span>
           {open === o.id && <ToolOutput out={o.content} />}
+          {open === o.id && t.key === "content" && <ContentPosts outputId={o.id} out={o.content} />}
         </div>
       ))}
     </div>
@@ -38,6 +64,7 @@ function ToolForm({ t }) {
   const { me, refresh } = useHub();
   const [vals, setVals] = useState(() => blankFor(t));
   const [out, setOut] = useState(null);
+  const [outId, setOutId] = useState(null);
   const [err, setErr] = useState("");
   const [hist, reloadHist] = useLoad(`/tools/${encodeURIComponent(t.key)}/history`);
   const missing = t.inputs.filter((i) => i.required && (vals[i.key] || "").trim().length < 2).map((i) => i.label);
@@ -46,6 +73,7 @@ function ToolForm({ t }) {
     setOut(null);
     const r = await api(`/tools/${encodeURIComponent(t.key)}/run`, { method: "POST", body: { inputs: vals } });
     setOut(r.output);
+    setOutId(r.id);
     reloadHist();
     refresh();
   };
@@ -69,6 +97,7 @@ function ToolForm({ t }) {
         <div className="stack">
           <hr className="rule" />
           <ToolOutput out={out} />
+          {t.key === "content" && <ContentPosts outputId={outId} out={out} />}
           {me.features?.outputs && <span className="small muted">Saved in <Link to="/outputs">My outputs</Link>.</span>}
         </div>
       )}

@@ -99,6 +99,9 @@ async def run_slot(spec: Spec, owners: list[dict], slot: str, at: datetime) -> i
     for part in _chunks(list(keys)):
         off |= {s["ws"] async for s in db().agent_settings.find({"key": spec.key, "on": False, "ws": {"$in": part}}, {"ws": 1})}
     todo = [o for o in eligible if keys[o["_id"]] not in taken and o["_id"] not in off]
+    if spec.ready and todo:   # one query for the whole slot, not one per owner
+        ok = await _safe(spec.ready(todo), f"{spec.key} ready check") or set()
+        todo = [o for o in todo if o["_id"] in ok]
 
     async def one(owner: dict) -> bool:
         if not await claim(keys[owner["_id"]], at):

@@ -147,6 +147,10 @@ async def payment_reminder(owner: dict, run: dict):
     b = await _business(ws)
     business, how = b.get("name") or "us", (b.get("payment_note") or "").strip()
     made, no_phone = 0, 0
+    from .. import followups
+    auto = await followups.whatsapp_auto(owner)       # approved once, Growth Mentorship and up: goes from the owner's own number
+    excluded = set((await followups.get_state(ws)).get("exclude") or [])
+    sent = 0
     query = {"ws": ws, "status": "due", "due_date": {"$lte": today}, "reminders_sent": {"$lt": MAX_REMINDERS},
              "$or": [{"last_reminded_at": None}, {"last_reminded_at": {"$lt": cutoff}}]}
     async for due in db().dues.find(query).sort("due_date", 1).limit(500):
@@ -160,15 +164,21 @@ async def payment_reminder(owner: dict, run: dict):
         name = greeting_name(due.get("customer", "")) or "there"
         amount, day = inr(due.get("amount", 0)), pretty_date(due.get("due_date", ""))
         await expire({"ws": ws, "kind": "reminder", "due_id": due["_id"]}, f"Replaced by reminder {nth}")
-        await create_approval(owner, ws, "payment_reminder", "reminder", f"Reminder {nth} of {MAX_REMINDERS} to {due.get('customer', '')} — {amount}",
+        # on its own only for customers the owner hasn't excluded, and not after they replied ("don't chase" / "they replied")
+        auto_this = auto and followups.customer_key(due) not in excluded and not due.get("no_auto") and not due.get("auto_stopped")
+        a = await create_approval(owner, ws, "payment_reminder", "reminder", f"Reminder {nth} of {MAX_REMINDERS} to {due.get('customer', '')} — {amount}",
                                   due.get("customer", ""), due["phone"], reminder_text(name, business, amount, day, how, due.get("invoice_no", "")),
                                   params=[name, business, amount, day, how or "Reply to this message and we'll share the details"],
-                                  due_id=due["_id"], n=nth)
+                                  due_id=due["_id"], n=nth, auto_send=auto_this)
         made += 1
+        sent += a.get("status") == "sent"
     if not made:
         raise Skip("No payments to remind about today." + (f" {plural(no_phone, 'amount')} owed {'has' if no_phone == 1 else 'have'} no phone number."
                                                            if no_phone else ""))
-    return f"{plural(made, 'payment reminder')} ready in your Send list."
+    waiting = made - sent
+    parts = ([f"{plural(sent, 'payment reminder')} sent from your WhatsApp"] if sent else []) + \
+            ([f"{plural(waiting, 'payment reminder')} ready in your Send list"] if waiting else [])
+    return "; ".join(parts) + "."
 
 
 # ───────────────────────── Morning digest ─────────────────────────
@@ -187,6 +197,21 @@ async def digest_line(owner: dict, at: datetime) -> str:
     if plans.has(owner, "tasks"):
         tasks_today = await db().tasks.count_documents({"ws": ws, "status": "open", "due": today})
         parts.append(f"{plural(tasks_today, 'task')} due today")
+    if plans.has(owner, "compliance_calendar"):
+        week = (ist_midnight(at) + timedelta(days=7)).astimezone(IST).strftime("%Y-%m-%d")
+        n = await db().compliance_items.count_documents({"owner_id": ws, "status": {"$ne": "done"}, "due_date": {"$gte": today, "$lte": week}})
+        if n:
+            parts.append(f"{plural(n, 'compliance item')} due this week")
+    if plans.has(owner, "cash_flow"):
+        from ..routers.cashflow import shortfall_line
+        line = await shortfall_line(ws)
+        if line:
+            parts.append(line)
+    if plans.has(owner, "auto_reminders") or plans.has(owner, "reminder_agent"):
+        from ..followups import week_line
+        line = await week_line(ws)
+        if line:
+            parts.append(line)
     return " · ".join(parts)
 
 

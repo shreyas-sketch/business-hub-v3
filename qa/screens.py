@@ -13,10 +13,11 @@ FREE = ["home", "score", "writer", "launch-kit", "website", "leads", "brand", "o
 MEMBER = ["week", "calendar", "member-call", "board", "tools", "magic", "gaps", "sops", "insights"]
 PROGRAM = ["approvals", "agents", "lead-magnet", "offers", "goals", "levers", "portfolio", "pipeline", "leaks", "end-goals", "decisions", "hiring"]
 RUNNING = ["crm", "customers", "money", "quotes"]
-GROWTH = ["setup", "control", "staff", "chats", "connections", "company-brain", "campaigns", "gym", "results", "team", "roles", "culture",
+GROWTH = ["setup", "dashboard", "staff", "chats", "connections", "company-brain", "campaigns", "gym", "results", "team", "roles", "culture",
           "competence", "meetings", "tasks", "reviews"]
 OFFICE = ["workforce", "office"]
-ALL = FREE + MEMBER + PROGRAM + RUNNING + GROWTH + OFFICE
+V21 = ["dashboard", "knowledge", "compliance", "cash-flow", "brand-kit"]          # v2.1 pages (plus magic, levers, sops, calendar, money, agents)
+ALL = FREE + MEMBER + PROGRAM + RUNNING + GROWTH + OFFICE + V21[1:]
 problems = []
 
 
@@ -60,7 +61,7 @@ with sync_playwright() as p:
     sweep(b, "office", "9820000001", ALL, 1366, 900)
     sweep(b, "officem", "9820000001", ALL, 390, 844)
     sweep(b, "growth", "9820000006", FREE[:2] + GROWTH[:9] + ["approvals", "pipeline", "customers", "workforce"], 1366, 900)
-    sweep(b, "growthm", "9820000006", ["chats", "staff", "campaigns", "gym", "control"], 390, 844)
+    sweep(b, "growthm", "9820000006", ["chats", "staff", "campaigns", "gym", "dashboard"], 390, 844)
     sweep(b, "running", "9820000005", ["home", "customers", "quotes", "money", "crm", "approvals", "staff"], 1366, 900)
     sweep(b, "runningm", "9820000005", ["customers", "quotes", "approvals"], 390, 844)
     sweep(b, "program", "9820000003", ["home", "offers", "levers", "end-goals", "pipeline", "customers", "plans"], 1366, 900)
@@ -69,8 +70,13 @@ with sync_playwright() as p:
     sweep(b, "free", "9820000004", ["home", "score", "writer", "launch-kit", "week", "approvals", "office", "plans"], 1366, 900)
     sweep(b, "freem", "9820000004", ["home", "score", "writer", "launch-kit"], 390, 844)
     sweep(b, "staff", "9820000012", ["home", "leads", "tasks", "sops", "meetings", "pipeline", "chats", "gym", "tools", "roles", "outputs"], 1366, 900)
-    sweep(b, "manager", "9820000011", ["home", "approvals", "money", "quotes", "control", "week", "office", "outputs"], 1366, 900)
-    sweep(b, "admin", "9999900000", ["admin", "admin/features", "admin/calls", "admin/recordings"], 1366, 900)
-    sweep(b, "adminm", "9999900000", ["admin", "admin/features", "admin/calls"], 390, 844)
+    sweep(b, "manager", "9820000011", ["home", "approvals", "money", "quotes", "dashboard", "week", "office", "outputs"], 1366, 900)
+    # v2.1: the AI Advantage launch account, every v2.1 page
+    launch = V21 + ["magic", "levers", "sops", "calendar", "money", "agents", "tools", "inquiries", "website", "lead-magnet", "quotes", "connections"]
+    sweep(b, "launch", "9820000007", launch, 1366, 900)
+    sweep(b, "launchm", "9820000007", launch, 390, 844)
+    sweep(b, "freedash", "9820000004", ["dashboard"], 390, 844)
+    sweep(b, "admin", "9999900000", ["admin", "admin/features", "admin/event", "admin/day1", "admin/calls", "admin/recordings", "admin/compliance", "admin/email"], 1366, 900)
+    sweep(b, "adminm", "9999900000", ["admin", "admin/features", "admin/event", "admin/day1", "admin/calls", "admin/compliance", "admin/email"], 390, 844)
     b.close()
 print(json.dumps(problems, indent=1) if problems else "No console, page or server errors, and nothing scrolls sideways on a phone.")

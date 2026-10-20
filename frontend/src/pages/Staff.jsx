@@ -10,7 +10,7 @@ const CONN = [["whatsapp", "WhatsApp number"], ["voice", "AI Telecaller"], ["emp
 const PAGE = {
   "/chats": ["Chats", "whatsapp_ai"], "/pipeline": ["Pipeline", "pipeline"], "/calendar": ["Content calendar", "content_calendar"],
   "/quotes": ["Quotations", "quotations"], "/money": ["Money owed", "money_owed"], "/customers": ["Customers", "customers"],
-  "/control": ["Control Room", "control_room"], "/reviews": ["Monthly reviews", "monthly_review"],
+  "/dashboard": ["Dashboard", "smart_dashboard"], "/reviews": ["Monthly reviews", "monthly_review"],
 };
 const CALL = { calling: ["Calling", "on"], done: ["Done", "on"], failed: ["Didn't connect", "off"] };
 const mins = (s) => (s ? `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}` : "—");

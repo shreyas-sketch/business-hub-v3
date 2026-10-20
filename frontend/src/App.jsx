@@ -2,6 +2,8 @@ import React, { Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { api, rupees, setLimitHandler, setLockedHandler, localPhone } from "./api.js";
 import { Copy, Gate, HubCtx, Modal } from "./ui.jsx";
+import { Finder, Icon, allPages, findPage, rememberPage } from "./shell.jsx";
+import "./app-theme.css";
 import Landing from "./pages/Landing.jsx";
 import Login from "./pages/Login.jsx";
 import Onboarding from "./pages/Onboarding.jsx";
@@ -48,7 +50,14 @@ const Crm = lazy(() => import("./pages/Crm.jsx"));
 const Customers = lazy(() => import("./pages/Customers.jsx"));
 const Quotes = lazy(() => import("./pages/Quotes.jsx"));
 const Setup = lazy(() => import("./pages/Setup.jsx"));
-const Control = lazy(() => import("./pages/Control.jsx"));
+const Dashboard = lazy(() => import("./pages/Dashboard.jsx"));
+const Knowledge = lazy(() => import("./pages/Knowledge.jsx"));
+const Compliance = lazy(() => import("./pages/Compliance.jsx"));
+const CashFlow = lazy(() => import("./pages/CashFlow.jsx"));
+const BrandKit = lazy(() => import("./pages/BrandKit.jsx"));
+const AdminCompliance = lazy(() => import("./pages/AdminCompliance.jsx"));
+const AdminEmail = lazy(() => import("./pages/AdminEmail.jsx"));
+const Inquiries = lazy(() => import("./pages/Inquiries.jsx"));
 const Staff = lazy(() => import("./pages/Staff.jsx"));
 const Chats = lazy(() => import("./pages/Chats.jsx"));
 const Connections = lazy(() => import("./pages/Connections.jsx"));
@@ -57,6 +66,10 @@ const Campaigns = lazy(() => import("./pages/Campaigns.jsx"));
 const Gym = lazy(() => import("./pages/Gym.jsx"));
 const Results = lazy(() => import("./pages/Results.jsx"));
 const Workforce = lazy(() => import("./pages/Workforce.jsx"));
+const Day1 = lazy(() => import("./pages/Day1.jsx"));
+const Event = lazy(() => import("./pages/Event.jsx"));
+const AdminEvent = lazy(() => import("./pages/AdminEvent.jsx"));
+const AdminDay1 = lazy(() => import("./pages/AdminDay1.jsx"));
 const kit = (name) => lazy(() => import("./pages/Kits.jsx").then((m) => ({ default: m[name] })));
 const [Competence, Culture, Decisions, Hiring, Reviews, Roles, Sops] = ["Competence", "Culture", "Decisions", "Hiring", "Reviews", "Roles", "Sops"].map(kit);
 
@@ -75,7 +88,9 @@ const PAGES = [
   ["/portfolio", Portfolio, "customer_portfolio", "manager"], ["/pipeline", Pipeline, "pipeline", "staff"], ["/leaks", Leaks, "funnel_leaks", "manager"],
   ["/end-goals", EndGoals, "end_goals", "owner"], ["/decisions", Decisions, "decision_log", "owner"], ["/hiring", Hiring, "hiring", "manager"],
   ["/crm", Crm, "crm_sync", "owner"], ["/customers", Customers, "customers", "manager"], ["/money", Money, "money_owed", "manager"],
-  ["/quotes", Quotes, "quotations", "manager"], ["/setup", Setup, "setup_tracker", "owner"], ["/control", Control, "control_room", "manager"],
+  ["/quotes", Quotes, "quotations", "manager"], ["/setup", Setup, "setup_tracker", "owner"], ["/dashboard", Dashboard, "smart_dashboard", "manager"],
+  ["/knowledge", Knowledge, "business_brain", "owner"], ["/compliance", Compliance, "compliance_calendar", "manager"], ["/cash-flow", CashFlow, "cash_flow", "manager"],
+  ["/brand-kit", BrandKit, "brand_kit", "owner"], ["/inquiries", Inquiries, "inquiry_desk", "staff"], ["/inquiries/new", Inquiries, "inquiry_desk", "staff"],
   ["/staff", Staff, "ai_staff", "manager"], ["/chats", Chats, "whatsapp_ai", "staff"], ["/connections", Connections, "connections", "owner"],
   ["/company-brain", CompanyBrain, "company_brain", "manager"], ["/campaigns", Campaigns, "campaigns", "manager"], ["/gym", Gym, "training_gym", "staff"],
   ["/results", Results, "results_report", "owner"], ["/team", Team, "team_logins", "owner"], ["/roles", Roles, "role_clarity", "staff"],
@@ -98,7 +113,9 @@ function Nav({ me, pathname }) {
   const isOn = (path) => (path === "/admin" ? pathname === "/admin" : pathname === path || pathname.startsWith(path + "/"));
   const admin = me.user.role === "admin" ? [{ group: "Admin", items: [
     { key: "a-pulse", label: "Pulse", path: "/admin" }, { key: "a-features", label: "Features & plans", path: "/admin/features" },
-    { key: "a-calls", label: "Manage member calls", path: "/admin/calls" }, { key: "a-rec", label: "Manage recordings", path: "/admin/recordings" }] }] : [];
+    { key: "a-event", label: "Live event", path: "/admin/event" }, { key: "a-day1", label: "Day-1 reports", path: "/admin/day1" },
+    { key: "a-calls", label: "Manage member calls", path: "/admin/calls" }, { key: "a-rec", label: "Manage recordings", path: "/admin/recordings" },
+    { key: "a-compliance", label: "Compliance rules", path: "/admin/compliance" }, { key: "a-email", label: "Email", path: "/admin/email" }] }] : [];
   const groups = [...admin, ...(me.menu || [])];
   const usable = groups.reduce((n, g) => n + g.items.filter((it) => !it.locked).length, 0);
   const crowded = usable > 24; // with most of the menu unlocked, start with only the current group and Start open
@@ -114,7 +131,7 @@ function Nav({ me, pathname }) {
         const showLocked = saved[`${group}:locked`] ?? false;
         const link = (it) => (
           <NavLink key={it.key} to={it.path} end={it.path === "/admin"} className={({ isActive }) => `${isActive ? "on" : ""} ${it.locked ? "locked" : ""}`}>
-            <span>{it.label}</span>
+            <span>{it.label}{it.sub && <small className="nav-sub">{it.sub}</small>}</span>
             {it.locked ? <span className="tier" title={`Unlocks with ${it.tier_name}`}>{it.tier_short || it.tier_name.split(" ")[0]}</span>
               : it.path === "/approvals" && me.approvals_waiting ? <span className="count" aria-label={`${me.approvals_waiting} waiting`}>{me.approvals_waiting}</span>
               : it.path === "/tasks" && me.my_open_tasks ? <span className="count" aria-label={`${me.my_open_tasks} open`}>{me.my_open_tasks}</span>
@@ -124,7 +141,7 @@ function Nav({ me, pathname }) {
         return (
           <div key={group} className={`nav-group ${expanded ? "open" : ""}`}>
             <button type="button" className="group" aria-expanded={expanded} onClick={() => !here && toggle(group, !expanded)} disabled={here}>
-              <span>{group}</span>
+              <span><Icon name={group} />{group}</span>
               <span className="meta">{!expanded && <span className="n">{open_.length || items.length}</span>}{!here && <i className="chev" aria-hidden="true" />}</span>
             </button>
             {expanded && (
@@ -145,33 +162,99 @@ function Nav({ me, pathname }) {
 
 function Shell({ me, children }) {
   const [open, setOpen] = useState(false);
+  const [finding, setFinding] = useState(false);
+  const [account, setAccount] = useState(false);
   const loc = useLocation();
-  useEffect(() => setOpen(false), [loc.pathname]);
+  const pages = allPages(me);
+  const here = findPage(pages, loc.pathname);
+  useEffect(() => { setOpen(false); setAccount(false); if (here && !here.locked) rememberPage(here.path); }, [loc.pathname]);  // eslint-disable-line react-hooks/exhaustive-deps
   // keep the current page visible in a long menu
   useEffect(() => { document.querySelector(".nav a.on")?.scrollIntoView({ block: "nearest" }); }, [loc.pathname]);
+  // the workspace look is for the logged-in hub only; public pages keep the blueprint look
+  useEffect(() => { document.body.classList.add("app"); return () => document.body.classList.remove("app"); }, []);
+  // "/" or Ctrl/⌘ K opens Go to, unless someone is typing
+  useEffect(() => {
+    const k = (e) => {
+      const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
+      if ((e.key === "k" && (e.metaKey || e.ctrlKey)) || (e.key === "/" && !typing)) { e.preventDefault(); setFinding(true); }
+    };
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, []);
+  // the account menu closes on a click anywhere else, or Esc
+  useEffect(() => {
+    if (!account) return undefined;
+    const click = (e) => { if (!e.target.closest(".me-menu, .me-btn")) setAccount(false); };
+    const esc = (e) => { if (e.key === "Escape") setAccount(false); };
+    document.addEventListener("mousedown", click); window.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("mousedown", click); window.removeEventListener("keydown", esc); };
+  }, [account]);
   const logout = async () => { await api("/auth/logout", { method: "POST" }); window.location.href = "/"; };
+  const who = me.workspace.is_team ? `${me.user.name || "Team"} · ${me.workspace.role}` : me.program.name;
+  const name = me.business_name || "Your business";
+  const initials = (me.user.name || name).trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "AH";
+  const runsPct = Math.min(100, (me.runs.left / Math.max(me.runs.allowance + me.runs.bonus, 1)) * 100);
+  const can = (key) => pages.some((p) => p.key === key && !p.locked);
+  const leadsTab = can("inquiry_desk") ? ["/inquiries", "Inquiries"] : ["/leads", "Leads"];
+  const isOn = (path) => loc.pathname === path || loc.pathname.startsWith(path + "/");
   return (
     <div className="shell">
       <div className="topbar">
         <div className="mark"><b>{me.business_name || "Action Hub"}</b><span>{me.workspace.is_team ? me.workspace.role : me.user.plan_name}</span></div>
         <button className="btn sm ghost" onClick={() => setOpen(true)}>Menu</button>
       </div>
-      <aside className={`rail ${open ? "open" : ""}`}>
-        <div className="row between">
-          <div className="mark"><b>{me.business_name || "Your business"}</b><span>{me.workspace.is_team ? `${me.user.name || "Team"} · ${me.workspace.role}` : me.program.name}</span></div>
+      <aside className={`rail ${open ? "open" : ""}`} aria-label="Menu">
+        <div className="row between" style={{ flexWrap: "nowrap" }}>
+          <div className="mark"><span className="seal" aria-hidden="true">{name.trim()[0]?.toUpperCase() || "A"}</span><b>{name}</b><span>{who}</span></div>
           {open && <button className="btn sm ghost" onClick={() => setOpen(false)}>Close</button>}
         </div>
+        <button type="button" className="find-btn" onClick={() => { setOpen(false); setFinding(true); }}><Icon name="search" />Go to…<kbd>/</kbd></button>
         <Nav me={me} pathname={loc.pathname} />
         <div className="foot">
           <div className="stack" style={{ gap: 6 }}>
             <span className="label">AI runs this month</span>
-            <div className="meter"><i style={{ width: `${Math.min(100, (me.runs.left / Math.max(me.runs.allowance + me.runs.bonus, 1)) * 100)}%` }} /></div>
+            <div className="meter"><i style={{ width: `${runsPct}%` }} /></div>
             <span className="small muted">{me.runs.left} left · {me.user.plan_name}</span>
           </div>
           <button className="btn sm ghost" onClick={logout}>Log out</button>
         </div>
       </aside>
-      <main className="main">{children}</main>
+      <main className="main">
+        <header className="appbar">
+          <nav className="crumbs" aria-label="You are here">
+            {here ? <><span>{here.group}</span><span className="sep" aria-hidden="true">/</span><b>{here.label}</b></> : <b>{name}</b>}
+          </nav>
+          <button type="button" className="find" onClick={() => setFinding(true)}><Icon name="search" />Go to a page<kbd>/</kbd></button>
+          {me.approvals_waiting > 0 && (
+            <NavLink to="/approvals" className="waiting" title="Messages waiting for you to send"><b>{me.approvals_waiting}</b>Send list</NavLink>
+          )}
+          <button type="button" className="me-btn" aria-haspopup="true" aria-expanded={account} aria-label="Your account" onClick={() => setAccount((a) => !a)}>{initials}</button>
+          {account && (
+            <div className="me-menu" role="menu">
+              <div className="who"><b>{me.user.name || name}</b><span className="small muted">{me.user.plan_name}{me.workspace.is_team ? ` · ${me.workspace.role}` : ""}</span></div>
+              <div className="stack" style={{ gap: 6 }}>
+                <span className="small muted">AI runs this month: {me.runs.left} left</span>
+                <div className="meter"><i style={{ width: `${runsPct}%` }} /></div>
+              </div>
+              <div>
+                {me.workspace.role === "owner" && <NavLink to="/plans" role="menuitem">Plans & billing</NavLink>}
+                {can("business_brain") && <NavLink to="/knowledge" role="menuitem">Knowledge Hub</NavLink>}
+                <button type="button" className="linkish" role="menuitem" onClick={logout}>Log out</button>
+              </div>
+            </div>
+          )}
+        </header>
+        <div className="desk">{children}</div>
+      </main>
+      <nav className="tabbar" aria-label="Shortcuts">
+        <NavLink to={me.landing || "/home"} className={isOn(me.landing || "/home") ? "on" : ""}><Icon name="Start" />Home</NavLink>
+        <NavLink to={leadsTab[0]} className={isOn(leadsTab[0]) ? "on" : ""}><Icon name="inbox" />{leadsTab[1]}</NavLink>
+        {can("approvals")
+          ? <NavLink to="/approvals" className={isOn("/approvals") ? "on" : ""}><Icon name="send" />Send list{me.approvals_waiting > 0 && <span className="badge">{me.approvals_waiting}</span>}</NavLink>
+          : <NavLink to="/website" className={isOn("/website") ? "on" : ""}><Icon name="Systems" />Website</NavLink>}
+        <button type="button" onClick={() => setFinding(true)}><Icon name="search" />Go to</button>
+      </nav>
+      {finding && <Finder me={me} onClose={() => setFinding(false)} />}
     </div>
   );
 }
@@ -221,7 +304,11 @@ export default function App() {
   const path = loc.pathname;
   const publicPaths = ["/", "/join", "/login"];
   let page;
-  if (!me) {
+  if (path === "/report" || path.startsWith("/report/")) {   // the ₹99 webinar tool: no login, whoever is (or isn't) logged in
+    page = <Suspense fallback={<div className="main muted">Loading…</div>}><Day1 /></Suspense>;
+  } else if (path === "/event" || path.startsWith("/event/")) {   // the live event link: no login until they save their pack
+    page = <Suspense fallback={<div className="main muted">Loading…</div>}><Event /></Suspense>;
+  } else if (!me) {
     page = publicPaths.includes(path) ? (
       <Routes><Route path="/login" element={<Login />} /><Route path="*" element={<Landing />} /></Routes>
     ) : <Navigate to={`/login?next=${encodeURIComponent(path)}`} replace />;
@@ -236,7 +323,7 @@ export default function App() {
   } else if (path === "/start" && !me.workspace.is_team) {
     page = <Onboarding />;
   } else if (publicPaths.includes(path)) {
-    page = <Navigate to={me.user.role === "admin" && !me.progress.profile ? "/admin" : "/home"} replace />;
+    page = <Navigate to={me.user.role === "admin" && !me.progress.profile ? "/admin" : me.landing || "/home"} replace />;
   } else {
     page = (
       <Shell me={me}>
@@ -250,12 +337,17 @@ export default function App() {
               </Gate>} />
           ))}
           <Route path="/studio" element={<Navigate to="/writer" replace />} />
+          <Route path="/control" element={<Navigate to="/dashboard" replace />} />{/* the Control Room is the dashboard now */}
           {me.user.role === "admin" && <Route path="/admin" element={<Admin />} />}
           {me.user.role === "admin" && <Route path="/admin/features" element={<AdminFeatures />} />}
           {me.user.role === "admin" && <Route path="/admin/owners/:id" element={<AdminOwner />} />}
           {me.user.role === "admin" && <Route path="/admin/calls" element={<AdminCalls />} />}
+          {me.user.role === "admin" && <Route path="/admin/day1" element={<AdminDay1 />} />}
+          {me.user.role === "admin" && <Route path="/admin/event" element={<AdminEvent />} />}
           {me.user.role === "admin" && <Route path="/admin/recordings" element={<AdminRecordings />} />}
-          <Route path="*" element={<Navigate to="/home" replace />} />
+          {me.user.role === "admin" && <Route path="/admin/compliance" element={<AdminCompliance />} />}
+          {me.user.role === "admin" && <Route path="/admin/email" element={<AdminEmail />} />}
+          <Route path="*" element={<Navigate to={me.landing || "/home"} replace />} />
         </Routes>
         </Suspense>
       </Shell>

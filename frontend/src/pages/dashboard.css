@@ -1,0 +1,71 @@
+/* Smart Dashboard (v2.1). Tiles on the blueprint grid: aqua = what the hub counted, amber only for rupees. */
+.db-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.db-tile { position: relative; background: var(--ink-raised); border: 1px solid var(--ink-line); padding: 18px; display: grid; gap: 12px;
+  align-content: start; min-width: 0; transition: border-color .15s; }
+.db-tile.l { grid-column: span 2; }
+.db-tile:hover { border-color: var(--slate); }
+.db-tile:focus-within { border-color: var(--aqua-deep); }
+.db-tile.teaser { background: transparent; border-style: dashed; }
+/* the whole tile opens its page; links and buttons inside sit above the cover */
+.db-cover { position: absolute; inset: 0; z-index: 0; }
+.db-cover:focus-visible { outline: 1px solid var(--aqua); outline-offset: -1px; }
+.db-tile a:not(.db-cover), .db-tile button { position: relative; z-index: 1; }
+.db-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.db-go { color: var(--grey); font-size: 14px; }
+.db-tile:hover .db-go { color: var(--aqua); }
+.db-tile .paper { color: var(--paper); font-weight: 500; }
+
+.db-big { font: 400 32px/1.05 var(--head); color: var(--paper); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.db-big.money { color: var(--amber); }
+.db-big.neg { color: var(--amber); }
+.db-num { font: 400 28px/1.05 var(--head); color: var(--paper); font-variant-numeric: tabular-nums; }
+.db-pair { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.db-trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: start; }
+.db-trio > div { display: grid; gap: 4px; min-width: 0; }
+
+.db-kv { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; margin: 0; font-size: 13px; }
+.db-kv dt { color: var(--grey); }
+.db-kv dd { margin: 0; text-align: right; color: var(--paper); font-variant-numeric: tabular-nums; display: inline-flex; gap: 6px; justify-content: flex-end; align-items: center; flex-wrap: wrap; }
+
+.db-bars { display: grid; gap: 6px; }
+.db-barrow { display: grid; grid-template-columns: minmax(70px, 110px) minmax(0, 1fr) 28px; gap: 10px; align-items: center; font-size: 12px; color: var(--grey); }
+.db-barrow b { text-align: right; color: var(--paper); font-weight: 500; font-variant-numeric: tabular-nums; }
+.db-barrow .bar { height: 6px; }
+
+.db-pace { position: relative; height: 10px; background: var(--ink); border: 1px solid var(--ink-line); }
+.db-pace > i { display: block; height: 100%; max-width: 100%; background: var(--aqua); }
+.db-pace > b { position: absolute; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; background: var(--paper); }
+
+.db-today, .db-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.db-today li { border-top: 1px solid var(--ink-line); }
+.db-today li:first-child { border-top: 0; }
+.db-today a { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; color: var(--paper); }
+.db-today a:hover { text-decoration: none; color: var(--aqua); }
+.db-today b { font: 400 22px/1 var(--head); color: var(--aqua); font-variant-numeric: tabular-nums; }
+.db-today li.zero a { color: var(--grey); }
+.db-today li.zero b { color: var(--slate); }
+.db-list li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-top: 1px solid var(--ink-line); font-size: 13px; }
+.db-list li:first-child { border-top: 0; }
+.db-list li span { min-width: 0; overflow-wrap: anywhere; }
+.db-list li b { font-weight: 500; white-space: nowrap; }
+
+.db-alert { margin: 0; padding: 8px 10px; border: 1px solid #5a4320; color: var(--amber); font-size: 13px; }
+.db-empty { display: grid; gap: 10px; justify-items: start; }
+.db-empty p { margin: 0; }
+
+.db-edit { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.db-edit li { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 12px;
+  border: 1px solid var(--ink-line); background: var(--ink); }
+.db-edit li.off .db-edit-name { color: var(--grey); text-decoration: line-through; text-decoration-color: var(--slate); }
+.db-edit-name { min-width: 0; overflow-wrap: anywhere; }
+.db-edit .btn.sm { min-width: 38px; padding: 0 10px; }
+
+@media (max-width: 1000px) {
+  .db-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .db-grid { grid-template-columns: minmax(0, 1fr); }
+  .db-tile.l { grid-column: auto; }
+  .db-tile.t-today { order: -1; }     /* on a phone, what needs you today comes first */
+  .db-big { font-size: 28px; }
+}

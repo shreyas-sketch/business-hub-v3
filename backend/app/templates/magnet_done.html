@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ m.title }} · {{ name }}</title>
+<meta name="description" content="{{ m.description }}">
+<meta property="og:title" content="{{ m.title }}">
+<meta property="og:description" content="{{ m.description }}">
+<meta property="og:image" content="{{ cover }}">
+<meta name="robots" content="noindex">
+<style>
+:root{--accent:{{ accent }};--ink:#14171c;--muted:#5b6370;--line:#e6e8ec;--soft:#f6f7f9}
+*{box-sizing:border-box}body{margin:0;font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans",Helvetica,Arial,sans-serif;color:var(--ink);background:#fff}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header{border-bottom:1px solid var(--line)}header .wrap{display:flex;justify-content:space-between;align-items:center;height:60px;gap:12px}
+header a{color:var(--ink);font-weight:700;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hero{background:linear-gradient(180deg,var(--soft),#fff);padding:52px 0 36px}
+.kicker{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+h1{font-size:clamp(28px,5vw,44px);line-height:1.12;letter-spacing:-.02em;margin:8px 0 12px}
+.lead{color:var(--muted);font-size:18px;margin:0}
+section{padding:28px 0;border-top:1px solid var(--line)}h2{font-size:22px;margin:0 0 10px}
+ul{padding-left:20px;margin:0}li{margin:6px 0}
+.locked{position:relative;max-height:260px;overflow:hidden}
+.locked:after{content:"";position:absolute;inset:auto 0 0 0;height:160px;background:linear-gradient(rgba(255,255,255,0),#fff)}
+form{background:var(--soft);border:1px solid var(--line);border-radius:14px;padding:22px;display:grid;gap:12px;margin:24px 0}
+label{font-weight:600;font-size:14px;display:grid;gap:6px}
+input{font:inherit;border:1px solid #cfd4db;border-radius:10px;padding:12px;width:100%}
+.btn{display:inline-flex;justify-content:center;align-items:center;min-height:48px;padding:0 22px;border-radius:10px;font-weight:700;border:0;background:var(--accent);color:#fff;font-size:16px;cursor:pointer;text-decoration:none}
+.hp{position:absolute;left:-9999px}.err{background:#fdecec;border:1px solid #f1b8b8;color:#8a1c1c;border-radius:10px;padding:10px 12px;font-weight:600;font-size:14px}
+.ok{background:#e9f7ef;border:1px solid #b5e2c6;color:#145c32;border-radius:10px;padding:14px;font-weight:600;margin-top:20px}
+.cta{background:var(--accent);color:#fff;border-radius:14px;padding:22px;margin:28px 0}.cta p{margin:0 0 12px}.cta .btn{background:#fff;color:var(--accent)}
+footer{color:var(--muted);font-size:14px;padding:24px 0 48px;border-top:1px solid var(--line)}
+</style>
+<style>
+.mag{display:grid;grid-template-columns:200px 1fr;gap:24px;align-items:start;margin-top:14px}.mag img{width:100%;border-radius:12px;border:1px solid var(--line);display:block}
+.more{border-top:1px solid var(--line);padding:24px 0}.more h2{font-size:18px}.more a{color:var(--accent);font-weight:600}
+@media(max-width:640px){.mag{grid-template-columns:1fr}.mag img{max-width:220px}}
+</style>
+</head>
+<body>
+<header><div class="wrap"><a href="{{ base or '/' }}">{{ name }}</a><a href="{{ base }}/wa" style="color:var(--accent)">Chat on WhatsApp</a></div></header>
+<div class="hero"><div class="wrap">
+  <span class="kicker">Free download from {{ name }}</span>
+  <h1>{{ m.title }}</h1>
+  <div class="ok">Thank you. Your download is ready.{% if emailed %} We've also emailed the link to {{ email }}.{% endif %}</div>
+</div></div>
+<div class="wrap">
+  <section style="border-top:0">
+    <p><a class="btn" href="{{ link }}">Download the PDF</a></p>
+    <p style="color:var(--muted)">The link works for 7 days. {{ name }} may also get in touch on the number you gave.</p>
+  </section>
+  <div class="cta"><p>Questions about it? {{ name }} is a message away.</p><a class="btn" href="{{ base }}/wa">Chat on WhatsApp</a></div>
+  {% if others %}<div class="more"><h2>More free downloads from {{ name }}</h2><ul>{% for o in others %}<li><a href="{{ base }}/guide/{{ o.slug }}">{{ o.title }}</a></li>{% endfor %}</ul></div>{% endif %}
+</div>
+<footer><div class="wrap">© {{ year }} {{ name }}</div></footer>
+</body>
+</html>

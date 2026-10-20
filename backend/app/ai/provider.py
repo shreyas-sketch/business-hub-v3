@@ -3,7 +3,9 @@ One interface, four engines (AI_PROVIDER = anthropic | gemini | openai | mock).
 Every call returns (result, usage) so each run's token cost can be recorded and shown on Pulse.
 `mock` returns deterministic, profile-based drafts so the whole hub works without a key.
 """
+import asyncio
 import json
+import random
 import re
 from dataclasses import dataclass
 
@@ -46,10 +48,52 @@ def _json(text: str) -> dict:
             raise AIError("The AI returned an unreadable answer") from e
 
 
+class Busy(AIError):
+    """The engine said "too many requests" or "overloaded" (429 / 503 / 529): worth one more try after a short wait."""
+
+    def __init__(self, message: str, wait: float | None = None):
+        super().__init__(message)
+        self.wait = wait
+
+
+# A room of 200 owners pressing AI buttons at the same moment: at most AI_CONCURRENCY calls go out at once from each server
+# process, the rest wait their turn, and a "slow down" from the engine is retried (AI_RETRIES times) after the wait it asks for.
+_gate: dict = {"sem": None, "size": 0, "loop": None}
+BUSY_STATUS = (429, 503, 529)
+
+
+def _semaphore() -> asyncio.Semaphore:
+    size, loop = max(1, settings.ai_concurrency), asyncio.get_running_loop()
+    if _gate["sem"] is None or _gate["size"] != size or _gate["loop"] is not loop:
+        _gate.update(sem=asyncio.Semaphore(size), size=size, loop=loop)
+    return _gate["sem"]
+
+
+def _retry_after(r: httpx.Response) -> float | None:
+    try:
+        return min(float(r.headers.get("retry-after", "")), 30.0)
+    except ValueError:
+        return None
+
+
 async def complete(system: str, prompt: str, mock, max_tokens: int = 1200) -> tuple[dict, Usage]:
     provider = settings.ai_provider
     if provider == "mock":
         return mock(), Usage()
+    attempt = 0
+    while True:
+        try:
+            async with _semaphore():
+                return await _call_once(provider, system, prompt, mock, max_tokens)
+        except Busy as e:
+            if attempt >= settings.ai_retries:
+                raise
+            attempt += 1
+            await asyncio.sleep(e.wait if e.wait is not None else min(2 ** attempt, 8) + random.random())
+
+
+async def _call_once(provider: str, system: str, prompt: str, mock, max_tokens: int) -> tuple[dict, Usage]:
+    """One request to the engine. (`mock` is unused here; the load test swaps this function for a simulated engine.)"""
     model = settings.ai_model or DEFAULT_MODEL.get(provider, "")
     sys_prompt = system + "\n\nReply with ONLY one valid JSON object. No markdown fences, no commentary."
     try:
@@ -60,6 +104,8 @@ async def complete(system: str, prompt: str, mock, max_tokens: int = 1200) -> tu
                     json={"model": model, "max_tokens": max_tokens + THINKING_HEADROOM, "system": sys_prompt,
                           "messages": [{"role": "user", "content": prompt}],
                           **({"output_config": {"effort": settings.ai_effort}} if settings.ai_effort else {})})
+                if r.status_code in BUSY_STATUS:
+                    raise Busy(f"anthropic {r.status_code}", _retry_after(r))
                 d = r.json()
                 if r.status_code != 200:
                     raise AIError(f"anthropic {r.status_code}: {r.text[:200]}")
@@ -74,6 +120,8 @@ async def complete(system: str, prompt: str, mock, max_tokens: int = 1200) -> tu
                     headers={"x-goog-api-key": settings.gemini_api_key},
                     json={"systemInstruction": {"parts": [{"text": sys_prompt}]}, "contents": [{"role": "user", "parts": [{"text": prompt}]}],
                           "generationConfig": {"maxOutputTokens": max_tokens, "responseMimeType": "application/json"}})
+                if r.status_code in BUSY_STATUS:
+                    raise Busy(f"gemini {r.status_code}", _retry_after(r))
                 d = r.json()
                 if r.status_code != 200:
                     raise AIError(f"gemini {r.status_code}: {r.text[:200]}")
@@ -84,6 +132,8 @@ async def complete(system: str, prompt: str, mock, max_tokens: int = 1200) -> tu
                 r = await client.post("https://api.openai.com/v1/chat/completions", headers={"authorization": f"Bearer {settings.openai_api_key}"},
                     json={"model": model, "max_tokens": max_tokens, "response_format": {"type": "json_object"},
                           "messages": [{"role": "system", "content": sys_prompt}, {"role": "user", "content": prompt}]})
+                if r.status_code in BUSY_STATUS:
+                    raise Busy(f"openai {r.status_code}", _retry_after(r))
                 d = r.json()
                 if r.status_code != 200:
                     raise AIError(f"openai {r.status_code}: {r.text[:200]}")

@@ -129,3 +129,59 @@ Agreed with Harsh in chat on 8 Oct 2026. This replaces the earlier plan-by-plan 
 - The wildcard DNS record on employz.ai, and the list of subdomains already in use.
 - Whose ElevenLabs account the Telecaller runs on, and which calling provider.
 - The ₹25k program outline.
+
+---
+
+# v2.1 — the subscription model (AI Advantage launch), October 2026
+
+## Decisions as built (D1–D6)
+
+- **D1 — plans.** Every new v2.1 feature is in Membership (`tier="lite"`), except the Smart Dashboard, which is in Free so every owner lands on it once the Knowledge Hub is 60% complete (the spec's acceptance has Free owners seeing their own tiles plus teasers). Existing features (website, lead magnet, pipeline, levers, quotations, money owed, payment reminders, CRM) are **not** moved in code: move them in Admin → Features & plans once management confirms. The launch demo account gets them through admin grants (see `seed_demo.py`).
+- **D2 — automatic payment follow-ups.** Off until the owner reads one sample of each stage and switches them on ("approve once, it runs"). Email goes automatically from then on. WhatsApp reminders stay tap-to-send below Growth Mentorship; from Growth Mentorship the owner may also let them go from their own number.
+- **D3 — automatic proposals.** P1 (not in this delivery).
+- **D4 — email.** Amazon SES in ap-south-1, called over HTTPS with AWS Signature V4 (no SDK). Delivery, bounce and complaint events come back through SNS (signature checked against Amazon's certificate); a hard bounce or complaint stops that owner emailing the address again.
+- **D5 — plan name.** Rename `lite` to "AI Advantage Membership" in Admin → Plans (the demo seed does this; the code default is unchanged).
+- **D6 — files.** Built as a `files` collection in the same MongoDB (documents up to 10 MB, `UPLOAD_MAX_MB`), not GridFS: every file in v2.1 is small (compliance receipts, certificates, logos), a plain collection needs no extra driver code, and it moves to S3/R2 later behind the same `app/files.py` interface.
+
+## The v2 rules after v2.1
+
+1. Unchanged: the hub's WhatsApp number only ever messages owners. (Regression test: `test_the_hub_number_never_messages_a_customer`.)
+2. Unchanged: below ₹1.5L, WhatsApp to customers is tap-to-send from the owner's own WhatsApp.
+3. Changed (D2): money messages may go out automatically **by email** once the owner has switched that automation on.
+4. Unchanged: AI tools below ₹1.5L; AI staff from ₹1.5L.
+
+## P0 — delivered
+
+1. Knowledge Hub (the Business Brain): identity, money basics, targets; completeness meter; every output built from it refreshes when it changes, and anything the owner edited is kept with a "your Knowledge Hub changed" banner.
+2. Smart Dashboard: one widget registry (`app/dashboard_widgets.py`), 13 tiles, 60-second cache, owner layout, admin on/off and order. The Control Room is this dashboard now (`/control` redirects).
+3. Compliance calendar: dates only from the rules table (`app/compliance_rules.py`, editable in Admin → Compliance rules, with the CA review stamp); reminders to the owner at 30/7/1/0 days; documents; the AI explains in words only.
+4. Cash flow, next 30 days: a forecast from what the owner entered, the lowest point, the first shortfall and the dues to collect first; what-if.
+5. Am I on target: month to date from invoices (or payments), projection, gap and required daily pace; alerts on the 10th and 20th.
+6. Automatic payment follow-ups by email (pending, due, every 3 days overdue, at most 4), invoice PDF attached, stop on payment or reply.
+7. Brand kit: message system, design tokens (applied to the website, launch kit and invoices) and 11 designs, Hindi included.
+8. SOP set (2 AI runs per SOP, refunds on failure, versions, assign, print), Mark as posted + posting log, ways to get more leads.
+9. Demo account for the launch: 9820000007 (`seed_demo.py`).
+
+## P1 — delivered
+
+1. **Inquiries + automatic proposal (3.6).** One inbox (`/inquiries`) for website, lead magnet, email and WhatsApp inquiries; each owner gets `<handle>@INBOUND_EMAIL_DOMAIN` (SES receipt rule → SNS → `/api/hooks/email-in/<secret>`); a pasted or shared WhatsApp inquiry (the hub is installable, with a share target) becomes a lead; a proposal is written from the Business Brain and Company Brain with a strict check (no number, discount, date or time promise the Brain doesn't have — subject included; a failed check uses the safe "qualifying questions" reply instead).
+2. **Replies to the hub's emails (3.8.4).** A reply to a reminder or a proposal (through its `r+<thread>` address, or forwarded to the inquiry address) stops the follow-ups for that amount, is kept on the lead or due, and the owner is told in the hub and on WhatsApp.
+3. **Invoicing (3.5).** Direct invoices and billing entry ("Sold 40 boxes to … ₹850 each"); the owner's own Razorpay connection (Connections, now visible from Membership with only the connections a plan unlocks): every captured payment becomes one GST invoice (or settles the matching due — part payments keep the due open), a processed refund becomes one credit note; "Email invoices automatically" (off by default).
+4. **Website (3.3).** Edit by prompt with a preview of only the changed sections (Apply / Discard / Undo), new facts offered to the Knowledge Hub only in the owner's own words; up to 5 uploaded lead-magnet PDFs at `/guide/<slug>`, downloadable only with a signed 7-day link after the form; each download is a lead with source `lead_magnet`.
+
+## Decisions taken in P1 (the safer option each time)
+
+- **WhatsApp proposals wait for a tap on every plan**, including Growth Mentorship (the spec allows automatic from ₹1.5L). A proposal carries prices; the existing instant reply still goes automatically from ₹1.5L.
+- **Automatic proposal emails only to senders whose address is authenticated** (SES DMARC verdict PASS). Others get the safe reply as a draft, with no AI run, and a number in their email isn't treated as the customer's phone. Email inquiries never trigger the Growth instant reply or the AI Telecaller.
+- **Website and lead-magnet inquiries get a proposal only when the owner switches it on** (each uses an AI run, and those leads already get the follow-up automation). Email and pasted WhatsApp inquiries always get one.
+- Limits: 100 automatic proposal emails a day (`PROPOSALS_PER_OWNER_PER_DAY`), one automatic reply per sender per 24 hours, 30 AI-written email proposals and 30 email inquiries an hour per owner.
+- A live hub must set `EMAIL_INBOUND_TOPIC_ARN` (inbound mail is refused without it).
+- Collections differ from the spec's table where an index would have broken existing data: uploads are in `magnet_files` (unique owner + slug), and payment idempotency uses `gateway_payments` / `gateway_claims` keyed by payment or refund id instead of a partial unique index on quotations.
+- A payment smaller than the due it names is a part payment: the due stays open for the rest.
+- An owner who hasn't filled in their business identity is treated as not GST-registered on gateway invoices.
+
+## Still open after P1
+
+- SES's SNS action carries emails up to 150 KB; an inquiry with large attachments bounces. Move the receipt rule to the S3 action if that matters.
+- Gateway customers don't become leads or Customers automatically yet (3.7).
+- The share target works once the owner adds the hub to their phone's home screen (no service worker is installed).

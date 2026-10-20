@@ -28,7 +28,19 @@ Products / services (as written by the owner):
 Who buys: {p.get('ideal_customer', '')}
 Why customers choose them: {p.get('why_us', '')}
 Proof the owner can show (may be empty): {p.get('proof', '')}
-Preferred language: {p.get('language', 'English')}"""
+Preferred language: {p.get('language', 'English')}""" + voice_text(p.get("voice"))
+
+
+def voice_text(v: dict | None) -> str:
+    """The tone of voice from the Brand kit, which every AI writer follows."""
+    if not isinstance(v, dict) or not v.get("tone"):
+        return ""
+    out = f"\nTone of voice: {v['tone']}"
+    for label, key in (("Do", "dos"), ("Don't", "donts"), ("Words we use", "use"), ("Words we avoid", "avoid")):
+        items = [str(x) for x in (v.get(key) or []) if str(x).strip()][:8]
+        if items:
+            out += f"\n{label}: " + "; ".join(items)
+    return out
 
 
 def _v(p: dict, key: str, default: str = "") -> str:

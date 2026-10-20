@@ -65,7 +65,10 @@ async def list_agents(ctx: Ctx = Depends(manager_ctx)):
     st = await jobs.all_settings(ctx.ws)
     shown = [spec for spec in catalog.AGENTS.values() if plans.META.get(spec.feature, {}).get("on")]
     shown.sort(key=lambda s: plans.rank(plans.tier_of(s.feature)))
-    return {"agents": [await _view(ctx, spec, st.get(spec.key, jobs.DEFAULTS)) for spec in shown],
+
+    async def views(group: str) -> list[dict]:
+        return [await _view(ctx, spec, st.get(spec.key, jobs.DEFAULTS)) for spec in shown if spec.group == group]
+    return {"agents": await views("team"), "alerts": await views("alerts"), "approve_once": await views("approve_once"),
             "can_act": plans.has(ctx.owner, "agents_act"), "act_tier": plans.tier_of("agents_act"),
             "act_tier_name": plans.PLANS[plans.tier_of("agents_act")]["name"],
             "connected": bool(await appr.owner_whatsapp(ctx.ws, ctx.owner))}

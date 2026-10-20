@@ -4,6 +4,7 @@ import { ago, api, day, inr, localPhone, rupees } from "../api.js";
 import { Busy, Field, FormError, Modal, Sheet, Switch, useHub } from "../ui.jsx";
 import { Empty, Loading, Num, Pill, Tabs } from "../v2.jsx";
 import "./admin.css";
+import "./admin-widgets.css";
 
 const ROLE_NAMES = { staff: "everyone in the team", manager: "managers and the owner", owner: "only the owner" };
 const FIELD_NAMES = { tier: "plan", label: "name", what: "description", on: "on/off", teaser: "show when locked", group: "menu group", order: "menu position" };
@@ -531,8 +532,68 @@ function ChangeLog({ names, changed }) {
   );
 }
 
+/* ═════════════ Dashboard widgets ═════════════ */
+/** Each Smart Dashboard tile on or off for everyone, and its default order. Owners can still reorder or hide tiles for themselves. */
+function DashboardWidgets({ names }) {
+  const { toast } = useHub();
+  const [rows, setRows] = useState(null);
+  const [saved, setSaved] = useState(null);
+  const [err, setErr] = useState("");
+  const load = useCallback(() => api("/admin/dashboard-widgets").then((d) => {
+    const list = d.widgets.slice().sort((a, b) => a.order - b.order);
+    setRows(list); setSaved(JSON.stringify(list)); setErr("");
+  }).catch((e) => setErr(e.message)), []);
+  useEffect(() => { load(); }, [load]);
+  if (!rows) return err ? <FormError msg={err} /> : <Loading />;
+  const move = (i, by) => {
+    const j = i + by;
+    if (j < 0 || j >= rows.length) return;
+    const next = rows.slice();
+    [next[i], next[j]] = [next[j], next[i]];
+    setRows(next);
+  };
+  const dirty = JSON.stringify(rows) !== saved;
+  const save = async () => {
+    const d = await api("/admin/dashboard-widgets", { method: "PUT", body: { widgets: rows.map((w, i) => ({ key: w.key, on: w.on, order: i * 10 })) } });
+    const list = d.widgets.slice().sort((a, b) => a.order - b.order);
+    setRows(list); setSaved(JSON.stringify(list));
+    toast("Saved. Owners see it within a minute.");
+  };
+  return (
+    <div className="stack">
+      <p className="small muted" style={{ maxWidth: "62ch" }}>
+        The tiles on every owner's dashboard. A tile shows only when the owner's plan has its feature; otherwise it shows locked, if that feature is shown when locked.
+        Switching a tile off here hides it for everyone. Owners can still reorder and hide tiles for themselves.
+      </p>
+      <ol className="db-admin">
+        {rows.map((w, i) => (
+          <li key={w.key} className={w.on ? "" : "off"}>
+            <div className="stack" style={{ gap: 4, minWidth: 0 }}>
+              <b>{w.title}</b>
+              <span className="small muted">{w.what}</span>
+              <span className="small muted">{w.features.length ? w.features.map((f) => `${f.label} · ${names[f.tier] || f.tier}`).join(" or ") : "Every plan"}</span>
+            </div>
+            <div className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+              <button className="btn sm ghost" disabled={i === 0} onClick={() => move(i, -1)} aria-label={`Move ${w.title} up`}>↑</button>
+              <button className="btn sm ghost" disabled={i === rows.length - 1} onClick={() => move(i, 1)} aria-label={`Move ${w.title} down`}>↓</button>
+              <Switch checked={w.on} disabled={w.key === "today"} label={w.on ? "On" : "Off"}
+                onChange={(on) => setRows(rows.map((x) => (x.key === w.key ? { ...x, on } : x)))} />
+            </div>
+          </li>
+        ))}
+      </ol>
+      <FormError msg={err} />
+      <div className="row">
+        <Busy className="btn primary" disabled={!dirty} onError={setErr} run={save}>Save widgets</Busy>
+        <button className="btn ghost" disabled={!dirty} onClick={() => setRows(JSON.parse(saved))}>Undo changes</button>
+        <button className="btn sm ghost" onClick={() => setRows(rows.slice().sort((a, b) => a.default_order - b.default_order).map((w) => ({ ...w, on: true })))}>Standard order, all on</button>
+      </div>
+    </div>
+  );
+}
+
 /* ═════════════ Page ═════════════ */
-const TABS = [["board", "Plan board"], ["menu", "Menu order"], ["plans", "Plans"], ["grants", "Grants"], ["log", "Change log"]];
+const TABS = [["board", "Plan board"], ["menu", "Menu order"], ["plans", "Plans"], ["widgets", "Dashboard widgets"], ["grants", "Grants"], ["log", "Change log"]];
 
 export default function AdminFeatures() {
   const { refresh } = useHub();
@@ -559,6 +620,7 @@ export default function AdminFeatures() {
             {cfg.tiers.map((t) => <PlanForm key={t.tier} t={t} changed={changed} />)}
           </div>
         )
+        : tab === "widgets" ? <DashboardWidgets names={names} />
         : tab === "grants" ? <Grants cfg={cfg} names={names} changed={changed} />
         : <ChangeLog names={names} changed={changed} />}
     </Sheet>

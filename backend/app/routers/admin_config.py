@@ -131,6 +131,38 @@ async def reset_feature(key: str, admin: dict = Depends(require_admin)):
     return plans.feature_view(key)
 
 
+# The v2.1 feature guide and the AI Advantage Membership event promise every feature in the guide on Membership. Five of them sit
+# in higher plans by default (an existing test pins those defaults), so the move is an admin setting: one press here, undone
+# per feature with "Reset to default".
+GUIDE_MEMBERSHIP = ("lead_magnet", "revenue_levers", "pipeline", "quotations", "money_owed")
+
+
+@router.get("/presets/guide-membership")
+async def guide_membership_state():
+    return {"features": [{"key": k, "label": plans.META[k]["label"], "tier": plans.META[k]["tier"]} for k in GUIDE_MEMBERSHIP],
+            "applied": all(plans.META[k]["tier"] == "lite" for k in GUIDE_MEMBERSHIP)}
+
+
+@router.post("/presets/guide-membership")
+async def apply_guide_membership(admin: dict = Depends(require_admin)):
+    """Moves the guide's five higher-plan features into Membership. Features already in Membership or lower are left alone."""
+    feats = await _overrides("features")
+    moved = []
+    for key in GUIDE_MEMBERSHIP:
+        if plans.rank(plans.META[key]["tier"]) <= plans.rank("lite"):
+            continue
+        before = dict(feats.get(key) or {})
+        after = _clean(key, {**before, "tier": "lite"})
+        feats[key] = after
+        moved.append((key, before, after))
+    if moved:
+        await _save("features", feats)
+        for key, before, after in moved:
+            await _log(admin, "feature", key, before, after, "Guide features into Membership")
+        await track("preset_guide_membership", admin["_id"], moved=[k for k, *_ in moved])
+    return {"moved": [k for k, *_ in moved], **await guide_membership_state()}
+
+
 @router.put("/menu")
 async def save_menu(body: MenuIn, admin: dict = Depends(require_admin)):
     """After a drag in the menu editor: every page's group and position."""

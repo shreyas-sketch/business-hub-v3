@@ -109,3 +109,22 @@ async def test_other_owners_cannot_read_a_draft_sites_photos(client):
     assert (await client.get(f"/s/{site['slug']}/photo/{pid}")).status_code == 200  # the owner previews it
     await client.post("/api/auth/logout")
     assert (await client.get(f"/s/{site['slug']}/photo/{pid}")).status_code == 404
+
+
+async def test_photos_are_served_on_the_websites_own_address(client):
+    """name.employz.ai shows the owner's photo and serves it at /photo/<id>, alongside the lead-magnet paths."""
+    old = settings.sites_domain
+    object.__setattr__(settings, "sites_domain", "employz.ai")
+    try:
+        await login(client, "9827100009")
+        site = await go_live(client)
+        hero = (await client.post("/api/site/photos", data={"slot": "hero"},
+                                  files={"file": ("me.jpg", io.BytesIO(JPEG), "image/jpeg")})).json()["photos"]["hero"]
+        host = f"https://{site['slug']}.employz.ai"
+        page = await client.get(f"{host}/")
+        assert page.status_code == 200 and f"/photo/{hero['id']}" in page.text
+        img = await client.get(f"{host}/photo/{hero['id']}")
+        assert img.status_code == 200 and img.content == JPEG
+        assert (await client.get(f"{host}/photo/{hero['id']}/../../api/me")).status_code == 404
+    finally:
+        object.__setattr__(settings, "sites_domain", old)

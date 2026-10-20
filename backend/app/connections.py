@@ -5,6 +5,7 @@ Connections to each owner's own accounts (Growth Mentorship and up; set up for t
     employz    their Employz.ai (GoHighLevel) sub-account: contacts and the sales pipeline (Running the Business and up)
     voice      the AI Telecaller: an ElevenLabs agent with a phone number (Twilio or SIP)
     tally / email / calendar   LegacyWorkforce
+    razorpay   their own Razorpay account: captured payments → invoices, refunds → credit notes (gateway_invoicing)
 
 Secrets (API keys, tokens, passwords) are encrypted at rest with CONNECTIONS_KEY (or a key derived from JWT_SECRET) and
 are never sent back to the browser — only whether they are set. Each connection that receives events gets its own
@@ -71,8 +72,14 @@ SPECS: dict[str, dict] = {
     "calendar": {"label": "Calendar", "feature": "more_connections", "fields": [
         ("booking_link", "Booking link", "text", "Your Employz.ai or Google booking page — the Meeting Setter shares it"),
     ]},
+    # v2.1 (3.5): the owner's own Razorpay account; every captured payment becomes an invoice, a refund a credit note
+    "razorpay": {"label": "Payment gateway — Razorpay", "feature": "gateway_invoicing", "fields": [
+        ("key_id", "Key id", "text", "Razorpay → Account & Settings → API keys. Test keys start with rzp_test_"),
+        ("key_secret", "Key secret", "secret", "Shown once when you create the key"),
+        ("webhook_secret", "Webhook secret", "secret", "The secret you type when you add the webhook below in Razorpay → Webhooks"),
+    ]},
 }
-WEBHOOKS = {"whatsapp": "/api/hooks/whatsapp/", "voice": "/api/hooks/voice/", "employz": "/api/hooks/employz/"}
+WEBHOOKS = {"whatsapp": "/api/hooks/whatsapp/", "voice": "/api/hooks/voice/", "employz": "/api/hooks/employz/", "razorpay": "/api/hooks/payments/"}
 
 
 def _fernet() -> Fernet:
@@ -127,6 +134,8 @@ def ready(kind: str, c: dict | None) -> bool:
         return bool(c.get("location_id") and c.get("token"))
     if kind == "voice":
         return bool(c.get("api_key") and c.get("agent_id") and c.get("phone_number_id"))
+    if kind == "razorpay":    # the webhook secret is what lets payments in; the key id says which account
+        return bool(c.get("key_id") and c.get("webhook_secret"))
     return any(v for k, v in c.items() if k not in ("status", "updated_at", "updated_by", "webhook_token"))
 
 

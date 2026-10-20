@@ -1,0 +1,24 @@
+/* SOPs (Kits.jsx → Sops): the library / whole-business tabs, the process map and the batch writer. */
+.sop-tabs { display: flex; margin-top: 18px; }
+.sop-set-bar { gap: 10px; }
+.sop-batch { gap: 10px; }
+.sop-fn { gap: 10px; }
+.sop-proc { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 10px 0; border-top: 1px solid var(--ink-line); }
+.sop-fn .row + .sop-proc { border-top: 0; }
+.sop-proc input[type="checkbox"] { width: 18px; height: 18px; margin: 3px 0 0; accent-color: var(--aqua); }
+.sop-proc-main { display: grid; gap: 4px; min-width: 0; }
+.sop-proc-title { overflow-wrap: anywhere; }
+.sop-proc.done .sop-proc-title { color: var(--grey); }
+.sop-proc-tags { gap: 6px; justify-content: flex-end; }
+.sop-add { display: grid; grid-template-columns: minmax(150px, 220px) minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.sop-write { gap: 10px; }
+.sop-short { color: var(--amber); }
+.sop-versions { gap: 8px; max-height: 50vh; overflow-y: auto; }
+.sop-version { padding: 12px 14px; gap: 6px; }
+
+@media (max-width: 900px) {
+  .sop-tabs button { flex: 1 1 auto; white-space: normal; line-height: 1.35; text-align: left; }
+  .sop-proc { grid-template-columns: 22px minmax(0, 1fr); }
+  .sop-proc-tags { grid-column: 2; justify-content: flex-start; }
+  .sop-add { grid-template-columns: 1fr; }
+}

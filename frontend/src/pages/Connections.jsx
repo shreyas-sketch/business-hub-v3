@@ -13,12 +13,14 @@ const WHAT = {
   tally: "Read sales and money owed from Tally on your office computer.",
   email: "Send emails from your own address.",
   calendar: "The booking link your AI staff share when a customer wants a meeting.",
+  razorpay: "Every payment a customer makes through your own Razorpay becomes a GST invoice on its own — or marks the matching amount in Money owed paid. A refund becomes a credit note.",
 };
 
 const HOOK_HINT = {
   whatsapp: "Paste this as the webhook in AiSensy, or as the callback URL in your Meta app (the verify token is the last part of the address).",
   voice: "Paste this as the post-call webhook in ElevenLabs, so every call comes back here with its summary.",
   employz: "Paste this into the webhook step of an Employz.ai workflow, so deals you move there move here too.",
+  razorpay: "In Razorpay → Account & Settings → Webhooks, add this address with the events payment.captured and refund.processed, and type the same webhook secret as above. Try it in test mode first: a test payment shows up as an invoice here.",
 };
 
 // WhatsApp: hide the other provider's fields so the form stays short.
@@ -165,20 +167,45 @@ function Panel({ c, reload }) {
   );
 }
 
+/** Connections your plan doesn't include yet: one quiet line per plan, not a wall of locked forms. */
+function Later({ locked }) {
+  const { me, upgrade } = useHub();
+  const RANK = ["free", "lite", "program", "running", "growth", "office"];
+  const rank = (c) => RANK.indexOf(me.feature_tiers?.[c.feature] || "office");
+  const byTier = {};
+  [...locked].sort((a, b) => rank(a) - rank(b)).forEach((c) => { (byTier[c.tier_name] = byTier[c.tier_name] || []).push(c); });
+  return (
+    <div className="panel flat stack" style={{ gap: 8 }}>
+      <span className="label">With a higher plan</span>
+      {Object.entries(byTier).map(([tier, cs]) => (
+        <div key={tier} className="row between" style={{ gap: 10 }}>
+          <span className="small muted"><b style={{ color: "var(--paper)" }}>{tier}:</b> {cs.map((c) => c.label).join(" · ")}</span>
+          {me.workspace?.role === "owner" && me.feature_tiers?.[cs[0].feature] && (
+            <button className="btn sm money" onClick={() => upgrade(me.feature_tiers[cs[0].feature], cs[0].feature)}>See {tier}</button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function Connections() {
   const [list, reload] = useLoad("/connections");
   const open = (list || []).filter((c) => c.available);
+  const locked = (list || []).filter((c) => !c.available);
   const done = open.filter((c) => c.connected).length;
   const title = !list ? <>Your own accounts, <em>connected</em>.</>
     : done && done === open.length ? <>All your accounts are <em>connected</em>.</>
-    : <>{done} of {open.length} accounts <em>connected</em>.</>;
+    : <>{done} of {open.length} {open.length === 1 ? "account" : "accounts"} <em>connected</em>.</>;
   return (
     <Sheet kicker="Systems · Connections" id="GM-04" pillar="Systems" title={title}
-      sub="Your AI staff work from your own WhatsApp number, CRM and voice agent. Our team usually sets these up for you during your setup — you can also add or change the details here.">
+      sub="Your hub works from your own accounts — your payment gateway, and on higher plans your WhatsApp number, CRM and voice agent. Our team can set these up for you; you can also add or change the details here.">
       <p className="small muted">Keys, tokens and passwords are stored encrypted and are never shown again after you save them. Leave a saved one empty to keep it.</p>
       {!list ? <Loading /> : (
         <div className="stack" style={{ gap: 16 }}>
-          {[...open, ...list.filter((c) => !c.available)].map((c) => <Panel key={c.kind} c={c} reload={reload} />)}
+          {open.map((c) => <Panel key={c.kind} c={c} reload={reload} />)}
+          {!open.length && <p className="muted">Your plan doesn't include any connections yet.</p>}
+          {locked.length > 0 && <Later locked={locked} />}
         </div>
       )}
     </Sheet>

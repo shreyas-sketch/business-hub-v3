@@ -11,6 +11,7 @@ from datetime import date, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from .. import sales
 from ..agents import rhythm
 from ..ai import program_tasks
 from ..context import Ctx, feature
@@ -43,10 +44,11 @@ async def magic_progress(ws: str, result: dict) -> dict:
     elapsed = (t - first).days + 1
     total = (nxt - first).days
     inquiries = await db().leads.count_documents({"owner_id": ws, "created_at": {"$gte": since}})
-    won, value = 0, 0.0
-    async for l in db().leads.find({"owner_id": ws, "status": "won", "updated_at": {"$gte": since}}, {"value": 1}):
-        won += 1
-        value += float(l.get("value") or 0)
+    won = await db().leads.count_documents({"owner_id": ws, "status": "won", "$or": [{"won_at": {"$gte": since}},
+                                                                                     {"won_at": {"$exists": False}, "updated_at": {"$gte": since}}]})
+    # sales: the same count as "Am I on target?" — invoices (plus won leads without one), or payments when counted when paid
+    m = await db().magic.find_one({"_id": ws}, {"count_when": 1}) or {}
+    value = (await sales.month_sales(ws, m.get("count_when") or "invoiced", t))["sales"]
     expected = round(elapsed / total * 100)
     def pct(a, b):
         return round(a / b * 100) if b else 0
@@ -58,10 +60,11 @@ async def magic_progress(ws: str, result: dict) -> dict:
 @router.get("/magic")
 async def get_magic(ctx: Ctx = Depends(feature("magic_number", "manager"))):
     m = await db().magic.find_one({"_id": ctx.ws})
-    if not m:
-        return {"inputs": None, "result": None, "progress": None}
+    if not m or not m.get("inputs"):
+        b = await db().businesses.find_one({"owner_id": ctx.ws}, {"targets": 1}) or {}
+        return {"inputs": None, "result": None, "progress": None, "brain_target": (b.get("targets") or {}).get("monthly_revenue")}
     return {"inputs": m["inputs"], "result": m["result"], "progress": await magic_progress(ctx.ws, m["result"]),
-            "updated_at": m["updated_at"].isoformat()}
+            "updated_at": m["updated_at"].isoformat(), "target": await sales.target_status(ctx.ws), "count_when": m.get("count_when") or "invoiced"}
 
 
 @router.put("/magic")
@@ -69,8 +72,10 @@ async def save_magic(body: MagicIn, ctx: Ctx = Depends(feature("magic_number", "
     inputs = body.model_dump()
     result = rhythm.magic_result(inputs)
     await db().magic.replace_one({"_id": ctx.ws}, {"_id": ctx.ws, "inputs": inputs, "result": result, "updated_at": now(), "by": ctx.actor}, upsert=True)
+    await db().businesses.update_one({"owner_id": ctx.ws}, {"$set": {"targets.monthly_revenue": inputs["monthly_target"]}})  # the Knowledge Hub target
     await track("magic_number", ctx.ws)
-    return {"inputs": inputs, "result": result, "progress": await magic_progress(ctx.ws, result), "updated_at": now().isoformat()}
+    return {"inputs": inputs, "result": result, "progress": await magic_progress(ctx.ws, result), "updated_at": now().isoformat(),
+            "target": await sales.target_status(ctx.ws)}
 
 
 # ═════════════════════════ Gaps scan (Membership) ═════════════════════════
@@ -307,13 +312,23 @@ def levers_result(i: dict) -> dict:
     now_rev = i["customers"] * i["avg_value"] * i["frequency"]
     new_rev = (i["customers"] * (1 + i["grow_customers"] / 100) * i["avg_value"] * (1 + i["grow_value"] / 100)
                * i["frequency"] * (1 + i["grow_frequency"] / 100))
+    mult = (1 + i["grow_customers"] / 100) * (1 + i["grow_value"] / 100) * (1 + i["grow_frequency"] / 100)
+    # the compounding, lever by lever, in the owner's own rupees: 10% on each → ×1.331, so +33.1%
+    steps, running = [], now_rev
+    for key, label in (("grow_customers", "customers"), ("grow_value", "average sale"), ("grow_frequency", "times they buy")):
+        after = running * (1 + i[key] / 100)
+        steps.append({"lever": label, "pct": i[key], "before": round(running), "after": round(after), "adds": round(after - running)})
+        running = after
     return {"revenue": round(now_rev), "new_revenue": round(new_rev), "growth_pct": round((new_rev / now_rev - 1) * 100, 1) if now_rev else None,
-            "extra": round(new_rev - now_rev)}
+            "extra": round(new_rev - now_rev), "multiplier": round(mult, 4), "steps": steps,
+            "simple_sum_pct": round(i["grow_customers"] + i["grow_value"] + i["grow_frequency"], 1)}
 
 
 @router.get("/levers")
 async def get_levers(ctx: Ctx = Depends(feature("revenue_levers", "manager"))):
     d = await db().levers.find_one({"_id": ctx.ws})
+    if d:
+        d["result"] = levers_result({**d, **{k: d.get(k, 10) for k in ("grow_customers", "grow_value", "grow_frequency")}})
     return {"levers": public(d) if d else None, "stages": [{"key": k, "label": l} for k, l in STAGES5]}
 
 

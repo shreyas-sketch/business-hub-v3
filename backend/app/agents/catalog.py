@@ -36,8 +36,14 @@ class Spec:
     customer_facing: bool = False
     approvals: bool = False         # its messages wait in Approvals unless the owner lets it act (agents_act)
     info_only: bool = False         # run by another module; shown for information, no switch here
-    schedule: dict | None = None    # {"every": "day"|"week"|"month", "at": "HH:MM", "weekday": 0-6, "day": 1-28, "grace_hours": n}
+    schedule: dict | None = None    # {"every": "day"|"week"|"month", "at": "HH:MM", "weekday": 0-6, "day": 1-28, "days": [10, 20], "grace_hours": n}
     runner: Runner | None = field(default=None, repr=False)
+    # owner-only scheduled checks: runs only for owners who have set the feature up (a bank balance, a target...), so owners
+    # who never used it get no "skipped" lines in their activity
+    ready: Callable[[list[dict]], Awaitable[set]] | None = field(default=None, repr=False)   # owners → ids of those ready (one query)
+    # where the Agents page lists it: "team" (the AI team), "alerts" (checks that only ever message the owner) or
+    # "approve_once" (customer-facing, switched on once after the owner approves the wording on its own panel)
+    group: str = "team"
 
 
 AGENTS: dict[str, Spec] = {}
@@ -86,6 +92,11 @@ def last_occurrence(schedule: dict, at: datetime) -> datetime:
         cand = (local - timedelta(days=(local.weekday() - wd) % 7)).replace(hour=h, minute=m, second=0, microsecond=0)
         if cand > local:
             cand -= timedelta(days=7)
+    elif every == "month" and schedule.get("days"):   # several days a month, e.g. the 10th and the 20th
+        days = sorted({min(int(x), 28) for x in schedule["days"]})
+        this = [local.replace(day=d, hour=h, minute=m, second=0, microsecond=0) for d in days]
+        past = [c for c in this if c <= local]
+        cand = past[-1] if past else _month_back(local, days[-1]).replace(hour=h, minute=m, second=0, microsecond=0)
     elif every == "month":
         day = min(int(schedule.get("day", 1)), 28)
         cand = local.replace(day=day, hour=h, minute=m, second=0, microsecond=0)
@@ -104,6 +115,10 @@ def next_occurrence(schedule: dict, at: datetime) -> datetime:
     every = schedule.get("every", "day")
     if every == "week":
         nxt = last + timedelta(days=7)
+    elif every == "month" and schedule.get("days"):
+        days = sorted({min(int(x), 28) for x in schedule["days"]})
+        later = [d for d in days if d > last.day]
+        nxt = last.replace(day=later[0]) if later else (last.replace(day=28) + timedelta(days=5)).replace(day=days[0])
     elif every == "month":
         nxt = (last.replace(day=28) + timedelta(days=5)).replace(day=min(int(schedule.get("day", 1)), 28))
     else:
@@ -118,7 +133,7 @@ def slot_key(schedule: dict, occurrence: datetime) -> str:
     if every == "week":
         return local.strftime("%G-W%V")
     if every == "month":
-        return local.strftime("%Y-%m")
+        return local.strftime("%Y-%m-%d") if schedule.get("days") else local.strftime("%Y-%m")
     return local.strftime("%Y-%m-%d")
 
 
