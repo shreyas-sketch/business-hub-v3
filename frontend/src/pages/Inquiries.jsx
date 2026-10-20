@@ -157,7 +157,8 @@ export default function Inquiries() {
               {it.channel === "email" && it.verified === false && <span className="small muted">The sender's address couldn't be confirmed — check before you reply.</span>}
               {(it.replies || []).map((r, i) => <div key={i} className="inq-reply small"><b>They replied {ago(r.at)}:</b> {r.text}</div>)}
               <Proposal it={it} reload={reload} />
-              <div className="small"><Link to="/leads">Open in Leads</Link>{me.features?.pipeline ? <> · <Link to="/pipeline">Pipeline</Link></> : null}</div>
+              <div className="small"><Link to="/leads">Open in Leads</Link>{me.features?.pipeline ? <> · <Link to="/pipeline">Pipeline</Link></> : null}
+                {me.features?.quotations && canAct(me, "manager") ? <> · <Link to={`/quotes?inquiry=${it.id}`}>Make a quotation</Link></> : null}</div>
             </div>
           ))}
         </div>

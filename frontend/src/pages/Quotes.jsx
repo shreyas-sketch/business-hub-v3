@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api, day, localPhone, rs, waLink } from "../api.js";
 import { Busy, Copy, Field, FormError, Modal, Sheet, Switch, canAct, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Num, Pill, Tabs } from "../v2.jsx";
@@ -39,9 +39,9 @@ const fromQuote = (q) => ({
   gst_mode: q.gst_mode || "intra", notes: q.notes || "", terms: q.terms || "", valid_days: q.valid_days || 15, lead_id: q.lead_id || "",
 });
 
-function DraftBox({ onDraft }) {
+function DraftBox({ onDraft, initial = "" }) {
   const { me, refresh } = useHub();
-  const [brief, setBrief] = useState("");
+  const [brief, setBrief] = useState(initial);
   const [err, setErr] = useState("");
   return (
     <div className="panel flat">
@@ -65,10 +65,12 @@ function DraftBox({ onDraft }) {
   );
 }
 
-function Editor({ quote, onClose, onSaved }) {
+function Editor({ quote, prefill, onClose, onSaved }) {
   const { toast } = useHub();
   const edit = !!quote;
-  const [f, setF] = useState(() => (edit ? fromQuote(quote) : blankForm()));
+  // "Make a quotation" on an inquiry: the customer and the inquiry come filled in, and their message is the draft's brief
+  const [f, setF] = useState(() => (edit ? fromQuote(quote) : prefill
+    ? { ...blankForm(), customer: { ...blankForm().customer, name: prefill.name, phone: prefill.phone }, lead_id: prefill.lead_id } : blankForm()));
   const [leads, setLeads] = useState([]);
   const [err, setErr] = useState("");
   useEffect(() => {
@@ -110,7 +112,7 @@ function Editor({ quote, onClose, onSaved }) {
         <h2>{edit ? <>Edit <em>{quote.number}</em></> : <>New <em>quotation</em></>}</h2>
         <button className="btn sm ghost" onClick={onClose}>Cancel</button>
       </div>
-      {!edit && <DraftBox onDraft={fill} />}
+      {!edit && <DraftBox onDraft={fill} initial={prefill?.brief || ""} />}
 
       <span className="label">Customer</span>
       <div className="grid2">
@@ -509,6 +511,19 @@ export default function Quotes() {
   const [editing, setEditing] = useState(null);   // null | "new" | "invoice" | a quotation
   const [settings, setSettings] = useState(false);
   const [invoiceFor, setInvoiceFor] = useState(null);
+  const [params, setParams] = useSearchParams();
+  const [prefill, setPrefill] = useState(null);
+  useEffect(() => {
+    const id = params.get("inquiry");
+    if (!id) return;
+    api("/leads").then((list) => {
+      const l = (list || []).find((x) => x.id === id);
+      if (l) {
+        setPrefill({ lead_id: l.id, name: l.name || "", phone: l.phone ? localPhone(l.phone) : "", brief: (l.message || "").slice(0, 6000) });
+        setEditing("new");
+      }
+    }).catch(() => {}).finally(() => setParams({}, { replace: true }));
+  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
   const numberOf = Object.fromEntries((quotes || []).map((q) => [q.id, q.number]));
   const waiting = (quotes || []).filter((q) => q.status === "sent").length;
   const title = waiting ? <>{waiting} {waiting === 1 ? "quotation is" : "quotations are"} waiting for a <em>yes</em>.</> : <>GST quotations in <em>minutes</em>.</>;
@@ -526,8 +541,9 @@ export default function Quotes() {
       {settings && !editing && <Settings onClose={() => setSettings(false)} />}
       {editing === "invoice" && <InvoiceEditor onClose={() => setEditing(null)} onSaved={() => { setEditing(null); setTab("invoice"); reloadI(); top(); }} />}
       {editing && editing !== "invoice" && (
-        <Editor key={editing === "new" ? "new" : editing.id} quote={editing === "new" ? null : editing} onClose={() => setEditing(null)}
-          onSaved={() => { setEditing(null); setTab("quote"); reloadQ(); top(); }} />
+        <Editor key={editing === "new" ? `new-${prefill?.lead_id || ""}` : editing.id} quote={editing === "new" ? null : editing} prefill={editing === "new" ? prefill : null}
+          onClose={() => { setEditing(null); setPrefill(null); }}
+          onSaved={() => { setEditing(null); setPrefill(null); setTab("quote"); reloadQ(); top(); }} />
       )}
       {!editing && (
         <>

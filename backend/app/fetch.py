@@ -86,7 +86,7 @@ def _blocked(ip: str) -> bool:
     return a.is_private or a.is_loopback or a.is_link_local or a.is_multicast or a.is_reserved or a.is_unspecified
 
 
-async def _one(client: httpx.AsyncClient, url: str) -> httpx.Response:
+async def _one(client: httpx.AsyncClient, url: str, accept: str = "text/html,application/xhtml+xml") -> httpx.Response:
     u = urlparse(url)
     host = u.hostname.lower().rstrip(".")
     try:
@@ -103,7 +103,7 @@ async def _one(client: httpx.AsyncClient, url: str) -> httpx.Response:
     if u.port:
         netloc += f":{u.port}"
     pinned = u._replace(netloc=netloc).geturl()
-    headers = {"Host": host + (f":{u.port}" if u.port else ""), "User-Agent": UA, "Accept": "text/html,application/xhtml+xml"}
+    headers = {"Host": host + (f":{u.port}" if u.port else ""), "User-Agent": UA, "Accept": accept}
     req = client.build_request("GET", pinned, headers=headers, extensions={"sni_hostname": host} if u.scheme == "https" else {})
     return await client.send(req, stream=True)
 
@@ -146,6 +146,38 @@ async def fetch(raw_url: str, client: httpx.AsyncClient | None = None) -> Page:
     finally:
         if own:
             await client.aclose()
+
+
+IMAGE_TYPES = ("image/png", "image/jpeg")
+
+
+async def fetch_image(raw_url: str, max_bytes: int = 800_000) -> tuple[bytes, str]:
+    """A small PNG or JPEG (a website's logo), with the same checks as a page: public addresses only, every redirect checked
+    again, at most `max_bytes`. SVG and other formats are refused (they can't be drawn on a design safely)."""
+    url = normalise_url(raw_url)
+    async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=False, verify=True) as client:
+        for _ in range(5):
+            try:
+                resp = await _one(client, url, accept="image/png,image/jpeg")
+            except httpx.HTTPError:
+                raise FetchError("The logo couldn't be opened.")
+            if resp.status_code in (301, 302, 303, 307, 308) and resp.headers.get("location"):
+                await resp.aclose()
+                url = normalise_url(urljoin(url, resp.headers["location"]))
+                continue
+            try:
+                ctype = resp.headers.get("content-type", "").split(";")[0].strip().lower()
+                if resp.status_code >= 400 or ctype not in IMAGE_TYPES:
+                    raise FetchError("The logo isn't a PNG or JPG.")
+                body = b""
+                async for chunk in resp.aiter_bytes():
+                    body += chunk
+                    if len(body) > max_bytes:
+                        raise FetchError("The logo file is too large.")
+            finally:
+                await resp.aclose()
+            return body, ctype
+        raise FetchError("The logo address redirects too many times.")
 
 
 # ───────────────────────── reading a page ─────────────────────────

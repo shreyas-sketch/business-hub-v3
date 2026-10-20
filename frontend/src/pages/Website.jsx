@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, waLink } from "../api.js";
-import { Busy, Copy, Field, FormError, InviteLine, Locked, Sheet, useHub, useLoad } from "../ui.jsx";
+import { Busy, Copy, Field, FormError, InviteLine, Locked, Modal, Sheet, useHub, useLoad } from "../ui.jsx";
 import DomainPanel from "../components/DomainPanel.jsx";
 import "./website21.css";
 
@@ -133,6 +133,7 @@ export default function Website() {
   const [frame, setFrame] = useState(0);
   const [building, setBuilding] = useState(false);
   const [guideUrl, setGuideUrl] = useState(null);
+  const [qr, setQr] = useState(false);
 
   useEffect(() => {
     if (site?.content) { setC(site.content); setAccent(site.accent); setSlug(site.slug); setShowcase(!!site.showcase); }
@@ -179,6 +180,16 @@ export default function Website() {
           ? <Busy className="btn ghost sm" run={async () => { await api("/site/unpublish", { method: "POST" }); await reload(); await refresh(); }}>Take offline</Busy>
           : <Busy className="btn primary" run={async () => { await save(); await api("/site/publish", { method: "POST" }); await reload(); await refresh(); toast("Your website is live"); }}>Publish</Busy>}
       </>}>
+      {live && qr && (
+        <Modal onClose={() => setQr(false)}>
+          <div className="stack" style={{ justifyItems: "center", textAlign: "center" }}>
+            <span className="kicker">Scan to send me an inquiry</span>
+            <img src="/api/site/qr.png" alt={`QR code for ${site.url}`} style={{ width: "min(70vw, 360px)", height: "auto", background: "#fff", padding: 10 }} />
+            <span className="mono" style={{ wordBreak: "break-all" }}>{site.url.replace(/^https?:\/\//, "")}</span>
+            <button className="btn ghost" onClick={() => setQr(false)}>Close</button>
+          </div>
+        </Modal>
+      )}
       {live && (
         <div className="panel active">
           <span className="label">Your web address</span>
@@ -186,6 +197,7 @@ export default function Website() {
           <div className="row">
             <Copy text={site.url} label="Copy link" />
             <a className="btn sm" href={`https://wa.me/?text=${shareText}`} target="_blank" rel="noopener">Send to customers on WhatsApp</a>
+            <button className="btn sm" onClick={() => setQr(true)}>Show the QR</button>
           </div>
           <p className="small muted">Put this link on your WhatsApp Business profile, Google Business listing and visiting card.</p>
           {site.card_url && (

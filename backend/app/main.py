@@ -12,12 +12,12 @@ from . import plans
 from .config import settings
 from .db import connect, ensure_indexes
 from . import files as files_store, mailer
-from .routers import (admin, admin_config, agents, auth, billing, brandkit, cashflow, compliance, dashboard, day1, desk, followups, domains, growth, hooks, hub, inquiries, gateway, kits, knowledge, leadideas, sitemagnets, membership, money,
+from .routers import (admin, admin_config, agents, auth, billing, brandkit, cashflow, compliance, dashboard, day1, desk, event, followups, domains, growth, hooks, hub, inquiries, gateway, kits, knowledge, leadideas, sitemagnets, membership, money,
                       office, onboard, program, public, recordings, rhythm, social, sopset, team, tools, workforce)
 from .sites import rewrite_to_site, slug_from_host
 
 FEATURE_ROUTERS = (kits, membership, team, billing, agents, money, office, recordings, admin_config, onboard, tools, rhythm,
-                   program, desk, growth, hooks, workforce, domains, day1, knowledge, compliance, cashflow, followups, brandkit, sopset, social, leadideas, dashboard, inquiries, gateway, sitemagnets)
+                   program, desk, growth, hooks, workforce, domains, day1, knowledge, compliance, cashflow, followups, brandkit, sopset, social, leadideas, dashboard, inquiries, gateway, sitemagnets, event)
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
 DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
@@ -31,15 +31,17 @@ async def lifespan(_: FastAPI):
         if hasattr(module, "ensure_indexes"):
             await module.ensure_indexes()
     await plans.load(force=True)
-    scheduler_task = day1_task = None
+    scheduler_task = day1_task = event_task = None
     if settings.run_scheduler and settings.env != "test":
         from .agents import scheduler
         scheduler_task = asyncio.create_task(scheduler.loop())
     if settings.env != "test":   # the Day-1 report queue (tests build reports with day1_runs.drain())
         from . import day1_runs
         day1_task = asyncio.create_task(day1_runs.loop())
+        from . import event as event_packs   # the live event pack queue (tests build packs with event.drain())
+        event_task = asyncio.create_task(event_packs.loop())
     yield
-    for task in (scheduler_task, day1_task):
+    for task in (scheduler_task, day1_task, event_task):
         if task:
             task.cancel()
 
@@ -85,6 +87,7 @@ app.include_router(public.router)
 for _module in FEATURE_ROUTERS:
     app.include_router(_module.router)
 app.include_router(day1.admin)
+app.include_router(event.admin)
 app.include_router(compliance.admin)
 app.include_router(dashboard.admin)
 

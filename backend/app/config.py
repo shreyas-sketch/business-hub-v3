@@ -46,6 +46,8 @@ class Settings:
     # Rupee cost per million tokens, used only for the cost estimate on Pulse
     ai_cost_in_per_m: float = _float("AI_COST_INR_PER_M_INPUT", 85.0)
     ai_cost_out_per_m: float = _float("AI_COST_INR_PER_M_OUTPUT", 425.0)
+    ai_concurrency: int = _int("AI_CONCURRENCY", 32)        # AI calls in flight at once, per server process; the rest wait their turn
+    ai_retries: int = _int("AI_RETRIES", 2)                 # a "too many requests" / "overloaded" answer is tried again this many times
 
     # Messaging: WhatsApp via AiSensy (the hub's own number), SMS fallback via MSG91. Empty = development mode (logged, not sent)
     aisensy_api_key: str = os.getenv("AISENSY_API_KEY", "")
@@ -107,6 +109,13 @@ class Settings:
     day1_workers: int = _int("DAY1_WORKERS", 8)                        # reports built at the same time, per server process
     day1_site_seconds: int = _int("DAY1_SITE_SECONDS", 20)             # longest the website check may take on a run
     day1_status_secret: str = os.getenv("DAY1_STATUS_WEBHOOK_SECRET", "")  # AiSensy sent/delivered/read webhook: /api/hooks/day1-status/<secret>
+
+    # Live event link (Admin → Live event): website + GST number → the event pack, before login
+    event_workers: int = _int("EVENT_WORKERS", 24)                    # packs in phase 1 (website + rules) at once, per server process
+    event_ai_workers: int = _int("EVENT_AI_WORKERS", 40)              # packs in phase 2 (AI) at once, per server process
+    event_runs_per_ip: int = _int("EVENT_RUNS_PER_IP_PER_10MIN", 600)  # per network address: a whole hall shares one Wi-Fi address
+    event_site_seconds: int = _int("EVENT_SITE_SECONDS", 20)          # longest the website read may take
+    event_ai_seconds: int = _int("EVENT_AI_SECONDS", 150)             # longest one AI step may take, waiting in line included
 
     # v2.1: email to customers (payment follow-ups, proposals, invoices). mock = written to the outbox, like WhatsApp in development
     email_provider: str = os.getenv("EMAIL_PROVIDER", "mock").lower()          # ses | mock

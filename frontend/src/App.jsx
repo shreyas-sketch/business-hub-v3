@@ -65,6 +65,8 @@ const Gym = lazy(() => import("./pages/Gym.jsx"));
 const Results = lazy(() => import("./pages/Results.jsx"));
 const Workforce = lazy(() => import("./pages/Workforce.jsx"));
 const Day1 = lazy(() => import("./pages/Day1.jsx"));
+const Event = lazy(() => import("./pages/Event.jsx"));
+const AdminEvent = lazy(() => import("./pages/AdminEvent.jsx"));
 const AdminDay1 = lazy(() => import("./pages/AdminDay1.jsx"));
 const kit = (name) => lazy(() => import("./pages/Kits.jsx").then((m) => ({ default: m[name] })));
 const [Competence, Culture, Decisions, Hiring, Reviews, Roles, Sops] = ["Competence", "Culture", "Decisions", "Hiring", "Reviews", "Roles", "Sops"].map(kit);
@@ -115,7 +117,7 @@ function Shell({ me, children }) {
         </div>
         <nav className="nav" aria-label="Main">
           {me.user.role === "admin" && <><div className="group">Admin</div><NavLink to="/admin" end>Pulse</NavLink><NavLink to="/admin/features">Features &amp; plans</NavLink>
-            <NavLink to="/admin/day1">Day-1 reports</NavLink><NavLink to="/admin/calls">Member calls</NavLink><NavLink to="/admin/recordings">Recordings</NavLink>
+            <NavLink to="/admin/event">Live event</NavLink><NavLink to="/admin/day1">Day-1 reports</NavLink><NavLink to="/admin/calls">Member calls</NavLink><NavLink to="/admin/recordings">Recordings</NavLink>
             <NavLink to="/admin/compliance">Compliance rules</NavLink><NavLink to="/admin/email">Email</NavLink></>}
           {(me.menu || []).map(({ group, items }) => (
             <React.Fragment key={group}>
@@ -193,6 +195,8 @@ export default function App() {
   let page;
   if (path === "/report" || path.startsWith("/report/")) {   // the ₹99 webinar tool: no login, whoever is (or isn't) logged in
     page = <Suspense fallback={<div className="main muted">Loading…</div>}><Day1 /></Suspense>;
+  } else if (path === "/event" || path.startsWith("/event/")) {   // the live event link: no login until they save their pack
+    page = <Suspense fallback={<div className="main muted">Loading…</div>}><Event /></Suspense>;
   } else if (!me) {
     page = publicPaths.includes(path) ? (
       <Routes><Route path="/login" element={<Login />} /><Route path="*" element={<Landing />} /></Routes>
@@ -228,6 +232,7 @@ export default function App() {
           {me.user.role === "admin" && <Route path="/admin/owners/:id" element={<AdminOwner />} />}
           {me.user.role === "admin" && <Route path="/admin/calls" element={<AdminCalls />} />}
           {me.user.role === "admin" && <Route path="/admin/day1" element={<AdminDay1 />} />}
+          {me.user.role === "admin" && <Route path="/admin/event" element={<AdminEvent />} />}
           {me.user.role === "admin" && <Route path="/admin/recordings" element={<AdminRecordings />} />}
           {me.user.role === "admin" && <Route path="/admin/compliance" element={<AdminCompliance />} />}
           {me.user.role === "admin" && <Route path="/admin/email" element={<AdminEmail />} />}

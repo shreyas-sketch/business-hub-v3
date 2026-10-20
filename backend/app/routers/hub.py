@@ -312,6 +312,24 @@ async def publish_site(ctx: Ctx = Depends(owner_ctx)):
     return site_view(await db().sites.find_one({"_id": site["_id"]}), user)
 
 
+@router.get("/site/qr.png")
+async def site_qr(ctx: Ctx = Depends(get_ctx)):
+    """A QR code of the live website — shown full screen so the person next to you can scan it and send an inquiry."""
+    import io
+
+    import qrcode
+    from fastapi.responses import Response
+    site = await db().sites.find_one({"owner_id": ctx.ws}, {"slug": 1, "status": 1})
+    if not site or site.get("status") != "live":
+        raise HTTPException(400, "Publish your website first.")
+    q = qrcode.QRCode(border=2, box_size=12, error_correction=qrcode.constants.ERROR_CORRECT_M)
+    q.add_data(site_url(site["slug"]))
+    q.make(fit=True)
+    buf = io.BytesIO()
+    q.make_image(fill_color="#0A1826", back_color="#FFFFFF").save(buf, "PNG")
+    return Response(buf.getvalue(), media_type="image/png", headers={"Cache-Control": "private, max-age=300"})
+
+
 @router.post("/site/unpublish")
 async def unpublish_site(ctx: Ctx = Depends(owner_ctx)):
     user = ctx.owner
