@@ -1,8 +1,110 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, upload, waLink } from "../api.js";
-import { Busy, Copy, Field, InviteLine, Locked, Sheet, useHub, useLoad } from "../ui.jsx";
+import { Busy, Copy, Field, FormError, InviteLine, Locked, Modal, Sheet, useHub, useLoad } from "../ui.jsx";
 import DomainPanel from "../components/DomainPanel.jsx";
+import "./website21.css";
+
+const SECTION_LABEL = { headline: "Headline", subheadline: "Line under the headline", cta: "Button text", about: "About us",
+  offers: "What you offer", why: "Why customers choose you", steps: "How it works", faq: "Questions customers ask" };
+
+/** One section's value, as the customer will read it. */
+function SectionValue({ k, v }) {
+  if (!Array.isArray(v)) return <p className="wp-text">{v || <span className="muted">(empty)</span>}</p>;
+  if (!v.length) return <p className="wp-text muted">(empty)</p>;
+  const line = (x) => (k === "offers" ? [x.name, x.price].filter(Boolean).join(" — ") + (x.description ? `: ${x.description}` : "")
+    : k === "faq" ? `${x.q} — ${x.a}` : [x.title, x.text].filter(Boolean).join(": "));
+  return <ul className="wp-list">{v.map((x, i) => <li key={i}>{line(x)}</li>)}</ul>;
+}
+
+/** Edit the page by describing the change. The AI touches only the sections the request is about; nothing changes until Apply. */
+function PromptEditor({ dirty, onApplied }) {
+  const { toast } = useHub();
+  const [state, reload] = useLoad("/site/prompt");
+  const [text, setText] = useState("");
+  const [pv, setPv] = useState(null);
+  const [facts, setFacts] = useState([]);
+  const [err, setErr] = useState("");
+  useEffect(() => { if (state) { setPv(state.preview); setFacts(state.preview?.new_facts || []); } }, [state]);
+  const show = (p) => { setPv(p); setFacts(p?.new_facts || []); };
+  return (
+    <div className="panel wp">
+      <div className="row between"><span className="label">Edit with a prompt</span><span className="small muted">1 AI run</span></div>
+      <p className="small muted">Say what to change, in your own words. For example: “make the about text warmer” or “add a question about delivery areas”.
+        Only the sections you mention change, and only facts from your Knowledge Hub are used.</p>
+      <textarea className="textarea" style={{ minHeight: 72 }} maxLength={500} value={text} placeholder="What should change on your page?"
+        onChange={(e) => setText(e.target.value)} aria-label="What should change on your page?" />
+      {dirty && <span className="hint">Save your own changes first — a prompt works on the saved page.</span>}
+      <FormError msg={err} />
+      <div className="row">
+        <Busy className="btn primary sm" disabled={dirty || text.trim().length < 3} onError={setErr} run={async () => {
+          show(await api("/site/prompt", { method: "POST", body: { instruction: text.trim() } }));
+        }}>Show me the change</Busy>
+        {state?.can_undo && !pv && (
+          <Busy className="btn ghost sm" onError={setErr} run={async () => {
+            await api("/site/prompt/undo", { method: "POST" });
+            toast("Back to how the page was before the last prompt edit");
+            await reload(); onApplied();
+          }}>Undo the last prompt edit</Busy>
+        )}
+      </div>
+
+      {pv && (
+        <div className="stack wp-preview">
+          <span className="label">Preview · “{pv.instruction}”</span>
+          {!pv.changed.length && (
+            <p className="small">{pv.new_facts?.length ? "Nothing changed yet: your request needs a fact your Knowledge Hub doesn't have — see below."
+              : pv.invented_left_out ? "Nothing changed: the only change the AI suggested used a number that isn't in your Knowledge Hub, so we left it out."
+              : "Nothing on the page needs to change for this."}</p>
+          )}
+          {pv.changed.map((k) => (
+            <div key={k} className="wp-change">
+              <span className="small muted">{SECTION_LABEL[k] || k}</span>
+              <div className="wp-cols">
+                <div><span className="wp-tag">Now</span><SectionValue k={k} v={pv.before[k]} /></div>
+                <div><span className="wp-tag new">After</span><SectionValue k={k} v={pv.after[k]} /></div>
+              </div>
+            </div>
+          ))}
+          {(pv.left_out || []).filter((x) => x.reason === "invented").map((x) => (
+            <p key={x.section} className="small" style={{ borderLeft: "2px solid var(--amber)", paddingLeft: 10 }}>We left out a number the AI added that isn't in your Knowledge Hub ({SECTION_LABEL[x.section] || x.section}: {x.numbers.join(", ")}), so that section stays as it is.</p>
+          ))}
+          {(pv.notes || []).map((n, i) => <p key={i} className="small muted">{n}</p>)}
+          <div className="row">
+            {pv.changed.length > 0 && (
+              <Busy className="btn primary sm" onError={setErr} run={async () => {
+                await api("/site/prompt/apply", { method: "POST" });
+                toast("Applied to your page");
+                setText(""); await reload(); onApplied();
+              }}>Apply</Busy>
+            )}
+            <Busy className="btn ghost sm" onError={setErr} run={async () => {
+              await api("/site/prompt/discard", { method: "POST" });
+              show(null); await reload();
+            }}>Discard</Busy>
+          </div>
+        </div>
+      )}
+
+      {facts.length > 0 && (
+        <div className="stack wp-facts">
+          <span className="label">Add this to your Knowledge Hub?</span>
+          <p className="small muted">You mentioned {facts.length === 1 ? "this" : "these"}, but your Knowledge Hub doesn't say {facts.length === 1 ? "it" : "them"} yet, so {facts.length === 1 ? "it wasn't" : "they weren't"} put on the page. Add {facts.length === 1 ? "it" : "them"} once and every AI writer in the hub can use {facts.length === 1 ? "it" : "them"} — then ask again.</p>
+          {facts.map((f) => (
+            <div key={f} className="row between wp-fact">
+              <span>{f}</span>
+              <Busy className="btn sm" onError={setErr} run={async () => {
+                await api("/knowledge/facts", { method: "POST", body: { text: f } });
+                setFacts(facts.filter((x) => x !== f));
+                toast("Added to your Knowledge Hub");
+              }}>Add it</Busy>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function ListEditor({ label, items, setItems, fields, max, blank }) {
   return (
@@ -111,6 +213,7 @@ export default function Website() {
   const [frame, setFrame] = useState(0);
   const [building, setBuilding] = useState(false);
   const [guideUrl, setGuideUrl] = useState(null);
+  const [qr, setQr] = useState(false);
 
   useEffect(() => {
     if (site?.content) { setC(site.content); setAccent(site.accent); setSlug(site.slug); setShowcase(!!site.showcase); }
@@ -157,6 +260,16 @@ export default function Website() {
           ? <Busy className="btn ghost sm" run={async () => { await api("/site/unpublish", { method: "POST" }); await reload(); await refresh(); }}>Take offline</Busy>
           : <Busy className="btn primary" run={async () => { await save(); await api("/site/publish", { method: "POST" }); await reload(); await refresh(); toast("Your website is live"); }}>Publish</Busy>}
       </>}>
+      {live && qr && (
+        <Modal onClose={() => setQr(false)}>
+          <div className="stack" style={{ justifyItems: "center", textAlign: "center" }}>
+            <span className="kicker">Scan to send me an inquiry</span>
+            <img src="/api/site/qr.png" alt={`QR code for ${site.url}`} style={{ width: "min(70vw, 360px)", height: "auto", background: "#fff", padding: 10 }} />
+            <span className="mono" style={{ wordBreak: "break-all" }}>{site.url.replace(/^https?:\/\//, "")}</span>
+            <button className="btn ghost" onClick={() => setQr(false)}>Close</button>
+          </div>
+        </Modal>
+      )}
       {live && (
         <div className="panel active">
           <span className="label">Your web address</span>
@@ -164,6 +277,7 @@ export default function Website() {
           <div className="row">
             <Copy text={site.url} label="Copy link" />
             <a className="btn sm" href={`https://wa.me/?text=${shareText}`} target="_blank" rel="noopener">Send to customers on WhatsApp</a>
+            <button className="btn sm" onClick={() => setQr(true)}>Show the QR</button>
           </div>
           <p className="small muted">Put this link on your WhatsApp Business profile, Google Business listing and visiting card.</p>
           {site.card_url && (
@@ -192,6 +306,7 @@ export default function Website() {
         </div>
       )}
       <DomainPanel />
+      <PromptEditor dirty={JSON.stringify(c) !== JSON.stringify(site.content)} onApplied={async () => { await reload(); setFrame((f) => f + 1); }} />
       <div className="grid2" style={{ alignItems: "start" }}>
         <div className="stack">
           <div className="panel">

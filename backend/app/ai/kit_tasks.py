@@ -15,6 +15,8 @@ def _lines(text: str, limit: int = 25) -> list[str]:
 
 # ───────────────────────── SOP ─────────────────────────
 async def sop(p: dict, inputs: dict):
+    if inputs.get("mode") == "scenario":
+        return await scenario_sop(p, inputs)
     process, notes = inputs.get("process", "").strip(), inputs.get("notes", "").strip()
 
     def mock():
@@ -38,6 +40,116 @@ A new team member must be able to follow it on day one. Steps are short, in orde
 JSON only: {{"title": "...", "purpose": "one sentence", "owner_role": "who does it, if the notes say", "when": "when this SOP is used",
 "steps": [{{"title": "short action", "detail": "how, in one or two sentences"}}], "checklist": ["..."], "mistakes": ["common mistakes to avoid"]}}
 4–15 steps, up to 10 checklist items, up to 6 mistakes.""", mock, 3500)
+
+
+async def scenario_sop(p: dict, inputs: dict):
+    """A situation, not a routine job: what starts it, who owns it, the steps, the exact words to use, what done looks like
+    and when to escalate."""
+    situation, notes = inputs.get("process", "").strip(), inputs.get("notes", "").strip()
+
+    def mock():
+        name = _v(p, "name", "our business")
+        return {"title": situation[:1].upper() + situation[1:120], "purpose": f"So everyone at {name} handles this the same calm, fair way.",
+                "owner_role": "Whoever receives it first, then the owner", "when": f"When {situation.lower()}.", "trigger": situation[:1].upper() + situation[1:240],
+                "function": inputs.get("function") or "Customer care",
+                "steps": [{"title": "Listen and write down exactly what happened", "detail": "Name, number, order details and what they expect."},
+                          {"title": "Say sorry for the trouble, without blaming anyone", "detail": ""},
+                          {"title": "Check the facts before promising anything", "detail": "Look up the order, the dates and what was agreed."},
+                          {"title": "Give a clear next step and a time", "detail": "Tell them what you will do and by when."},
+                          {"title": "Follow up when you said you would", "detail": ""}] + [{"title": l[:120], "detail": ""} for l in _lines(notes, 6)],
+                "scripts": [{"label": "First reply", "text": f"I'm sorry about this. Thank you for telling us. Let me check the details and come back to you by today evening. — {name}"},
+                            {"label": "Follow-up", "text": "As promised, here is what we found and what we'll do next."}],
+                "checklist": ["Details written down", "Next step and time given", "Followed up on time"],
+                "mistakes": ["Arguing about who was wrong", "Promising a date before checking"],
+                "done_when": "The customer has confirmed the problem is solved, and it's noted.",
+                "escalation": "Bring in the owner when the customer asks for a refund or is still unhappy after one follow-up."}
+
+    return await complete(RULES, f"""{profile_text(p)}
+
+Write a scenario SOP for this situation: {situation}
+Owner's notes (use these facts): {notes or '(none)'}
+Function: {inputs.get('function') or 'whichever fits'}
+
+JSON only: {{"title": "...", "purpose": "one sentence", "trigger": "what starts this", "owner_role": "who owns it", "when": "...",
+"function": "Sales | Marketing | Operations/Delivery | Accounts | HR | Customer care",
+"steps": [{{"title": "short action", "detail": "how"}}], "scripts": [{{"label": "e.g. First reply", "text": "the exact words or WhatsApp message"}}],
+"checklist": ["..."], "mistakes": ["..."], "done_when": "what done looks like", "escalation": "who to bring in and when"}}
+4–12 steps, 2–5 scripts. No prices, refunds or discounts that aren't in the profile.""", mock, 3500)
+
+
+PROCESS_MAPS = {
+    "trading": ["Sales: Taking an order from a dealer", "Sales: Sending a price list and quotation", "Sales: Following up an open quotation",
+                "Marketing: Posting new stock on WhatsApp and social media", "Marketing: Getting new dealers", "Operations/Delivery: Receiving stock from a supplier",
+                "Operations/Delivery: Checking stock levels and reordering", "Operations/Delivery: Packing and dispatching an order",
+                "Operations/Delivery: Handling a damaged or wrong delivery", "Accounts: Raising a GST invoice", "Accounts: Collecting payments and following up dues",
+                "Accounts: Paying suppliers", "Accounts: Monthly GST and books with the accountant", "HR: Hiring a salesperson", "HR: A new staff member's first week",
+                "Customer care: Handling a complaint", "Customer care: Returns and replacements", "Customer care: Asking happy customers for referrals"],
+    "clinic": ["Sales: Answering an appointment enquiry", "Sales: Explaining treatment options and costs", "Marketing: Posting patient education content",
+               "Marketing: Getting Google reviews from happy patients", "Operations/Delivery: Booking and confirming appointments",
+               "Operations/Delivery: Patient check-in and records", "Operations/Delivery: Sterilisation and room preparation", "Operations/Delivery: Follow-up after treatment",
+               "Accounts: Billing and receipts", "Accounts: Insurance and pending payments", "Accounts: Monthly accounts with the CA", "HR: Hiring an assistant",
+               "HR: A new staff member's first week", "Customer care: Handling a patient complaint", "Customer care: Missed appointments and reminders",
+               "Customer care: Recall for check-ups"],
+    "food": ["Sales: Taking a phone or WhatsApp order", "Sales: Bulk and event orders", "Marketing: Posting the daily special", "Marketing: Festival offers",
+             "Operations/Delivery: Opening checklist", "Operations/Delivery: Closing checklist", "Operations/Delivery: Receiving and storing raw material",
+             "Operations/Delivery: Hygiene and FSSAI checks", "Operations/Delivery: Packing and delivery", "Accounts: Daily cash and UPI tally",
+             "Accounts: Paying suppliers", "HR: Hiring kitchen staff", "HR: A new staff member's first day", "Customer care: Handling a complaint about food",
+             "Customer care: Asking for reviews"],
+    "services": ["Sales: Answering a new enquiry", "Sales: Site visit or first meeting", "Sales: Sending a quotation", "Sales: Following up a quotation",
+                 "Marketing: Posting finished work", "Marketing: Asking for referrals", "Marketing: Google profile and reviews", "Operations/Delivery: Starting a new job",
+                 "Operations/Delivery: Buying material for a job", "Operations/Delivery: Daily progress updates to the customer", "Operations/Delivery: Quality check before handover",
+                 "Operations/Delivery: Handover and sign-off", "Accounts: Taking an advance", "Accounts: Raising the invoice", "Accounts: Following up payments",
+                 "Accounts: Paying contractors and suppliers", "HR: Hiring a site supervisor", "HR: A new staff member's first week", "Customer care: Handling a complaint",
+                 "Customer care: After-sales service visit"],
+    "manufacturing": ["Sales: Handling an enquiry from a buyer", "Sales: Costing and quotation", "Sales: Sample approval", "Marketing: Catalogue and exhibitions",
+                      "Operations/Delivery: Purchase of raw material", "Operations/Delivery: Production planning", "Operations/Delivery: Quality inspection",
+                      "Operations/Delivery: Machine maintenance", "Operations/Delivery: Packing and dispatch", "Accounts: GST invoice and e-way bill",
+                      "Accounts: Collections", "Accounts: Paying vendors", "HR: Hiring operators", "HR: Safety induction", "Customer care: Handling a quality complaint",
+                      "Customer care: Replacement and credit notes"],
+}
+
+
+def business_type(p: dict) -> str:
+    text = f"{p.get('industry', '')} {' '.join(o.get('name', '') for o in p.get('offers') or [])}".lower()
+    for kind, words in (("clinic", ("clinic", "dental", "doctor", "hospital", "physio", "diagnostic", "skin", "eye care")),
+                        ("food", ("restaurant", "cafe", "café", "food", "sweets", "bakery", "catering", "farsan", "kitchen and dining", "cloud kitchen")),
+                        ("manufacturing", ("manufactur", "factory", "fabrication", "machining", "plant", "production")),
+                        ("trading", ("trader", "trading", "wholesale", "distributor", "dealer", "supplier", "retail", "shop", "store"))):
+        if any(w in text for w in words):
+            return kind
+    return "services"
+
+
+async def process_map(p: dict):
+    kind = business_type(p)
+
+    def mock():
+        return {"processes": [{"function": x.split(": ", 1)[0], "title": x.split(": ", 1)[1], "why": ""} for x in PROCESS_MAPS[kind]]}
+
+    return await complete(RULES, f"""{profile_text(p)}
+
+List the business processes this kind of business runs, grouped by function, so each can get an SOP.
+Functions: Sales, Marketing, Operations/Delivery, Accounts, HR, Customer care. 15–30 processes, specific to THIS business type.
+JSON only: {{"processes": [{{"function": "...", "title": "short name of the process", "why": "one line on why it matters here"}}]}}""", mock, 3000)
+
+
+async def sop_scripts(p: dict, sop: dict):
+    """The second pass on a written SOP: the exact words to use, what done looks like, and when to escalate."""
+    def mock():
+        return {"scripts": [{"label": "Message to the customer", "text": f"Hello, this is {_v(p, 'name', 'us')}. Here is what happens next: "
+                                                                           f"{(sop.get('steps') or [{'title': 'we will update you'}])[0]['title'].lower()}."}],
+                "done_when": f"{sop.get('title', 'This job')} is complete and noted, and the customer knows what happens next.",
+                "escalation": "Bring in the owner if the customer is unhappy, or anything costs more than agreed."}
+
+    steps = "\n".join(f"- {s.get('title')}" for s in sop.get("steps") or [])
+    return await complete(RULES, f"""{profile_text(p)}
+
+This SOP is written: {sop.get('title')}
+Steps:
+{steps}
+
+Add the words to use (WhatsApp messages or what to say), what "done" looks like, and when to escalate.
+JSON only: {{"scripts": [{{"label": "...", "text": "..."}}], "done_when": "...", "escalation": "..."}}. 1–4 scripts.""", mock, 1500)
 
 
 # ───────────────────────── Hiring kit ─────────────────────────

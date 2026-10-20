@@ -1,0 +1,18 @@
+/* Revenue levers (v2.1): the compounding steps and "Ways to get more leads". */
+.lv-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; counter-reset: lv; }
+.lv-steps li { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.4fr) minmax(0, 1fr); gap: 4px 16px; align-items: baseline;
+  padding: 10px 0; border-top: 1px solid var(--ink-line); font-size: 14px; }
+.lv-steps li:first-child { border-top: 0; }
+.lv-steps li > span { min-width: 0; overflow-wrap: anywhere; }
+.lv-ideas { display: grid; gap: 0; }
+.lv-idea { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 12px; padding: 12px 0; border-top: 1px solid var(--ink-line); }
+.lv-idea:first-child { border-top: 0; }
+.lv-idea.done .lv-title { color: var(--grey); text-decoration: line-through; text-decoration-color: var(--slate); }
+.lv-title { font-weight: 500; overflow-wrap: anywhere; }
+.lv-tick { padding-top: 2px; cursor: pointer; }
+.lv-tick input { appearance: none; width: 20px; height: 20px; margin: 0; border: 1px solid var(--slate); background: var(--ink); cursor: pointer; display: grid; place-items: center; }
+.lv-tick input:checked { background: var(--aqua); border-color: var(--aqua); }
+.lv-tick input:checked::after { content: ""; width: 5px; height: 10px; border: solid var(--ink); border-width: 0 2px 2px 0; transform: translateY(-1px) rotate(45deg); }
+@media (max-width: 640px) {
+  .lv-steps li { grid-template-columns: minmax(0, 1fr); }
+}

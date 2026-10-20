@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
-from .. import fetch, plans, score as scoring
+from .. import day1, fetch, plans, score as scoring
 from ..ai import onboard_tasks
 from ..config import settings
 from ..context import Ctx, owner_ctx
@@ -35,6 +35,7 @@ class WordsIn(BaseModel):
 
 class ScoreIn(BaseModel):
     answers: dict[str, str]
+    numbers: dict[str, int | float | str | None] | None = None   # the 6 "your numbers" answers (revenue band, team, enquiries…)
 
 
 def _draft(raw: dict) -> dict:
@@ -88,7 +89,11 @@ async def get_score(ctx: Ctx = Depends(owner_ctx)):
     can_retake = not latest or ctx.has("score_recheck")
     if latest:
         latest["share_url"] = f"{settings.app_url}/score/{latest['token']}"
+    if latest:
+        latest["gap"] = await _gap_line(latest.get("numbers"))
     return {"questions": [{"key": k, "area": a, "q": q} for k, a, q, *_ in scoring.QUESTIONS],
+            "numbers": [{**{k: v for k, v in n.items() if k != "choices"},
+                         **({"choices": [{"value": a, "label": b} for a, b in n["choices"]]} if n["kind"] == "choice" else {})} for n in day1.NUMBERS],
             "website_checks": [{"key": k, "label": l} for k, l, _ in scoring.WEBSITE_CHECKS],
             "scan": {"url": scan["url"], "checks": scan["checks"], "at": scan["at"].isoformat()} if scan else None,
             "latest": latest, "history": history, "can_retake": can_retake,
@@ -103,6 +108,10 @@ async def take_score(body: ScoreIn, ctx: Ctx = Depends(owner_ctx)):
     answers = {k: body.answers.get(k) for k in keys}
     if any(v not in scoring.ANSWER_POINTS for v in answers.values()):
         raise HTTPException(400, "Answer every question: yes, partly or no.")
+    try:   # "your numbers" are asked with the questions but not scored, so the score stays comparable month to month
+        numbers = day1.clean_numbers(body.numbers, required=False)
+    except day1.InputError as e:
+        raise HTTPException(400, str(e))
     scan = await db().site_scans.find_one({"_id": ctx.ws})
     website = {"url": scan["url"], "checks": scan["checks"]} if scan else None
     result = scoring.compute(answers, website)
@@ -110,12 +119,23 @@ async def take_score(body: ScoreIn, ctx: Ctx = Depends(owner_ctx)):
     b = await db().businesses.find_one({"owner_id": ctx.ws}, {"name": 1, "city": 1}) or {}
     doc = {"_id": secrets.token_hex(8), "ws": ctx.ws, "at": now(), "month": now().strftime("%Y-%m"), "answers": answers,
            "website": website, **result, "change": (result["score"] - prev["score"]) if prev else None,
-           "token": secrets.token_urlsafe(9), "business": b.get("name", ""), "city": b.get("city", "")}
+           "token": secrets.token_urlsafe(9), "business": b.get("name", ""), "city": b.get("city", ""), "numbers": numbers}
     await db().scores.insert_one(doc)
     await track("score_taken", ctx.ws, score=result["score"])
     out = public(doc)
     out["share_url"] = f"{settings.app_url}/score/{doc['token']}"
+    out["gap"] = await _gap_line(numbers)
     return out
+
+
+async def _gap_line(numbers: dict | None) -> dict | None:
+    """What you're missing, from the owner's own numbers (the same arithmetic as the Day-1 report)."""
+    if not numbers or not all(numbers.get(k) not in (None, "") for k in ("enquiries", "close_rate", "aov")):
+        return None
+    cfg = await day1.load_config()
+    g = day1.gap(numbers, int(cfg["constants"]["cold_rate_pct"]))
+    return {"year": g["gap_year"], "month": g["gap_month"], "cold_rate_pct": g["cold_rate_pct"], "lost_month": g["lost_month"],
+            "line": f"About {day1.rupees(g['gap_year'])} a year in enquiries that go cold, at your numbers"}
 
 
 @router.get("/score/{token}", response_class=HTMLResponse)

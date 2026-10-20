@@ -1,9 +1,114 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ago, api, waLink } from "../api.js";
+import { ago, api, upload, waLink } from "../api.js";
 import { Busy, Copy, Field, FormError, Sheet, Stat, Switch, useHub, useLoad } from "../ui.jsx";
 import { Loading, Pill } from "../v2.jsx";
 import "./program.css";
+import "./website21.css";
+
+const mb = (bytes) => `${(bytes / 1024 / 1024).toFixed(bytes < 1024 * 1024 ? 2 : 1)} MB`;
+
+/** One uploaded download: its link, numbers, the published switch, words and delete. */
+function UploadItem({ m, onChange }) {
+  const { toast } = useHub();
+  const [edit, setEdit] = useState(false);
+  const [title, setTitle] = useState(m.title);
+  const [desc, setDesc] = useState(m.description || "");
+  const [err, setErr] = useState("");
+  const patch = async (body, msg) => { await api(`/lead-magnets/${m.id}`, { method: "PATCH", body }); toast(msg); onChange(); };
+  return (
+    <div className="panel flat lm-item">
+      <img src={m.cover_url} alt="" loading="lazy" />
+      <div className="lm-body">
+        <div className="row between"><b>{m.title}</b>{m.published ? <Pill kind="on">On your website</Pill> : <Pill>Hidden</Pill>}</div>
+        {m.description && <span className="small muted">{m.description}</span>}
+        <div className="lm-meta small muted">
+          <span>{m.leads} form {m.leads === 1 ? "fill" : "fills"} (left their number)</span>
+          <span>{m.downloads} {m.downloads === 1 ? "download" : "downloads"} of the PDF</span>
+          <span>{mb(m.size || 0)} PDF</span>
+          <span>Added {ago(m.created_at)}</span>
+        </div>
+        {m.url && m.published && (
+          <>
+            <a className="pg-link" href={m.url} target="_blank" rel="noopener">{m.url}</a>
+            <div className="pg-actions">
+              <Copy text={m.url} label="Copy link" />
+              <a className="btn sm" href={waLink(`Here's a free download for you: ${m.title}. Get it here: ${m.url}`)} target="_blank" rel="noopener">Share on WhatsApp</a>
+              <a className="btn sm ghost" href={m.file_url} target="_blank" rel="noopener">See the PDF</a>
+            </div>
+          </>
+        )}
+        {edit ? (
+          <div className="lm-form">
+            <Field label="Title"><input className="input" maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
+            <Field label="One line about it"><input className="input" maxLength={500} value={desc} onChange={(e) => setDesc(e.target.value)} /></Field>
+            <FormError msg={err} />
+            <div className="row">
+              <Busy className="btn sm primary" disabled={title.trim().length < 3} onError={setErr}
+                run={async () => { await patch({ title: title.trim(), description: desc.trim() }, "Saved"); setEdit(false); }}>Save</Busy>
+              <button className="btn sm ghost" onClick={() => { setEdit(false); setTitle(m.title); setDesc(m.description || ""); }}>Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <div className="row">
+            <Switch checked={m.published} label="On my website" onChange={(on) => patch({ published: on }, on ? "It's on your website" : "Hidden from your website").catch((e) => toast(e.message, "err"))} />
+            <button className="btn sm ghost" onClick={() => setEdit(true)}>Edit words</button>
+            <Busy className="btn sm ghost" run={async () => {
+              if (!window.confirm(`Delete “${m.title}”? Its link stops working.`)) return;
+              await api(`/lead-magnets/${m.id}`, { method: "DELETE" }); toast("Deleted"); onChange();
+            }}>Delete</Busy>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Upload your own PDF (up to 5): it gets its own page with a form, and the download unlocks only after the form. */
+function Uploads() {
+  const { toast } = useHub();
+  const [d, reload] = useLoad("/lead-magnets");
+  const [file, setFile] = useState(null);
+  const [cover, setCover] = useState(null);
+  const [title, setTitle] = useState("");
+  const [desc, setDesc] = useState("");
+  const [err, setErr] = useState("");
+  const [key, setKey] = useState(0);   // resets the file inputs after an upload
+  if (!d) return <div className="panel"><Loading /></div>;
+  const full = d.items.length >= d.max;
+  return (
+    <div className="panel">
+      <div className="row between"><span className="label">Your own downloads</span><span className="small muted">{d.items.length} of {d.max}</span></div>
+      <p className="small muted">Have a brochure, price list or checklist as a PDF? Upload it. It gets its own page on your website: visitors leave their name and number (email optional), then download it — and each one lands in your leads.</p>
+      {!d.site_live && <p className="small muted">Your website has to be live for the pages to open. <Link to="/website">Go to my website</Link></p>}
+      {d.items.length > 0 && <div className="lm-list">{d.items.map((m) => <UploadItem key={m.id} m={m} onChange={reload} />)}</div>}
+      {full ? <span className="hint">That's {d.max}. Delete one to add another.</span> : (
+        <div className="lm-form" key={key}>
+          <Field label="Title" hint="What people get, in a few words."><input className="input" maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Kitchen planning checklist" /></Field>
+          <Field label="One line about it (optional)"><input className="input" maxLength={500} value={desc} onChange={(e) => setDesc(e.target.value)} /></Field>
+          <Field label={`The PDF (up to ${d.max_mb} MB)`}><input className="lm-file" type="file" accept="application/pdf,.pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} /></Field>
+          <Field label="A cover picture (optional)" hint="PNG or JPG. Leave it empty and we draw one in your brand colours.">
+            <input className="lm-file" type="file" accept="image/png,image/jpeg" onChange={(e) => setCover(e.target.files?.[0] || null)} />
+          </Field>
+          <FormError msg={err} />
+          <div className="row">
+            <Busy className="btn primary sm" disabled={!file || title.trim().length < 3} onError={setErr} run={async () => {
+              const form = new FormData();
+              form.append("file", file);
+              form.append("title", title.trim());
+              form.append("description", desc.trim());
+              if (cover) form.append("cover", cover);
+              await upload("/lead-magnets", form);
+              toast("Uploaded — it's on your website");
+              setFile(null); setCover(null); setTitle(""); setDesc(""); setKey((k) => k + 1);
+              reload();
+            }}>Upload</Busy>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const FORMATS = [["checklist", "Checklist"], ["guide", "Step-by-step guide"], ["price guide", "Price guide"], ["mistakes list", "Mistakes to avoid"]];
 const MAX_SECTIONS = 10;
@@ -115,6 +220,7 @@ export default function LeadMagnet() {
     return (
       <Sheet {...head} title={<>A free guide that brings <em>inquiries</em>.</>} sub={sub}>
         <WriteForm first onDone={setData} />
+        <Uploads />
       </Sheet>
     );
   }
@@ -172,6 +278,8 @@ export default function LeadMagnet() {
       {rewrite
         ? <WriteForm onDone={(d) => { setData(d); setRewrite(false); }} onCancel={() => setRewrite(false)} />
         : <div><button className="btn ghost sm" onClick={() => setRewrite(true)}>Write a new guide with AI</button></div>}
+
+      <Uploads />
     </Sheet>
   );
 }

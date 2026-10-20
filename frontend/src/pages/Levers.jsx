@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { ago, api, day, rs } from "../api.js";
 import { Busy, Field, FormError, Sheet, Stat, useHub, useLoad } from "../ui.jsx";
-import { Loading, Num } from "../v2.jsx";
+import { Loading, Num, Pill } from "../v2.jsx";
 import "./program.css";
+import "./levers.css";
 
 const n = (x) => Number(x) || 0;
 const pct = (x) => new Intl.NumberFormat("en-IN", { maximumFractionDigits: 1 }).format(x);
@@ -21,6 +23,101 @@ function calc(f) {
   const today = n(f.customers) * n(f.avg_value) * n(f.frequency);
   const factor = (1 + n(f.grow_customers) / 100) * (1 + n(f.grow_value) / 100) * (1 + n(f.grow_frequency) / 100);
   return { revenue: Math.round(today), new_revenue: Math.round(today * factor), growth_pct: Math.round((factor - 1) * 1000) / 10, extra: Math.round(today * factor - today) };
+}
+
+/** Lever by lever, in rupees: each one multiplies what the one before it made. Same maths as the server. */
+function steps(f) {
+  let running = n(f.customers) * n(f.avg_value) * n(f.frequency);
+  return [["more customers", "grow_customers"], ["a bigger average sale", "grow_value"], ["buying more often", "grow_frequency"]].map(([lever, k]) => {
+    const before = running;
+    running = before * (1 + n(f[k]) / 100);
+    return { lever, pct: n(f[k]), before: Math.round(before), after: Math.round(running), adds: Math.round(running - before) };
+  });
+}
+
+function Compounding({ f, r }) {
+  const rows = steps(f);
+  const mult = rows.length ? (rows[2].after / Math.max(rows[0].before, 1)) : 1;
+  const simple = n(f.grow_customers) + n(f.grow_value) + n(f.grow_frequency);
+  return (
+    <div className="panel">
+      <div className="stack" style={{ gap: 4 }}>
+        <span className="label">Why small levers compound</span>
+        <p className="small muted">Added up, these sound like {pct(simple)}%. Multiplied — which is what really happens — they're {pct(r.growth_pct)}% (×{mult.toFixed(3)}).</p>
+      </div>
+      <ol className="lv-steps">
+        {rows.map((x) => (
+          <li key={x.lever}>
+            <span>+{pct(x.pct)}% from {x.lever}</span>
+            <span className="money">{rs(x.before)} → {rs(x.after)}</span>
+            <span className="small muted">adds <span className="money">{rs(x.adds)}</span></span>
+          </li>
+        ))}
+      </ol>
+      <span className="small muted">From your own numbers, a year. The last lever adds the most because it multiplies the first two.</span>
+    </div>
+  );
+}
+
+const TYPE = { trading: "a trading business", clinic: "a clinic", food: "a food business", services: "a services business", manufacturing: "a manufacturer" };
+const SOURCE = { website: "website", guide: "lead magnet", whatsapp: "WhatsApp", email: "email", card: "card / QR", qr: "card / QR" };
+
+/** Ways to get more leads: 5–7 ideas a month that fit this kind of business, each with a first step and the hub feature that does it. */
+function LeadIdeas() {
+  const { me, toast } = useHub();
+  const [d, setD] = useState(null);
+  const [loaded, , loadErr] = useLoad("/levers/ideas");
+  const [err, setErr] = useState("");
+  useEffect(() => { if (loaded) setD(loaded); }, [loaded]);
+  if (!d) return <div className="panel">{loadErr ? <FormError msg={loadErr.message} /> : <Loading />}</div>;
+  const cur = d.current;
+  const sources = Object.entries(d.sources || {});
+  const tierName = (feature) => me?.tiers?.[me?.feature_tiers?.[feature] || "lite"]?.name || "a higher plan";
+  const tick = async (i, tried) => setD(await api(`/levers/ideas/${i.n}/tried`, { method: "POST", body: { tried } }));
+  const suggest = async () => { setD(await api("/levers/ideas", { method: "POST" })); toast("This month's ideas are ready"); };
+  return (
+    <div className="panel active">
+      <div className="row between">
+        <div className="stack" style={{ gap: 4 }}>
+          <span className="label">Ways to get more leads</span>
+          <p className="small muted">Ideas that fit {TYPE[d.business_type] || "your business"}, each with one first step. Tick what you tried.</p>
+        </div>
+        {cur && <Pill kind="on">{cur.tried} of {cur.ideas.length} tried</Pill>}
+      </div>
+      <span className="small muted">
+        Your leads in the last 90 days: {sources.length ? sources.map(([k, v]) => `${SOURCE[k] || k} ${v}`).join(" · ") : "none recorded yet"}.
+      </span>
+      {cur?.ideas?.length > 0 && (
+        <div className="lv-ideas">
+          {cur.ideas.map((i) => (
+            <div key={i.n} className={`lv-idea ${i.tried ? "done" : ""}`}>
+              <label className="lv-tick">
+                <input type="checkbox" checked={!!i.tried} aria-label={`Tried: ${i.title}`} onChange={(e) => tick(i, e.target.checked).catch((x) => toast(x.message, "err"))} />
+              </label>
+              <div className="stack" style={{ gap: 4 }}>
+                <b className="lv-title">{i.title}</b>
+                {i.why && <span className="small muted">{i.why}</span>}
+                {i.first_step && <span className="small">First step: {i.first_step}</span>}
+                {i.feature && i.path && (
+                  i.locked
+                    ? <span className="small muted">{i.feature_label} unlocks with {tierName(i.feature)}. <Link to={i.path}>See it</Link></span>
+                    : <span className="small"><Link to={i.path}>Open {i.feature_label} →</Link></span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <FormError msg={err} />
+      <div className="row">
+        <Busy className={`btn ${cur ? "ghost" : "primary"}`} onError={setErr} run={suggest}>{cur ? "Suggest again" : "Suggest ideas"}</Busy>
+        <span className="small muted">Uses 1 AI run. Written from your Knowledge Hub{cur ? "; ideas you ticked are kept" : ""}.</span>
+      </div>
+      {d.past?.length > 0 && (
+        <span className="small muted">Earlier: {d.past.map((p) => `${p.month} — ${p.tried} of ${p.ideas} tried`).join(" · ")}</span>
+      )}
+    </div>
+  );
 }
 
 function Lever({ title, label, value, onValue, grow, onGrow, growLabel, step = "any" }) {
@@ -95,6 +192,9 @@ export default function Levers() {
         <Stat label="Extra a year" value={hasNumbers ? `+${rs(r.extra)}` : "—"} money />
       </div>
       {!hasNumbers && <p className="small muted">Fill in the three numbers for last year to see your revenue in rupees.</p>}
+      {hasNumbers && <Compounding f={f} r={r} />}
+
+      <LeadIdeas />
 
       <div className="panel">
         <div className="stack" style={{ gap: 4 }}>

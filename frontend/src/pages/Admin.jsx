@@ -25,6 +25,8 @@ export default function Admin() {
       actions={<div className="tabs">{[7, 30].map((d) => <button key={d} className={days === d ? "on" : ""} onClick={() => setDays(d)}>{d} days</button>)}</div>}>
       <nav className="row" aria-label="Admin">
         <Link className="btn sm" to="/admin/features">Features &amp; plans</Link>
+        <Link className="btn sm" to="/admin/event">Live event</Link>
+        <Link className="btn sm" to="/admin/day1">Day-1 reports</Link>
         <Link className="btn sm" to="/admin/calls">Member calls</Link>
         <Link className="btn sm ghost" to="/admin/recordings">Recordings</Link>
       </nav>

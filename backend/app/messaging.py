@@ -24,22 +24,29 @@ def _param(value) -> str:
     return re.sub(r"\s+", " ", str(value or "")).strip()[:900] or "-"
 
 
-async def _outbox(channel: str, to: str, kind: str, params: list[str]) -> dict:
-    await db().outbox.insert_one({"channel": channel, "to": to, "kind": kind, "params": params, "at": now()})
+async def _outbox(channel: str, to: str, kind: str, params: list[str], **extra) -> dict:
+    await db().outbox.insert_one({"channel": channel, "to": to, "kind": kind, "params": params, "at": now(), **extra})
     log.info("DEV %s → %s [%s] %s", channel, to, kind, params)
     return {"sent": True, "via": f"dev-{channel}"}
 
 
-async def whatsapp_template(to: str, campaign: str, user_name: str, params: list[str], kind: str) -> dict:
-    """Sends one approved AiSensy template. Returns {"sent": bool, "via": str}. Never raises."""
+async def whatsapp_template(to: str, campaign: str, user_name: str, params: list[str], kind: str,
+                            media: dict | None = None, buttons: list | None = None) -> dict:
+    """Sends one approved AiSensy template. Returns {"sent": bool, "via": str}. Never raises.
+    `media` ({"url", "filename"}) is the header of a media template; `buttons` fills a URL button's dynamic part."""
     if not settings.aisensy_api_key or not campaign:
         if not settings.local_dev:
             log.warning("WhatsApp %s not sent: AiSensy key or campaign missing", kind)
             return {"sent": False, "via": "whatsapp-not-configured"}
-        return await _outbox("whatsapp", to, kind, params)
+        extra = {k: v for k, v in (("media", media), ("buttons", buttons)) if v}
+        return await _outbox("whatsapp", to, kind, params, **extra)
     params = [_param(p) for p in params]
     payload = {"apiKey": settings.aisensy_api_key, "campaignName": campaign, "destination": _digits(to),
                "userName": _param(user_name or "there")[:60], "templateParams": params, "source": "action-hub"}
+    if media:
+        payload["media"] = {"url": media["url"], "filename": media.get("filename") or "report"}
+    if buttons:
+        payload["buttons"] = buttons
     if kind == "otp" and settings.aisensy_otp_button:
         # Meta authentication templates carry a copy-code button that needs the code as its own parameter
         payload["buttons"] = [{"type": "button", "sub_type": "url", "index": 0, "parameters": [{"type": "text", "text": params[0]}]}]
@@ -52,7 +59,15 @@ async def whatsapp_template(to: str, campaign: str, user_name: str, params: list
             log.info("AiSensy %s accepted for campaign %r: %s", kind, campaign, reply)
         else:  # AiSensy says why (wrong campaign name, template not approved, low wallet balance…) — keep it in the log
             log.warning("AiSensy %s failed for campaign %r: %s %s", kind, campaign, r.status_code, reply)
-        return {"sent": ok, "via": "whatsapp"}
+        out = {"sent": ok, "via": "whatsapp"}
+        try:   # the message id, when AiSensy returns one, lets delivery ticks be matched to this message
+            body = r.json() if ok else {}
+            mid = next((body.get(k) for k in ("submitted_message_id", "messageId", "message_id", "id") if isinstance(body, dict) and isinstance(body.get(k), str)), None)
+        except ValueError:
+            mid = None
+        if mid:
+            out["id"] = mid
+        return out
     except httpx.HTTPError as e:
         log.warning("AiSensy %s error: %s", kind, type(e).__name__)
         return {"sent": False, "via": "whatsapp"}

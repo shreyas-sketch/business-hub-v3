@@ -120,6 +120,8 @@ async def _hand_over(owner: dict, b: dict, t: dict, result: dict, lead: dict | N
         lead = {"_id": new_id(), "owner_id": ws, "site_id": None, "name": t.get("name") or "WhatsApp customer", "phone": "+" + t["phone"],
                 "message": result.get("summary", "")[:500], "status": "new", "stage": "logic", "source": "whatsapp", "created_at": now()}
         await db().leads.insert_one(lead)
+        from . import dashboard_cache
+        dashboard_cache.bust(ws)
         await track("lead", ws, source="whatsapp")
         await db().wa_threads.update_one({"_id": t["_id"]}, {"$set": {"lead_id": lead["_id"]}})
     text = f"{who} on WhatsApp: {result.get('why') or result.get('summary') or 'needs you'}"

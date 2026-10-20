@@ -15,3 +15,6 @@ python-docx>=1.1,<2         # Company Brain: Word uploads
 pypdf>=4,<7                 # Company Brain: PDF uploads
 openpyxl>=3.1,<4            # customer import from Excel
 tzdata>=2024.1              # India time (zoneinfo) on slim images without system tz data
+Pillow>=10.4,<13            # logo and image checks
+reportlab>=4.2,<6           # invoice and quotation PDFs
+qrcode>=7.4,<9              # website and event QR codes

@@ -20,7 +20,7 @@ export default function Login() {
     sessionStorage.removeItem("ah_attr");
     await refresh();
     const next = params.get("next") || "";
-    nav(/^\/[a-z]/.test(next) ? next : "/home", { replace: true });  // only paths inside the hub
+    nav(/^\/[a-z]/.test(next) ? next : "/", { replace: true });  // only paths inside the hub; "/" goes to the owner's landing page
   };
   const send = async (e) => {
     e?.preventDefault(); setBusy(true); setCodeFailed(false);

@@ -7,6 +7,9 @@ How a message leaves:
           as a free-form message when the customer wrote in the last 24 hours, otherwise as the matching approved template.
 - on its own: only LegacyWorkforce, only when the owner lets that department act, never for money messages
               (reminders, quotations, invoices) and never for text containing a link.
+- v2.1 exception (decision D2): payment reminders the owner approved once ("Automatic payment follow-ups") go on their
+  own from the owner's own number — only from Growth Mentorship (callers check `followups.whatsapp_auto`), and never
+  with a link unless it is the owner's own payment link from their connected gateway.
 The hub's own WhatsApp number never messages customers; it only alerts the owner.
 
 approvals {_id, ws, agent, kind followup|review|reminder|office|customer|quote, title, to_name, to_phone, text, params,
@@ -98,10 +101,41 @@ async def after_sent(approval: dict, at=None) -> None:
         await db().leads.update_one({"_id": lead_id, "owner_id": approval["ws"]}, {"$set": {"review_requested_at": at}})
 
 
+PAYMENT_LINK_HOSTS = ("rzp.io", "razorpay.me", "pages.razorpay.com")
+
+
+def link_hosts(text: str) -> list[str]:
+    """Every web address in a message, as a bare host: full links (parsed properly — no tricks with ?, @ or ports) and
+    bare domains like pay.example.in. Email addresses are not links."""
+    import re as _re
+    from urllib.parse import urlsplit
+    text = text or ""
+    hosts = []
+    for url in _re.findall(r"(?i)\b(?:https?|ftp)://\S+", text):
+        try:
+            hosts.append((urlsplit(url).hostname or "").lower())
+        except ValueError:
+            hosts.append("?")
+    # payment and app links that aren't web addresses (upi://pay…, tel:, intent:…) count as links too
+    hosts += [m.lower() + ":" for m in _re.findall(r"(?i)\b(upi|intent|tel|sms|whatsapp|market|javascript|data|tez|phonepe|paytmmp)\s*:", text)]
+    rest = _re.sub(r"(?i)\b(?:https?|ftp)://\S+", " ", text)
+    rest = _re.sub(r"(?i)\b(?:upi|intent|tel|sms|whatsapp|market|javascript|data|tez|phonepe|paytmmp)\s*:\S*", " ", rest)
+    rest = _re.sub(r"\S+@\S+", " ", rest)                       # email addresses
+    hosts += [h.lower().rstrip(".") for h in _re.findall(r"(?i)(?<![\w-])((?:[a-z0-9-]+\.)+[a-z]{2,})(?![\w-])", rest)]
+    return hosts
+
+
+def only_payment_links(text: str) -> bool:
+    """True when the text has no link, or only links to Razorpay payment pages."""
+    return all(any(h == p or h.endswith("." + p) for p in PAYMENT_LINK_HOSTS) for h in link_hosts(text))
+
+
 async def create_approval(owner: dict, ws: str, agent: str, kind: str, title: str, to_name: str, to_phone: str, text: str,
-                          params: list | None = None, allow_act: bool = True, **refs) -> dict:
+                          params: list | None = None, allow_act: bool = True, auto_send: bool = False, **refs) -> dict:
     """A message to a customer. Waits in the Send list, or — LegacyWorkforce, when the owner lets this department act,
-    for a non-money message without a link — goes out at once from the owner's own number."""
+    for a non-money message without a link — goes out at once from the owner's own number. `auto_send` (a payment
+    reminder the owner approved once, Growth Mentorship and up — decided by the caller) also goes at once, unless it
+    carries a link other than the owner's own payment link."""
     if kind not in KINDS:
         raise ValueError(f"kind must be one of {KINDS}")
     doc = {"_id": new_id(), "ws": ws, "agent": agent, "kind": kind, "title": (title or "")[:160], "to_name": (to_name or "")[:80],
@@ -110,10 +144,11 @@ async def create_approval(owner: dict, ws: str, agent: str, kind: str, title: st
            "lead_id": None, "due_id": None, **{k: v for k, v in refs.items() if k not in CORE}}
     if kind in ("review", "reminder"):  # these go out as a fixed template; keep its wording to show what was really sent
         doc["template_text"] = doc["text"]
-    if allow_act and kind not in MONEY and may_act(owner, await get_settings(ws, agent)):
+    money_ok = auto_send and kind == "reminder" and only_payment_links(doc["text"]) and plans.rank(plans.effective_plan(owner)) >= plans.rank("growth")
+    if money_ok or (allow_act and kind not in MONEY and may_act(owner, await get_settings(ws, agent))):
         result = await deliver(doc, owner)
         if result["sent"]:
-            doc.update(status="sent", via="owner-whatsapp", decided_at=now(), decided_by="agent")
+            doc.update(status="sent", via="owner-whatsapp", decided_at=now(), decided_by="auto-approved" if money_ok else "agent")
         else:
             doc["send_error"] = result.get("error") or "Couldn't send this on its own."
     await db().approvals.insert_one(doc)

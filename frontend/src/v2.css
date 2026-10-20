@@ -27,3 +27,6 @@
   .bubble { max-width: 92%; }
   .kanban { grid-auto-columns: 78%; }
 }
+
+/* v2.1: a second line under a menu item ("Knowledge Hub · Business Brain") */
+.nav a .nav-sub { display: block; margin-top: 3px; font: 400 10px/1.2 var(--body); letter-spacing: .02em; text-transform: none; color: var(--grey); opacity: .8; }

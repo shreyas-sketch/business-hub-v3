@@ -22,6 +22,11 @@ class Step(BaseModel):
     detail: str = S(800)
 
 
+class Script(BaseModel):
+    label: str = Field(max_length=120)
+    text: str = S(900)
+
+
 class SopContent(BaseModel):
     title: str = Field(min_length=3, max_length=140)
     purpose: str = S(500)
@@ -30,11 +35,19 @@ class SopContent(BaseModel):
     steps: list[Step] = Field(default_factory=list, max_length=25)
     checklist: list[str] = Field(default_factory=list, max_length=15)
     mistakes: list[str] = Field(default_factory=list, max_length=10)
+    # v2.1 scenario SOPs and the whole-business set
+    trigger: str = S(300)                        # what starts it ("a customer complains that delivery is late")
+    scripts: list[Script] = Field(default_factory=list, max_length=8)   # the words and messages to use
+    done_when: str = S(400)                      # what "done" looks like
+    escalation: str = S(400)                     # who to bring in, and when
+    function: str = S(40)                        # Sales, Marketing, Operations/Delivery, Accounts, HR, Customer care
 
 
 class SopInputs(BaseModel):
     process: str = Field(min_length=3, max_length=300)
     notes: str = S(8000)
+    mode: Literal["process", "scenario"] = "process"   # scenario: a situation ("new staff member's first day")
+    function: str = S(40)
 
 
 class Question(BaseModel):
@@ -243,6 +256,11 @@ async def update(ws: str, actor: str, kind: str, kit_id: str, content: dict) -> 
         clean = shape(k, content)
     except ValidationError:
         raise HTTPException(400, "Some fields are empty or too long. Please check and save again.")
+    before = await db().kits.find_one({"_id": kit_id, "ws": ws, "kind": kind}, {"content": 1, "title": 1, "updated_at": 1, "updated_by": 1, "created_by": 1})
+    if before and before.get("content") != clean:   # the previous version is kept
+        await db().kit_versions.insert_one({"_id": new_id(), "kit_id": kit_id, "ws": ws, "kind": kind, "title": before.get("title", ""),
+                                            "content": before["content"], "at": before.get("updated_at") or now(),
+                                            "by": before.get("updated_by") or before.get("created_by"), "saved_at": now()})
     r = await db().kits.update_one({"_id": kit_id, "ws": ws, "kind": kind},
                                    {"$set": {"content": clean, "title": k.title(clean)[:160], "updated_at": now(), "updated_by": actor}})
     if not r.matched_count:

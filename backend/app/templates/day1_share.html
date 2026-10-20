@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ t.first_name }}'s {{ t.number_label or "report" }}{% if t.score is defined %}: {{ t.score }}/100{% endif %}</title>
+<meta name="description" content="{{ t.eyebrow or program }}. Save it with your WhatsApp code to see the full report.">
+<meta property="og:title" content="{{ t.first_name }}'s {{ t.number_label or 'report' }}{% if t.score is defined %}: {{ t.score }}/100{% endif %}">
+<meta property="og:description" content="Open to see where the business stands, and save the full report with a WhatsApp code.">
+<meta property="og:url" content="{{ url }}">
+{% if t.status == "done" %}<meta property="og:image" content="{{ image }}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">{% endif %}
+<meta name="robots" content="noindex">
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:#0A1826;color:#EEF4F6;font:16px/1.55 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans",Helvetica,Arial,sans-serif;display:grid;place-items:center;padding:28px 16px}
+.card{width:100%;max-width:480px;border:1px solid #1B2A38;border-radius:18px;padding:28px 22px;background:#12202D}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#8A9BB5;font-weight:600}
+h1{font-family:"Space Grotesk",Inter,sans-serif;font-weight:600;font-size:28px;line-height:1.15;margin:8px 0 18px}
+.score{display:flex;align-items:baseline;gap:6px;margin:0 0 4px}.score b{font-family:"Space Grotesk",Inter,sans-serif;font-size:64px;line-height:1;font-weight:600}
+.score span{color:#8A9BB5;font-size:20px}.label{color:#8A9BB5;font-size:14px}
+.gap{margin:18px 0 0;padding:14px 16px;border:1px solid #1B2A38;border-radius:12px;background:#0A1826}
+.gap .tag{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#8A9BB5;font-weight:600}
+.gap p{margin:4px 0 0;font-weight:600}.money{color:#F2A93B}
+h2{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:#8A9BB5;margin:22px 0 6px;font-weight:600}
+ol{margin:0;padding-left:20px}li{margin:6px 0}
+.btn{display:flex;justify-content:center;align-items:center;min-height:52px;border-radius:12px;font-weight:700;text-decoration:none;font-size:16px;background:#3FD6C9;color:#0A1826;margin-top:22px;padding:0 16px;text-align:center}
+.note{color:#8A9BB5;font-size:13px;text-align:center;margin-top:12px}
+.foot{color:#8A9BB5;font-size:12px;text-align:center;margin-top:18px}
+</style>
+</head>
+<body>
+<main class="card">
+  <div class="eyebrow">{{ t.eyebrow or program }}</div>
+  {% if t.status == "done" %}
+    <h1>{{ t.first_name }}, here is where you stand</h1>
+    <div class="score"><b>{{ t.score }}</b><span>/100</span></div>
+    <div class="label">{{ t.number_label }} · {{ t.band }}</div>
+    <div class="gap"><span class="tag">Estimate</span>
+      <p>{% for text, money in gap_parts %}{% if money %}<span class="money">{{ text }}</span>{% else %}{{ text }}{% endif %}{% endfor %}</p>
+    </div>
+    <h2>Where you're lacking</h2>
+    <ol>{% for f in t.findings %}<li>{{ f }}</li>{% endfor %}</ol>
+    {% if t.saved %}
+      <a class="btn" href="{{ save }}">See the full report</a>
+      <p class="note">Already saved. Log in with the same WhatsApp number to see it.</p>
+    {% else %}
+      <a class="btn" href="{{ save }}">Save with your WhatsApp code</a>
+      <p class="note">We send a 6-digit code to the WhatsApp number used for this report. It saves the full report (image and PDF) in a free account.</p>
+    {% endif %}
+  {% elif t.status == "failed" %}
+    <h1>{{ t.first_name }}, this report couldn't be built</h1>
+    <p class="label">Our team has been told and will send it to you on WhatsApp.</p>
+  {% else %}
+    <h1>{{ t.first_name }}, your report is being built</h1>
+    <p class="label">It takes about a minute. Open this link again shortly.</p>
+  {% endif %}
+  <div class="foot">{{ program }} · {{ speakers }}</div>
+</main>
+</body>
+</html>

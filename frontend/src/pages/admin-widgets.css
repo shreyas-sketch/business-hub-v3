@@ -1,0 +1,10 @@
+/* Admin → Features & plans → Dashboard widgets (v2.1). */
+.db-admin { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.db-admin li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 14px;
+  border: 1px solid var(--ink-line); background: var(--ink-raised); }
+.db-admin li.off { opacity: .6; }
+.db-admin li b { font-weight: 500; }
+.db-admin .btn.sm { min-width: 38px; padding: 0 10px; }
+@media (max-width: 640px) {
+  .db-admin li { grid-template-columns: minmax(0, 1fr); }
+}

@@ -18,6 +18,7 @@ from ..config import settings
 from ..db import IST, db, now
 from ..messaging import whatsapp_template
 from ..security import client_ip, normalise_phone, optional_user, rate_limit
+from .. import dashboard_cache
 from ..services import new_id, track
 from ..sites import base_for, site_url
 from .hub import wa_digits
@@ -143,11 +144,14 @@ async def inquiry(slug: str, request: Request):
         return RedirectResponse(f"{base or '/'}?err={'busy' if e.status_code == 429 else 'phone'}#contact", 303)
 
 
-async def save_lead(site: dict, owner: dict, business: dict, name: str, phone: str, message: str, source: str) -> dict:
-    """A new lead from any public form: saved, the owner alerted on WhatsApp, and the agents told."""
-    lead = {"_id": new_id(), "owner_id": owner["_id"], "site_id": site["_id"], "name": name, "phone": phone,
-            "message": message, "status": "new", "stage": "identification", "source": source, "created_at": now()}
+async def save_lead(site: dict | None, owner: dict, business: dict, name: str, phone: str, message: str, source: str, **extra) -> dict:
+    """A new lead from any channel (website form, the guide, a lead magnet download, an email or a pasted WhatsApp
+    inquiry): saved at the first pipeline stage, the owner alerted on WhatsApp, and the agents told. `extra` carries
+    channel fields (email, magnet_id, message_id…)."""
+    lead = {"_id": new_id(), "owner_id": owner["_id"], "site_id": (site or {}).get("_id"), "name": name, "phone": phone,
+            "message": message, "status": "new", "stage": "identification", "source": source, "created_at": now(), **extra}
     await db().leads.insert_one(lead)
+    dashboard_cache.bust(owner["_id"])
     await track("lead", owner["_id"], source=source)
     # Owner alert on WhatsApp from the hub's own number (every plan). Params: business, lead name, lead phone, message.
     alert = await whatsapp_template(owner["phone"], settings.aisensy_lead_alert_campaign, business.get("name", ""),
@@ -203,16 +207,27 @@ async def _guide(slug: str):
     return site, owner, business, g
 
 
+async def _uploads(slug: str) -> list[dict]:
+    """The owner's published uploaded lead magnets (v2.1), listed under the guide."""
+    from .sitemagnets import published_magnets
+    site, owner, _b = await _site_and_owner(slug, None, False)
+    return await published_magnets(owner) if site else []
+
+
 @router.get("/s/{slug}/guide", response_class=HTMLResponse)
 async def guide_page(slug: str, request: Request):
     found = await _guide(slug)
     if not found:
+        uploads = await _uploads(slug)   # no AI guide, but an uploaded download: /guide opens that
+        if uploads:
+            return RedirectResponse(f"{base_for(request, slug.lower())}/guide/{uploads[0]['slug']}", 303)
         return not_found()
     site, owner, business, g = found
     await _count(site, "guide_views")
     return HTMLResponse(templates.get_template("guide.html").render(
         g=g["content"], name=business.get("name", ""), accent=site.get("accent", "#1F4E79"), base=base_for(request, site["slug"]),
-        unlocked=False, form_error=FORM_ERRORS.get(request.query_params.get("err", "")), program=settings.program_name, year=now().year))
+        unlocked=False, form_error=FORM_ERRORS.get(request.query_params.get("err", "")), program=settings.program_name, year=now().year,
+        uploads=await _uploads(slug)))
 
 
 @router.post("/s/{slug}/guide/get", response_class=HTMLResponse)
@@ -234,7 +249,7 @@ async def guide_get(slug: str, request: Request):
         await _count(site, "guide_leads")
     return HTMLResponse(templates.get_template("guide.html").render(
         g=g["content"], name=business.get("name", ""), accent=site.get("accent", "#1F4E79"), base=base, unlocked=True,
-        form_error=None, program=settings.program_name, year=now().year), headers={"Cache-Control": "no-store"})
+        form_error=None, program=settings.program_name, year=now().year, uploads=await _uploads(slug)), headers={"Cache-Control": "no-store"})
 
 
 # ───────────────────────── the digital visiting card ─────────────────────────
