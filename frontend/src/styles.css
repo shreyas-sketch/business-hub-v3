@@ -140,8 +140,6 @@ table.t { width: 100%; border-collapse: collapse; }
 .title-sheet { position: relative; border: 1px solid var(--ink-line); padding: clamp(28px, 6vw, 72px); display: grid; gap: 22px; margin-top: 8px; overflow: hidden; }
 .title-sheet::before { content: ""; position: absolute; right: -160px; top: -160px; width: 420px; height: 420px; background: radial-gradient(circle, rgba(63,214,201,.16), transparent 65%); pointer-events: none; }
 .title-sheet h1 { font-size: clamp(36px, 6vw, 60px); font-weight: 300; max-width: 16ch; }
-.login-sheet { padding: clamp(28px, 5vw, 48px); }
-.login-sheet h1 { font-size: clamp(34px, 5vw, 46px); }
 .titleblock { justify-self: end; border: 1px solid var(--ink-line); padding: 10px 14px; font: 400 10px/1.7 var(--body); letter-spacing: .15em; text-transform: uppercase; color: var(--grey); }
 .pillars { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--ink-line); border-top: 0; }
 .pillars > div { padding: 26px; border-right: 1px solid var(--ink-line); display: grid; gap: 10px; align-content: start; }
@@ -155,9 +153,6 @@ table.t { width: 100%; border-collapse: collapse; }
 /* ── Feature modules ── */
 .nav { overflow-y: auto; min-height: 0; flex: 1; scrollbar-width: thin; align-content: start; padding-bottom: 28px;
   -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); }
-.nav a { gap: 8px; }
-.nav a > span:first-child { min-width: 0; line-height: 1.3; }
-.nav a .tier, .nav a .count { flex-shrink: 0; }
 .nav a .tier { font: 500 9px/1 var(--body); letter-spacing: .12em; color: var(--slate); border: 1px solid var(--slate); padding: 2px 5px; }
 .nav a.locked { color: var(--slate); }
 .nav a .count { min-width: 18px; padding: 2px 6px; background: var(--aqua); color: var(--ink); font: 600 10px/1.2 var(--body); text-align: center; letter-spacing: 0; }

@@ -168,13 +168,18 @@ async def write_calendar(owner: dict, year: int, month: int, focus: str = "", ac
     label = date(year, month, 1).strftime("%B %Y")
     result = await run_ai(owner, "calendar", program_tasks.content_calendar(profile, label, slots, focus), f"Content calendar — {label}")
     by_date = {str(p.get("date")): p for p in (result.get("posts") or []) if isinstance(p, dict)}
+    key = f"{ws}:{year:04d}-{month:02d}"
+    old = await db().calendars.find_one({"_id": key}) or {}
+    posted = {p["date"]: p for p in old.get("posts") or [] if p.get("posted")}   # a post already out stays as it was posted
     posts = []
     for s in slots:
+        if s["date"] in posted:
+            posts.append(posted[s["date"]])
+            continue
         p = by_date.get(s["date"]) or {}
         posts.append({"date": s["date"], "occasion": s["occasion"], "hook": str(p.get("hook", ""))[:140],
                       "caption": str(p.get("caption", ""))[:1200], "hashtags": [str(h)[:40] for h in (p.get("hashtags") or [])][:4],
                       "posted": False})
-    key = f"{ws}:{year:04d}-{month:02d}"
     await db().calendars.replace_one({"_id": key}, {"_id": key, "ws": ws, "month": f"{year:04d}-{month:02d}", "label": label, "focus": focus,
                                                     "posts": posts, "by": actor, "created_at": now()}, upsert=True)
     return await db().calendars.find_one({"_id": key})

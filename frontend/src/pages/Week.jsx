@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api, rs, waLink } from "../api.js";
 import { Busy, Copy, Field, FormError, Sheet, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Num, Pill } from "../v2.jsx";
+import PostActions, { usePostedRefs } from "./PostActions.jsx";
 import "./member.css";
 
 /* ── Small pieces shared by this group's pages (Content calendar, Gaps scan) ── */
@@ -86,6 +87,10 @@ export default function Week() {
   const [hist, reloadHist] = useLoad("/week/history");
   const [ticking, setTicking] = useState(null);
   const postRef = useRef(null);
+  // which of this week's posts (and today's calendar post) are already marked as posted
+  const wk = d?.week?.week;
+  const tp = d?.today_post;
+  const [refs, reloadRefs] = usePostedRefs([wk ? `week:${wk}` : null, tp?.date ? `cal:${String(tp.date).slice(0, 7)}` : null], !!d);
   const head = { kicker: "Start · This week", id: "MB-01", title: <>Five minutes, <em>every</em> day.</>,
     sub: "Today's one action, this week's 7 posts and 3 actions. Check in on Friday and see your weekly score." };
   if (!d) return <Sheet {...head}>{err ? <FormError msg={err.message} /> : <Loading />}</Sheet>;
@@ -119,6 +124,10 @@ export default function Week() {
     finally { setTicking(null); }
   };
   const linkName = d.today?.link && d.today.link !== "/week" ? pageName(me, d.today.link) : null;
+  // today's post is the calendar's post for today when there is one, else this week's post for today
+  const todayRef = post ? (post.date ? `cal:${String(post.date).slice(0, 7)}:${post.date}`
+    : w?.posts?.length ? `week:${w.week}:${Math.min(todayIdx, w.posts.length - 1)}` : null) : null;
+  const canMarkToday = todayRef && (todayRef.startsWith("cal:") ? me?.features?.content_calendar : true);
   const doneActs = (w?.actions || []).filter((a) => a.done).length;
 
   return (
@@ -157,6 +166,7 @@ export default function Week() {
           <PostCard post={post} head={<div className="row between"><span className="label">Today's post</span>{post.occasion && <Pill kind="on">{post.occasion}</Pill>}</div>}>
             <a className="btn sm" href={waLink(postText(post))} target="_blank" rel="noreferrer">Open in WhatsApp</a>
           </PostCard>
+          {canMarkToday && <PostActions postRef={todayRef} post={post} posted={refs[todayRef] || null} onChange={reloadRefs} />}
         </div>
       )}
 
@@ -196,7 +206,9 @@ export default function Week() {
           <div className="grid3">
             {w.posts.map((p, i) => (
               <div key={i} className={`panel ${i === todayIdx ? "active" : ""}`}>
-                <PostCard post={p} head={<div className="row between"><span className="label">{p.day || `Day ${i + 1}`}</span>{i === todayIdx && <Pill kind="on">Today</Pill>}</div>} />
+                <PostCard post={p} head={<div className="row between"><span className="label">{p.day || `Day ${i + 1}`}</span>{i === todayIdx && <Pill kind="on">Today</Pill>}</div>}>
+                  <PostActions postRef={`week:${w.week}:${i}`} post={p} posted={refs[`week:${w.week}:${i}`] || null} onChange={reloadRefs} />
+                </PostCard>
               </div>
             ))}
           </div>

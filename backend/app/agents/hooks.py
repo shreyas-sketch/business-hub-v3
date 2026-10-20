@@ -26,20 +26,30 @@ async def on_new_lead(owner: dict, business: dict, site: dict | None, lead: dict
             patch["followups"] = True
     except Exception:
         log.exception("could not schedule follow-ups for lead %s", lead.get("_id"))
-    # Growth Mentorship: instant reply from the owner's own number, and the AI Telecaller's call.
+    # Growth Mentorship: instant reply from the owner's own number, and the AI Telecaller's call — not for an email inquiry,
+    # whose number was read out of an email anyone can write (its proposal goes by email, or waits for a tap).
+    by_email = lead.get("source") == "email"
     try:
-        if plans.has(owner, "whatsapp_ai") and await jobs.is_on(owner["_id"], "instant_reply"):
+        if not by_email and plans.has(owner, "whatsapp_ai") and await jobs.is_on(owner["_id"], "instant_reply"):
             from .growth import instant_reply
             patch["instant_reply"] = await instant_reply(owner, business, lead)
     except Exception:
         log.exception("instant reply failed for lead %s", lead.get("_id"))
     try:
-        if plans.has(owner, "voice_agent") and await jobs.is_on(owner["_id"], "telecaller"):
+        if not by_email and plans.has(owner, "voice_agent") and await jobs.is_on(owner["_id"], "telecaller"):
             from .growth import schedule_call
             if await schedule_call(owner, lead, minutes=3):
                 patch["call_scheduled"] = True
     except Exception:
         log.exception("could not schedule a call for lead %s", lead.get("_id"))
+    # Inquiries (v2.1): a proposal for every new inquiry, written in the background so the customer's form never waits
+    try:
+        if plans.has(owner, "inquiry_desk"):
+            from ..routers import inquiries
+            if await inquiries.wants_proposal(owner["_id"], lead):
+                inquiries.after_lead(owner, business, lead)
+    except Exception:
+        log.exception("could not start the proposal for lead %s", lead.get("_id"))
     # Running the Business: the lead goes into Employz.ai.
     if plans.has(owner, "crm_sync"):
         await sync_later(owner, {**lead, **patch})

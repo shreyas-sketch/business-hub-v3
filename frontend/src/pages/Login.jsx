@@ -24,14 +24,14 @@ export default function Login() {
       sessionStorage.removeItem("ah_attr");
       await refresh();
       const next = params.get("next") || "";
-      nav(/^\/[a-z]/.test(next) ? next : "/home", { replace: true });  // only paths inside the hub
+      nav(/^\/[a-z]/.test(next) ? next : "/", { replace: true });  // only paths inside the hub; "/" goes to the owner's landing page
     } catch (err) { toast(err.message, "err"); } finally { setBusy(false); }
   };
 
   return (
-    <div className="public" style={{ maxWidth: 680 }}>
+    <div className="public" style={{ maxWidth: 560 }}>
       <header><Link to="/" className="mark"><b>Business AI Action Hub</b><span>Back</span></Link></header>
-      <section className="title-sheet login-sheet">
+      <section className="title-sheet">
         <span className="kicker">{sent ? "Step 2 of 2" : "Step 1 of 2"}</span>
         <h1 style={{ fontSize: 38 }}>{sent ? <>Enter the <em>code</em>.</> : <>Log in with your <em>mobile</em>.</>}</h1>
         {!sent ? (

@@ -275,6 +275,7 @@ class Line(BaseModel):
 class QCustomer(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     phone: str = Field(default="", max_length=24)
+    email: str = Field(default="", max_length=254)
     gstin: str = Field(default="", max_length=15)
     address: str = Field(default="", max_length=300)
 
@@ -328,7 +329,7 @@ def totals(items: list[dict], mode: str) -> dict:
 
 async def next_number(ws: str, kind: str) -> str:
     c = await db().counters.find_one_and_update({"_id": f"{ws}:{kind}"}, {"$inc": {"n": 1}}, upsert=True, return_document=ReturnDocument.AFTER)
-    return f"{'Q' if kind == 'quote' else 'INV'}-{int(c['n']):04d}"
+    return f"{ {'quote': 'Q', 'credit_note': 'CN'}.get(kind, 'INV') }-{int(c['n']):04d}"
 
 
 def rupees(x: float) -> str:
@@ -345,9 +346,10 @@ def rupees(x: float) -> str:
 
 
 def share_text(q: dict, business: str) -> str:
-    lines = [f"{'Quotation' if q['kind'] == 'quote' else 'Invoice'} {q['number']} from {business}"]
+    lines = [f"{ {'quote': 'Quotation', 'credit_note': 'Credit note'}.get(q['kind'], 'Invoice') } {q['number']} from {business}"]
     for i in q["items"][:12]:
-        lines.append(f"• {i['name']} — {i['qty']:g} {i['unit']} × {rupees(i['rate'])} = {rupees(i['amount'])}")
+        amount = i.get("amount", round(float(i.get("qty") or 0) * float(i.get("rate") or 0), 2))
+        lines.append(f"• {i.get('name', '')} — {float(i.get('qty') or 0):g} {i.get('unit') or 'nos'} × {rupees(float(i.get('rate') or 0))} = {rupees(amount)}")
     t = q["totals"]
     lines.append(f"Subtotal {rupees(t['subtotal'])}" + (f" + GST {rupees(t['gst'])}" if t["gst"] else ""))
     lines.append(f"Total: {rupees(t['total'])}")
@@ -470,7 +472,8 @@ async def _closed(ctx: Ctx, q: dict, status: str) -> None:
         lead = await db().leads.find_one({"_id": q["lead_id"], "owner_id": ctx.ws})
         if lead and lead.get("status") not in ("won", "lost"):
             result = "won" if status == "accepted" else "lost"
-            upd = {"status": result, "updated_at": now(), **({"value": q["totals"]["total"]} if result == "won" else {})}
+            upd = {"status": result, "updated_at": now(), "won_at": now() if result == "won" else None,
+                   **({"value": q["totals"]["total"]} if result == "won" else {})}
             await db().leads.update_one({"_id": lead["_id"]}, {"$set": upd})
             await hooks.on_lead_status(ctx.owner, {**lead, **upd}, result)
 
@@ -493,6 +496,7 @@ async def make_invoice(qid: str, body: InvoiceIn, ctx: Ctx = Depends(feature("qu
     cust = q.get("customer") or {}
     if plans.has(ctx.owner, "money_owed"):
         await db().dues.insert_one({"_id": due_id, "ws": ctx.ws, "customer": cust.get("name", "")[:80], "phone": cust.get("phone", ""),
+                                    "email": (cust.get("email") or "").strip().lower(),
                                     "amount": int(round(q["totals"]["total"] * 100)), "due_date": due_date, "note": f"Invoice {number}",
                                     "invoice_no": number, "invoice_id": inv_id, "status": "due", "paid_at": None, "reminders_sent": 0,
                                     "last_reminded_at": None, "created_by": ctx.actor, "created_at": now(), "updated_at": now()})
@@ -500,6 +504,8 @@ async def make_invoice(qid: str, body: InvoiceIn, ctx: Ctx = Depends(feature("qu
     if q.get("status") != "accepted":
         await _closed(ctx, q, "accepted")
     await track("invoice", ctx.ws)
+    from .gateway import maybe_email   # "Email invoices automatically", when the owner switched it on (off by default)
+    await maybe_email(ctx.owner, await db().quotes.find_one({"_id": inv_id}))
     return await _qview(await db().quotes.find_one({"_id": inv_id}))
 
 
@@ -522,8 +528,8 @@ async def print_quote(qid: str, ctx: Ctx = Depends(feature("quotations", "manage
         raise HTTPException(404, "Not found")
     b = await db().businesses.find_one({"owner_id": ctx.ws}) or {}
     s = await db().quote_settings.find_one({"_id": ctx.ws}) or {}
-    site = await db().sites.find_one({"owner_id": ctx.ws}, {"accent": 1}) or {}
-    return HTMLResponse(templates.get_template("quote.html").render(q=q, b=b, s=s, rupees=rupees, accent=site.get("accent", "#1F4E79")))
+    from ..brand import accent_for
+    return HTMLResponse(templates.get_template("quote.html").render(q=q, b=b, s=s, rupees=rupees, accent=await accent_for(ctx.ws)))
 
 
 # ═════════════════════════ Employz.ai CRM starter ═════════════════════════

@@ -172,10 +172,12 @@ async def main():
             await rakesh.post(f"/api/recordings/item/{rec['id']}/watched", json={"watched": True})
 
         extra = await v2_demo(d, admin, rakesh, uid, site, kapoor, arora, mehta, today)
+        extra.append(await v21_demo(d, admin, today))
         for c in (admin, rakesh, kapoor, arora, mehta, *team.values(), *extra):
             await c.aclose()
     print("Demo ready. LegacyWorkforce: 9820000001 (team: 9820000011 manager, 9820000012 staff) · Growth Mentorship: 9820000006 · "
           "Running the Business: 9820000005 · Action Program: 9820000003 · Membership: 9820000002 · Free: 9820000004 · "
+          "AI Advantage launch demo (all v2.1 features): 9820000007 · "
           "Admin: 9999900000 · Website: /s/" + site["slug"])
 
 async def wait_for(check, tries=40):
@@ -346,6 +348,160 @@ async def v2_demo(d, admin, rakesh, uid, site, kapoor, arora, mehta, today):
                                                               "notes": "Bring one offer you want feedback on."})).json()
     await kapoor.post(f"/api/member-call/{call['id']}/questions", json={"text": "How do I price a Diwali check-up offer without looking cheap?"})
     return [patel, sharma]
+
+
+async def v21_demo(d, admin, today):
+    """The AI Advantage Membership launch account (v2.1, 4.6): every v2.1 demo filled in on one login, so the launch demos
+    run from it. Kaveri Home Appliances is an invented business; every customer, phone number and email here is invented."""
+    from app import followups, knowledge
+    from app.routers import sopset
+    from app.services import new_id
+    # D5: the Membership plan is called AI Advantage Membership (an admin setting, not code)
+    await admin.patch("/api/admin/config/plans/lite", json={"name": "AI Advantage Membership"})
+    kav = await owner("9820000007")
+    uid = (await kav.get("/api/me")).json()["user"]["id"]
+    await admin.patch(f"/api/admin/users/{uid}", json={"plan": "lite"})
+    await live(kav, {
+        "name": "Kaveri Home Appliances", "city": "Pune", "industry": "Retail and wholesale of kitchen and home appliances, with installation",
+        "offers": [{"name": "Chimney with installation", "price": "₹14,500", "unit": "onwards"}, {"name": "Water purifier AMC", "price": "₹3,200", "unit": "per year"},
+                   {"name": "Bulk orders for builders", "price": "", "unit": ""}],
+        "ideal_customer": "Families setting up a new kitchen, and builders handing over flats", "why_us": "Same-day installation in Pune\nGenuine brands with bills\nService visit within 48 hours",
+        "proof": "Authorised dealer for 4 brands", "whatsapp": "98200 00007", "email": "hello@kaveri-appliances.example", "language": "English",
+        "payment_note": "Pay by UPI to kaveri@okaxis or bank transfer", "_accent": "#1F4E79"})
+    # the launch demo account gets every demo feature, as the admin would grant it (D1 moves these for everyone only when management confirms)
+    for f in ("pipeline", "revenue_levers", "quotations", "money_owed", "lead_magnet", "automations", "approvals", "reminder_agent", "customers"):
+        await admin.post("/api/admin/config/grants", json={"user_id": uid, "feature": f, "days": 365, "note": "AI Advantage launch demo"})
+    await kav.put("/api/knowledge/identity", json={"entity": "pvt_ltd", "gst_registered": True, "gstin": "27AAHCK1234M1Z5", "gst_scheme": "monthly",
+                                                    "state": "Maharashtra", "staff": 24, "registrations": ["udyam", "shops", "pt", "pf", "esi", "trademark"]})
+    await kav.put("/api/knowledge/money", json={"payment_terms_days": 15, "bank_balance": 180000, "bank_balance_on": today.isoformat(), "gst_rate": 18,
+                                                 "safety_buffer": 0, "fixed_costs": [{"name": "Salaries", "amount": 420000, "day": 1, "kind": "salary"},
+                                                                                     {"name": "Showroom rent", "amount": 85000, "day": 5, "kind": "rent"},
+                                                                                     {"name": "Delivery van EMI", "amount": 18500, "day": 10, "kind": "emi"}]})
+    await kav.post("/api/brand-kit/generate")
+    await kav.put("/api/brand-kit/design", json={"colors": {"primary": "#1F4E79", "secondary": "#488FD0", "accent": "#F2A93B"},
+                                                  "fonts": {"heading": "poppins", "body": "mukta"}, "corners": "soft", "spacing": "comfortable", "text_logo": "Kaveri"})
+    site = (await kav.get("/api/site")).json()
+    await kav.post("/api/lead-magnet/generate", json={"problem": "Choosing the right chimney for an Indian kitchen", "format": "checklist"})
+    await kav.post("/api/lead-magnet/publish", json={"published": True})
+
+    # 25 leads from every source over the last 30 days; 6 open deals across the 5 stages
+    names = ["Rohan Kulkarni", "Sneha Patil", "Amit Joshi", "Pallavi Deshpande", "Nikhil Bhosale", "Anjali Gokhale", "Sameer Kale", "Kirti Jadhav",
+             "Manoj Pawar", "Rutuja Shinde", "Vivek Sathe", "Meera Apte", "Tushar More", "Gauri Chavan", "Prasad Limaye", "Swati Karve",
+             "Omkar Dixit", "Neha Bapat", "Rahul Gadgil", "Aditi Ranade", "Kunal Mahajan", "Shruti Phadke", "Yash Thakur", "Pooja Kelkar", "Ajay Naik"]
+    sources = ["website"] * 8 + ["guide"] * 5 + ["whatsapp"] * 5 + ["email"] * 4 + ["card"] * 3
+    deals = {0: ("identification", 18000), 1: ("logic", 42000), 2: ("pain", 96000), 3: ("vision", 145000), 4: ("close", 260000), 5: ("logic", 31000)}
+    for i, (name, src) in enumerate(zip(names, sources)):
+        at = now() - timedelta(days=(i * 29) // 24, hours=i % 7)
+        stage, value = deals.get(i, ("identification", 0))
+        # 6 open deals, 3 new inquiries still waiting for a reply, the rest won or lost
+        status = "contacted" if i in deals else "new" if i > 21 else "won" if i % 3 == 0 else "lost"
+        doc = {"_id": new_id(), "owner_id": uid, "site_id": site["id"], "name": name, "phone": f"+9198300{70000 + i:05d}", "message": "Chimney and hob for a new kitchen",
+               "status": status, "stage": stage, "value": value or (36000 if status == "won" else 0), "source": src, "created_at": at, "updated_at": at + timedelta(hours=5)}
+        if status != "new":
+            doc["first_action_at"] = at + timedelta(minutes=20 + i * 7)
+        if src == "email":
+            doc["email"] = name.lower().replace(" ", ".") + "@mail.example"
+        await d.leads.insert_one(doc)
+    for i in range(30):
+        day_ = (today - timedelta(days=i)).isoformat()
+        await d.site_views.insert_one({"_id": f"{site['id']}:{day_}", "site_id": site["id"], "ws": uid, "day": day_, "n": 30 + (i * 7) % 25})
+
+    # 10 invoices this month (3 paid through the payment gateway), 8 dues (2 overdue) with email follow-up history
+    month_start = today.replace(day=1)
+    elapsed = (today - month_start).days + 1
+    for i in range(10):
+        total = [48000, 36500, 112000, 22000, 64000, 18500, 91000, 27000, 54000, 40500][i]
+        created = now() - timedelta(days=min(elapsed - 1, i * 2))
+        gateway = i < 3
+        await d.quotes.insert_one({"_id": new_id(), "ws": uid, "kind": "invoice", "number": f"KHA-{1101 + i}", "customer": {"name": names[10 + i]},
+                                   "items": [{"name": "Appliances and installation", "qty": 1, "unit": "nos", "rate": total, "gst": 0, "amount": total}],
+                                   "totals": {"subtotal": total, "gst": 0, "total": total}, "gst_mode": "intra",
+                                   "status": "paid" if gateway or i == 5 else "due", "paid_at": created if gateway else None, "due_id": None,
+                                   **({"source": "gateway", "gateway_payment_id": f"pay_demo{i:04d}"} if gateway else {}), "created_at": created, "updated_at": created})
+    habits = [("Desai Builders", -40, 82000, 12), ("Sharma Interiors", -25, 46000, 2)]   # paid before, late and on time
+    for cust, back, amount, late in habits:
+        due_day = today + timedelta(days=back)
+        await d.dues.insert_one({"_id": new_id(), "ws": uid, "customer": cust, "phone": "", "email": "", "amount": amount * 100, "due_date": due_day.isoformat(),
+                                 "status": "paid", "paid_at": datetime_ist(due_day + timedelta(days=late)), "created_at": now() - timedelta(days=60)})
+    dues = [("Desai Builders", "accounts@desai-builders.example", -12, 45000), ("Joshi Caterers", "billing@joshi-caterers.example", -5, 30000),
+            ("Sharma Interiors", "pay@sharma-interiors.example", 3, 60000), ("Patil Residency", "office@patil-residency.example", 9, 38000),
+            ("Hotel Panchavati", "accounts@hotel-panchavati.example", 12, 125000), ("Gokhale Clinic", "", 15, 22000),
+            ("Sai Developers", "finance@sai-developers.example", 20, 210000), ("Mrs. Apte", "", 26, 16500)]
+    stage_days = followups.PENDING_DAYS
+    for cust, email, offset, amount in dues:
+        due_day = today + timedelta(days=offset)
+        history = []
+        if email and offset < 0:
+            history = [{"stage": "pending", "n": 0, "channel": "email", "at": datetime_ist(due_day - timedelta(days=stage_days)), "ok": True, "via": "dev-email"},
+                       {"stage": "due", "n": 0, "channel": "email", "at": datetime_ist(due_day), "ok": True, "via": "dev-email"}]
+            if offset <= -3:
+                history.append({"stage": "overdue", "n": 1, "channel": "email", "at": datetime_ist(due_day + timedelta(days=3)), "ok": True, "via": "dev-email"})
+        await d.dues.insert_one({"_id": new_id(), "ws": uid, "customer": cust, "phone": "", "email": email, "amount": amount * 100, "due_date": due_day.isoformat(),
+                                 "invoice_no": f"KHA-{1000 + amount // 1000}", "note": "", "status": "due", "paid_at": None, "reminders_sent": 0,
+                                 "followups": history, "auto_stopped": None, "created_at": now() - timedelta(days=30), "updated_at": now()})
+    s = (await kav.get("/api/followups/auto")).json()
+    await kav.post("/api/followups/auto/approve", json={"hash": s["hash"]})
+    # cash flow: a supplier payment on day 7 takes the balance below zero
+    await kav.post("/api/cash-flow/items", json={"kind": "out", "title": "Supplier payment — Diwali stock", "amount": 380000,
+                                                  "date": (today + timedelta(days=6)).isoformat()})
+
+    # compliance: generated from the identity, plus two own items due this week and a document expiring this month
+    await kav.get("/api/compliance")
+    for title, days, cat in (("Shop insurance premium", 2, "insurance"), ("Fire extinguisher refill", 5, "other")):
+        await kav.post("/api/compliance/items", json={"title": title, "due_date": (today + timedelta(days=days)).isoformat(), "category": cat, "recurrence": "yearly"})
+    tm = await d.compliance_items.find_one({"owner_id": uid, "rule_key": "trademark"})
+    if tm:
+        await kav.patch(f"/api/compliance/items/{tm['_id']}", json={"due_date": (today + timedelta(days=24)).isoformat()})
+        from app import files as files_store
+        f = await files_store.put(uid, b"%PDF-1.4\n% demo certificate placeholder\n", "trademark-certificate.pdf", "application/pdf", "compliance")
+        await d.compliance_items.update_one({"_id": tm["_id"]}, {"$set": {"doc_file_id": f["_id"]}})
+
+    # 12 SOPs from the process map, 20 posts (9 posted), a target the month is ₹3.2 L behind
+    await kav.post("/api/sop-set/map")
+    keys = [p["key"] for p in (await kav.get("/api/sop-set")).json()["processes"][:12]]
+    await kav.post("/api/sop-set/write", json={"keys": keys})
+    await sopset.settle()
+    month = today.strftime("%Y-%m")
+    cal = (await kav.post("/api/calendar", json={"month": month, "focus": "Diwali kitchen upgrades"})).json()["calendar"]
+    await kav.post("/api/week/plan") if (await kav.get("/api/me")).json()["features"].get("week") else None
+    posted = 0
+    for p in cal["posts"]:
+        if p["date"] <= today.isoformat() and posted < 9:
+            await kav.post("/api/social/posted", json={"ref": f"cal:{month}:{p['date']}", "platform": ["Instagram", "Facebook", "WhatsApp Status"][posted % 3]})
+            posted += 1
+    from app import sales
+    sold = (await sales.month_sales(uid, "invoiced", today))["sales"]
+    projected = sold / elapsed * (sales.month_bounds(today)[1] - month_start).days
+    await kav.put("/api/magic", json={"monthly_target": round(projected + 320000, -3), "avg_sale": 36000, "close_rate": 30, "meeting_rate": 60})
+
+    # P1: an uploaded lead magnet, a pasted WhatsApp inquiry with its proposal, and proposals waiting for two email inquiries
+    import io
+    from reportlab.pdfgen import canvas
+    buf = io.BytesIO()
+    pdf = canvas.Canvas(buf)
+    pdf.setFont("Helvetica-Bold", 20)
+    pdf.drawString(72, 760, "Chimney buying checklist")
+    pdf.setFont("Helvetica", 12)
+    for n, line in enumerate(["1. Suction power for your kitchen size", "2. Filterless or baffle filter", "3. Duct length and bends",
+                              "4. Noise level", "5. Installation and service in your area"]):
+        pdf.drawString(72, 720 - n * 22, line)
+    pdf.save()
+    await kav.post("/api/lead-magnets", files={"file": ("chimney-checklist.pdf", buf.getvalue(), "application/pdf")},
+                   data={"title": "Chimney buying checklist", "description": "Five things to check before you buy a chimney for an Indian kitchen."})
+    await kav.post("/api/inquiries/whatsapp", json={"name": "Varsha Kulkarni", "phone": "98300 71001",
+                                                    "message": "Hi, need a chimney with installation for our new flat in Baner. What's the price?"})
+    from app.routers import inquiries
+    b = await d.businesses.find_one({"owner_id": uid})
+    async for lead in d.leads.find({"owner_id": uid, "source": "email", "status": "new"}).limit(2):
+        await inquiries.on_new_inquiry(await d.users.find_one({"_id": uid}), b, lead)
+    await inquiries.settle()
+    await knowledge.settle()
+    return kav
+
+
+def datetime_ist(day):
+    from datetime import datetime
+    return datetime(day.year, day.month, day.day, 11, 0, tzinfo=IST)
 
 
 async def _count(coll, query, n):

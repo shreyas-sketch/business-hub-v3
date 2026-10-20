@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ago, api } from "../api.js";
-import { Busy, Field, Gate, Sheet, Switch, canAct, useHub, useLoad } from "../ui.jsx";
+import { Busy, Field, FormError, Gate, Sheet, Switch, canAct, useHub, useLoad } from "../ui.jsx";
 
 // The fields PUT /api/business accepts; everything else on the business record is left as it is.
 const BUSINESS_FIELDS = ["name", "city", "industry", "offers", "ideal_customer", "why_us", "proof", "whatsapp", "email", "language", "review_link", "payment_note"];
@@ -55,6 +55,93 @@ function AgentCard({ a, data, owner, onChange }) {
           </span>
         </>
       )}
+    </div>
+  );
+}
+
+const SAMPLE_LABEL = { pending: "3 days before the due date", due: "On the due date", overdue: "After the due date (every few days)", final: "The last reminder" };
+
+/** Automatic payment follow-ups: the owner reads one sample of each email, then switches them on once ("approve once"). */
+export function AutoFollowups({ a, owner }) {
+  const { upgrade, toast } = useHub();
+  const [s, setS] = useState(null);
+  const [err, setErr] = useState("");
+  const [wa, setWa] = useState(false);
+  const load = () => api("/followups/auto").then((x) => { setS(x); setWa(x.whatsapp); }).catch((e) => setErr(e.message));
+  useEffect(() => { if (owner && a.available) load(); }, [owner, a.available]);  // eslint-disable-line react-hooks/exhaustive-deps
+  if (!a.available) {
+    return (
+      <div className="panel">
+        <div className="row between"><h3>{a.name}</h3><span className="token grey">{a.tier_name}</span></div>
+        <p className="small">{a.what}</p>
+        <div className="row between">
+          <span className="small muted">Unlocks with <b>{a.tier_name}</b></span>
+          {owner && <button className="btn sm money" onClick={() => upgrade(a.tier, a.feature)}>See {a.tier_name}</button>}
+        </div>
+      </div>
+    );
+  }
+  if (!owner) {
+    return (
+      <div className="panel">
+        <h3>{a.name}</h3>
+        <p className="small">{a.what}</p>
+        <span className="small muted">The owner reads the wording and switches these on.</span>
+      </div>
+    );
+  }
+  if (!s) return <div className="panel"><h3>{a.name}</h3>{err ? <FormError msg={err} /> : <span className="small muted">Loading…</span>}</div>;
+  const stale = s.on && !s.approved_current;
+  return (
+    <div className={`panel ${s.on && !stale ? "active" : ""}`}>
+      <div className="row between">
+        <h3>{a.name}</h3>
+        <span className={`token ${s.on && !stale ? "" : "grey"}`}>{s.on ? (stale ? "Needs a look" : "On") : "Off"}</span>
+      </div>
+      <p className="small">{a.what}</p>
+      <span className="small muted">
+        {s.dues_with_email} unpaid {s.dues_with_email === 1 ? "amount has" : "amounts have"} an email{s.dues_without_email ? ` · ${s.dues_without_email} without one won't get emails — add them in ` : ""}
+        {s.dues_without_email ? <Link to="/money">Money owed</Link> : null}
+      </span>
+      {!s.email_ready && <p className="small" style={{ color: "var(--amber)" }}>Email isn't set up on this hub yet, so nothing can be sent until it is — even when this is on.</p>}
+      {stale && <p className="small" style={{ color: "var(--amber)" }}>The wording changed since you switched this on. Read the emails below again and approve them to keep it running.</p>}
+
+      <span className="label">The emails your customers get</span>
+      <div className="stack" style={{ gap: 10 }}>
+        {["pending", "due", "overdue", "final"].map((k) => s.samples[k] && (
+          <div key={k} className="stack" style={{ gap: 6 }}>
+            <span className="small muted">{SAMPLE_LABEL[k]}</span>
+            <div className="prompt"><b>{s.samples[k].subject}</b>{"\n\n"}{s.samples[k].text}</div>
+          </div>
+        ))}
+      </div>
+      <span className="hint">An example customer is shown. Each email uses your customer's name, amount, invoice number and due date, attaches the invoice when there is one, and stops when it's paid or they reply. At most {s.timing.overdue_max} after the due date, every {s.timing.overdue_every_days} days.</span>
+
+      {s.whatsapp_available
+        ? <>
+          <Switch checked={wa} onChange={setWa} label="Also send the overdue reminders on WhatsApp, from my own number" />
+          {wa && s.whatsapp_sample && <div className="stack" style={{ gap: 6 }}><span className="small muted">The WhatsApp reminder</span><div className="prompt">{s.whatsapp_sample}</div></div>}
+        </>
+        : <span className="hint">WhatsApp reminders stay tap-to-send from your Send list. Sending them on their own, from your own number, starts with Growth Mentorship.</span>}
+      <FormError msg={err} />
+      <div className="row">
+        {(!s.on || stale || wa !== s.whatsapp) && (
+          <Busy className="btn primary" onError={setErr} run={async () => {
+            const r = await api("/followups/auto/approve", { method: "POST", body: { hash: s.hash, whatsapp: wa } });
+            setS(r);
+            setWa(r.whatsapp);
+            toast(s.on ? "Saved" : "Automatic follow-ups are on");
+          }}>{s.on ? (stale ? "Approve this wording" : "Save") : "Switch on with this wording"}</Busy>
+        )}
+        {s.on && (
+          <Busy className="btn ghost" onError={setErr} run={async () => {
+            const r = await api("/followups/auto/off", { method: "POST" });
+            setS(r);
+            toast("Automatic follow-ups are off");
+          }}>Switch off</Busy>
+        )}
+      </div>
+      {s.on && s.approved_at && <span className="small muted">Approved {ago(s.approved_at)}.{a.last_run_at ? ` Last run ${ago(a.last_run_at)}${a.last_note ? `: ${a.last_note}` : ""}` : ""}</span>}
     </div>
   );
 }
@@ -120,6 +207,22 @@ function AgentsInner() {
       {data && (
         <div className="grid2">
           {data.agents.map((a) => <AgentCard key={a.key} a={a} data={data} owner={owner} onChange={() => { reload(); reloadActivity(); }} />)}
+        </div>
+      )}
+      {data?.approve_once?.length > 0 && (
+        <div className="stack">
+          <h2>Approve once, <em>it runs</em>.</h2>
+          <p className="sub">Read the wording once; after that these go to customers on their own, by email.</p>
+          {data.approve_once.map((a) => <AutoFollowups key={a.key} a={a} owner={owner} />)}
+        </div>
+      )}
+      {data?.alerts?.length > 0 && (
+        <div className="stack">
+          <h2>Alerts to you — <em>never to customers</em>.</h2>
+          <p className="sub">Checks that run on their own and message only you, on WhatsApp and here in the hub. They start once you've set up the part they watch.</p>
+          <div className="grid2">
+            {data.alerts.map((a) => <AgentCard key={a.key} a={a} data={data} owner={owner} onChange={() => { reload(); reloadActivity(); }} />)}
+          </div>
         </div>
       )}
       {owner && <Needs />}

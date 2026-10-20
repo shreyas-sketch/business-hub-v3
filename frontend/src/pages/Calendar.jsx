@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { api } from "../api.js";
-import { Busy, Field, FormError, Sheet, Switch, canAct, useHub, useLoad } from "../ui.jsx";
+import { Busy, Field, FormError, Sheet, canAct, useHub, useLoad } from "../ui.jsx";
 import { Loading, Pill, Tabs } from "../v2.jsx";
+import PostActions, { PostingSummary, usePostedRefs } from "./PostActions.jsx";
 import { PostCard, dateLabel } from "./Week.jsx";
 import "./member.css";
 
@@ -18,16 +19,10 @@ function monthOptions() {
   });
 }
 
-function Posted({ post, onToggle }) {
-  const { toast } = useHub();
-  const [busy, setBusy] = useState(false);
-  return (
-    <Switch checked={post.posted} disabled={busy} label="Posted"
-      onChange={async () => {
-        setBusy(true);
-        try { await onToggle(post.date); } catch (e) { if (!e.handled) toast(e.message, "err"); } finally { setBusy(false); }
-      }} />
-  );
+/** Mark as posted (with the platform and a link) and Make the design. The calendar's own tick follows the posting log. */
+function Posted({ month, post, refs, onChange }) {
+  const ref = `cal:${month}:${post.date}`;
+  return <PostActions postRef={ref} post={post} posted={post.posted ? (refs[ref] || {}) : null} onChange={onChange} />;
 }
 
 function PostHead({ post, today }) {
@@ -98,6 +93,8 @@ export default function Calendar() {
   const opts = useMemo(monthOptions, []);
   const [month, setMonth] = useState(opts[0][0]);
   const [d, reload, err] = useLoad(`/calendar/${month}`);
+  const [log, reloadLog] = useLoad("/social/log");
+  const [refs, reloadRefs] = usePostedRefs([`cal:${month}`]);
   const [sel, setSel] = useState(null);
   const [rewrite, setRewrite] = useState(false);
   const [showPast, setShowPast] = useState(false);
@@ -114,12 +111,13 @@ export default function Calendar() {
   const listed = showPast ? posts : posts.filter((p) => p.date >= today);
 
   const pick = (k) => { setMonth(k); setSel(null); setRewrite(false); setShowPast(false); };
-  const toggle = async (date) => { await api(`/calendar/${month}/posted/${date}`, { method: "POST" }); await reload(); };
+  const changed = async () => { await Promise.all([reload(), reloadRefs(), reloadLog()]); };
   const written = async () => { await reload(); refresh(); setRewrite(false); toast(`${label}'s posts are ready`); };
 
   return (
     <Sheet kicker="Scale · Content calendar" id="MB-02" title={<>A month of posts, <em>ready</em>.</>}
       sub="Posts for every Monday, Wednesday and Friday, plus Indian festivals and occasions. Next month's posts are written for you on the 25th at 9am.">
+      <PostingSummary summary={log?.summary} />
       <Tabs tabs={opts} value={month} onChange={pick} />
       {!ready ? (err ? <FormError msg={err.message} /> : <Loading />) : (
         <>
@@ -158,7 +156,7 @@ export default function Calendar() {
                 {selected && (
                   <div className="panel active">
                     <PostCard post={selected} head={<PostHead post={selected} today={today} />}>
-                      <Posted post={selected} onToggle={toggle} />
+                      <Posted month={month} post={selected} refs={refs} onChange={changed} />
                     </PostCard>
                   </div>
                 )}
@@ -173,7 +171,7 @@ export default function Calendar() {
                 {listed.map((p) => (
                   <div key={p.date} className={`panel ${p.date === today ? "active" : ""} ${p.date < today && p.posted ? "m-faded" : ""}`}>
                     <PostCard post={p} head={<PostHead post={p} today={today} />}>
-                      <Posted post={p} onToggle={toggle} />
+                      <Posted month={month} post={p} refs={refs} onChange={changed} />
                     </PostCard>
                   </div>
                 ))}

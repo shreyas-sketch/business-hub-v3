@@ -48,7 +48,14 @@ const Crm = lazy(() => import("./pages/Crm.jsx"));
 const Customers = lazy(() => import("./pages/Customers.jsx"));
 const Quotes = lazy(() => import("./pages/Quotes.jsx"));
 const Setup = lazy(() => import("./pages/Setup.jsx"));
-const Control = lazy(() => import("./pages/Control.jsx"));
+const Dashboard = lazy(() => import("./pages/Dashboard.jsx"));
+const Knowledge = lazy(() => import("./pages/Knowledge.jsx"));
+const Compliance = lazy(() => import("./pages/Compliance.jsx"));
+const CashFlow = lazy(() => import("./pages/CashFlow.jsx"));
+const BrandKit = lazy(() => import("./pages/BrandKit.jsx"));
+const AdminCompliance = lazy(() => import("./pages/AdminCompliance.jsx"));
+const AdminEmail = lazy(() => import("./pages/AdminEmail.jsx"));
+const Inquiries = lazy(() => import("./pages/Inquiries.jsx"));
 const Staff = lazy(() => import("./pages/Staff.jsx"));
 const Chats = lazy(() => import("./pages/Chats.jsx"));
 const Connections = lazy(() => import("./pages/Connections.jsx"));
@@ -57,6 +64,8 @@ const Campaigns = lazy(() => import("./pages/Campaigns.jsx"));
 const Gym = lazy(() => import("./pages/Gym.jsx"));
 const Results = lazy(() => import("./pages/Results.jsx"));
 const Workforce = lazy(() => import("./pages/Workforce.jsx"));
+const Day1 = lazy(() => import("./pages/Day1.jsx"));
+const AdminDay1 = lazy(() => import("./pages/AdminDay1.jsx"));
 const kit = (name) => lazy(() => import("./pages/Kits.jsx").then((m) => ({ default: m[name] })));
 const [Competence, Culture, Decisions, Hiring, Reviews, Roles, Sops] = ["Competence", "Culture", "Decisions", "Hiring", "Reviews", "Roles", "Sops"].map(kit);
 
@@ -75,7 +84,9 @@ const PAGES = [
   ["/portfolio", Portfolio, "customer_portfolio", "manager"], ["/pipeline", Pipeline, "pipeline", "staff"], ["/leaks", Leaks, "funnel_leaks", "manager"],
   ["/end-goals", EndGoals, "end_goals", "owner"], ["/decisions", Decisions, "decision_log", "owner"], ["/hiring", Hiring, "hiring", "manager"],
   ["/crm", Crm, "crm_sync", "owner"], ["/customers", Customers, "customers", "manager"], ["/money", Money, "money_owed", "manager"],
-  ["/quotes", Quotes, "quotations", "manager"], ["/setup", Setup, "setup_tracker", "owner"], ["/control", Control, "control_room", "manager"],
+  ["/quotes", Quotes, "quotations", "manager"], ["/setup", Setup, "setup_tracker", "owner"], ["/dashboard", Dashboard, "smart_dashboard", "manager"],
+  ["/knowledge", Knowledge, "business_brain", "owner"], ["/compliance", Compliance, "compliance_calendar", "manager"], ["/cash-flow", CashFlow, "cash_flow", "manager"],
+  ["/brand-kit", BrandKit, "brand_kit", "owner"], ["/inquiries", Inquiries, "inquiry_desk", "staff"], ["/inquiries/new", Inquiries, "inquiry_desk", "staff"],
   ["/staff", Staff, "ai_staff", "manager"], ["/chats", Chats, "whatsapp_ai", "staff"], ["/connections", Connections, "connections", "owner"],
   ["/company-brain", CompanyBrain, "company_brain", "manager"], ["/campaigns", Campaigns, "campaigns", "manager"], ["/gym", Gym, "training_gym", "staff"],
   ["/results", Results, "results_report", "owner"], ["/team", Team, "team_logins", "owner"], ["/roles", Roles, "role_clarity", "staff"],
@@ -104,13 +115,14 @@ function Shell({ me, children }) {
         </div>
         <nav className="nav" aria-label="Main">
           {me.user.role === "admin" && <><div className="group">Admin</div><NavLink to="/admin" end>Pulse</NavLink><NavLink to="/admin/features">Features &amp; plans</NavLink>
-            <NavLink to="/admin/calls">Member calls</NavLink><NavLink to="/admin/recordings">Recordings</NavLink></>}
+            <NavLink to="/admin/day1">Day-1 reports</NavLink><NavLink to="/admin/calls">Member calls</NavLink><NavLink to="/admin/recordings">Recordings</NavLink>
+            <NavLink to="/admin/compliance">Compliance rules</NavLink><NavLink to="/admin/email">Email</NavLink></>}
           {(me.menu || []).map(({ group, items }) => (
             <React.Fragment key={group}>
               <div className="group">{group}</div>
               {items.map((it) => (
                 <NavLink key={it.key} to={it.path} className={({ isActive }) => `${isActive ? "on" : ""} ${it.locked ? "locked" : ""}`}>
-                  <span>{it.label}</span>
+                  <span>{it.label}{it.sub && <small className="nav-sub">{it.sub}</small>}</span>
                   {it.locked ? <span className="tier" title={`Unlocks with ${it.tier_name}`}>{it.tier_short || it.tier_name.split(" ")[0]}</span>
                     : it.path === "/approvals" && me.approvals_waiting ? <span className="count" aria-label={`${me.approvals_waiting} waiting`}>{me.approvals_waiting}</span>
                     : it.path === "/tasks" && me.my_open_tasks ? <span className="count" aria-label={`${me.my_open_tasks} open`}>{me.my_open_tasks}</span>
@@ -179,7 +191,9 @@ export default function App() {
   const path = loc.pathname;
   const publicPaths = ["/", "/join", "/login"];
   let page;
-  if (!me) {
+  if (path === "/report" || path.startsWith("/report/")) {   // the ₹99 webinar tool: no login, whoever is (or isn't) logged in
+    page = <Suspense fallback={<div className="main muted">Loading…</div>}><Day1 /></Suspense>;
+  } else if (!me) {
     page = publicPaths.includes(path) ? (
       <Routes><Route path="/login" element={<Login />} /><Route path="*" element={<Landing />} /></Routes>
     ) : <Navigate to={`/login?next=${encodeURIComponent(path)}`} replace />;
@@ -194,7 +208,7 @@ export default function App() {
   } else if (path === "/start" && !me.workspace.is_team) {
     page = <Onboarding />;
   } else if (publicPaths.includes(path)) {
-    page = <Navigate to={me.user.role === "admin" && !me.progress.profile ? "/admin" : "/home"} replace />;
+    page = <Navigate to={me.user.role === "admin" && !me.progress.profile ? "/admin" : me.landing || "/home"} replace />;
   } else {
     page = (
       <Shell me={me}>
@@ -208,12 +222,16 @@ export default function App() {
               </Gate>} />
           ))}
           <Route path="/studio" element={<Navigate to="/writer" replace />} />
+          <Route path="/control" element={<Navigate to="/dashboard" replace />} />{/* the Control Room is the dashboard now */}
           {me.user.role === "admin" && <Route path="/admin" element={<Admin />} />}
           {me.user.role === "admin" && <Route path="/admin/features" element={<AdminFeatures />} />}
           {me.user.role === "admin" && <Route path="/admin/owners/:id" element={<AdminOwner />} />}
           {me.user.role === "admin" && <Route path="/admin/calls" element={<AdminCalls />} />}
+          {me.user.role === "admin" && <Route path="/admin/day1" element={<AdminDay1 />} />}
           {me.user.role === "admin" && <Route path="/admin/recordings" element={<AdminRecordings />} />}
-          <Route path="*" element={<Navigate to="/home" replace />} />
+          {me.user.role === "admin" && <Route path="/admin/compliance" element={<AdminCompliance />} />}
+          {me.user.role === "admin" && <Route path="/admin/email" element={<AdminEmail />} />}
+          <Route path="*" element={<Navigate to={me.landing || "/home"} replace />} />
         </Routes>
         </Suspense>
       </Shell>

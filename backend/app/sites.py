@@ -8,9 +8,12 @@ An owner's own domain (Growth Mentorship and up) is answered the same way once t
 Requests that arrive on a website's host are rewritten to the hub's /s/<name>/... routes, so only that website's pages
 are reachable there: the hub's API and pages never answer on a member website's address.
 """
+import re
+
 from .config import settings
 
 SITE_PATHS = ("", "/", "/inquiry", "/guide", "/guide/get", "/wa", "/card", "/card.vcf")
+MAGNET_PATH = re.compile(r"^/guide/[a-z0-9-]{1,60}(/file|/cover\.png)?$")   # uploaded lead magnets: form, download, cover
 
 
 def site_url(slug: str, path: str = "") -> str:
@@ -34,7 +37,7 @@ def slug_from_host(host: str) -> str | None:
 def rewrite_to_site(scope: dict, slug: str) -> bool:
     """Points a website-host request at /s/<slug>/... Returns False for paths a website doesn't have."""
     path = scope.get("path") or "/"
-    if path.rstrip("/") not in {p.rstrip("/") for p in SITE_PATHS}:
+    if path.rstrip("/") not in {p.rstrip("/") for p in SITE_PATHS} and not MAGNET_PATH.match(path.rstrip("/")):
         return False
     tail = "" if path in ("", "/") else path
     scope["path"] = f"/s/{slug}{tail}"

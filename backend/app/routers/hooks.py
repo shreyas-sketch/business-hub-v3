@@ -155,8 +155,39 @@ async def employz_event(token: str, request: Request):
     if upd:
         upd["updated_at"] = now()
         await db().leads.update_one({"_id": lead["_id"]}, {"$set": upd})
+        if upd.get("status") and upd["status"] != lead.get("status"):   # the day it was won, for "Am I on target"
+            await db().leads.update_one({"_id": lead["_id"]}, {"$set": {"won_at": now() if upd["status"] == "won" else None}})
         if upd.get("status") and upd["status"] != lead.get("status"):
             owner = await db().users.find_one({"_id": ws})
             from ..agents import hooks
             await hooks.on_lead_status(owner, {**lead, **upd}, upd["status"])
     return {"ok": True, "matched": True, "changed": sorted(upd)}
+
+
+# ───────────────────────── Email delivery events (SES → SNS) ─────────────────────────
+@router.post("/email-events/{secret}")
+async def email_events(secret: str, request: Request):
+    """Delivered / bounced / complained, from Amazon SES through SNS. The address carries EMAIL_EVENTS_SECRET and every
+    message's SNS signature is checked against Amazon's certificate."""
+    import hmac
+    from .. import mailer
+    from ..config import settings
+    if not settings.email_events_secret or not hmac.compare_digest(secret, settings.email_events_secret):
+        raise HTTPException(404, "Not found")
+    try:
+        msg = json.loads(await request.body() or b"{}")
+    except ValueError:
+        raise HTTPException(400, "Not JSON")
+    if not isinstance(msg, dict) or not await mailer.sns_verified(msg):
+        raise HTTPException(401, "Bad signature")
+    if settings.email_events_topic_arn and msg.get("TopicArn") != settings.email_events_topic_arn:
+        raise HTTPException(403, "Not our topic")   # a valid SNS message, but from someone else's AWS account
+    if msg.get("Type") == "SubscriptionConfirmation":
+        return {"ok": await mailer.sns_confirm(msg)}
+    if msg.get("Type") != "Notification":
+        return {"ok": True}
+    try:
+        event = json.loads(msg.get("Message") or "{}")
+    except ValueError:
+        raise HTTPException(400, "Not JSON")
+    return {"ok": True, "recorded": await mailer.record_event(event if isinstance(event, dict) else {})}

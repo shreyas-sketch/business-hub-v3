@@ -1,0 +1,9 @@
+/* v2.1 Inquiries */
+.inq-setup .inq-addr { font: 500 14px/1.4 var(--mono); color: var(--aqua); background: var(--ink); border: 1px solid var(--ink-line); padding: 6px 10px; overflow-wrap: anywhere; }
+.inq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.inq-item .inq-msg { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--paper); }
+.inq-item .row.between { align-items: flex-start; flex-wrap: wrap; gap: 8px; }
+.inq-prop .prompt { white-space: pre-wrap; overflow-wrap: anywhere; }
+.ok-text { color: var(--aqua); font-weight: 500; }
+@media (max-width: 640px) { .inq-grid { grid-template-columns: 1fr; } }
+.inq-reply { border-left: 2px solid var(--aqua-deep); padding: 4px 10px; white-space: pre-wrap; overflow-wrap: anywhere; }

@@ -61,7 +61,7 @@ DEFAULT_FEATURES: dict[str, dict] = {
     # ───────── Free: given at the workshop ─────────
     "home":            F("free", "Start", "Home", "Your next steps and what's new", "/home", core=True),
     "recordings":      F("free", "Learn", "Recordings", "Workshop and program calls, with notes", "/recordings"),
-    "business_brain":  F("free", "Structure", "Business Brain", "Read from your website, a voice note or a few typed lines — you check it in 4 short steps", "/start", "owner", core=True),
+    "business_brain":  F("free", "Structure", "Knowledge Hub", "Your Business Brain: fill it once, and every part of the hub and every AI task uses it", "/knowledge", "owner", core=True),
     "brand_message":   F("free", "Structure", "Brand message", "Your one-line brand message and a 30-second pitch", "/brand", "owner"),
     "business_score":  F("free", "Structure", "Business score", "Your Business AI Score out of 100, the top 3 fixes and a card to share", "/score", "owner"),
     "website":         F("free", "Systems", "Website", "Your website at name.employz.ai, with an inquiry form and a Chat on WhatsApp button", "/website", "owner"),
@@ -89,6 +89,14 @@ DEFAULT_FEATURES: dict[str, dict] = {
     "magic_number":    F("lite", "Structure", "Magic Number", "Your revenue target worked back to customers, inquiries and daily activity — it tracks itself", "/magic", "manager"),
     "gaps_scan":       F("lite", "Structure", "Gaps scan", "12 questions that find the silent killers in your business, with this month's 3 fixes", "/gaps", "owner"),
     "funnel":          F("lite", "Systems", "Funnel & dashboard", "Visitors to inquiries to customers, week by week, and how fast leads get a reply", "/insights", "manager"),
+    # v2.1 — the AI Advantage Membership launch (new features start in Membership; move them in Admin → Features & plans)
+    "smart_dashboard": F("free", "Start", "Dashboard", "Your whole business on one screen — leads, money, posts, targets and what needs you today", "/dashboard", "manager"),
+    "inquiry_desk":    F("lite", "Systems", "Inquiries", "Every inquiry from your website, email and WhatsApp in one place, answered with a proposal", "/inquiries"),
+    "gateway_invoicing": F("lite", "Systems", "Automatic invoices", "Connect your payment gateway; every payment becomes a GST invoice on its own", None, "owner"),
+    "auto_reminders":  F("lite", "AI team", "Automatic payment follow-ups", "Switch it on once: reminders go out by email as money falls due and goes overdue"),
+    "compliance_calendar": F("lite", "Systems", "Compliance calendar", "Every filing, licence, renewal and document expiry in one calendar, with reminders", "/compliance", "manager"),
+    "brand_kit":       F("lite", "Structure", "Brand kit", "Your brand message in every version, your design system and ready designs", "/brand-kit", "owner"),
+    "cash_flow":       F("lite", "Structure", "Cash flow", "The next 30 days of money in and out, day by day — see a shortfall before it comes", "/cash-flow", "manager"),
     # ───────── Action Program ─────────
     "approvals":       F("program", "Start", "Send list", "Messages your automations wrote, ready to send from your WhatsApp with one tap", "/approvals", "manager"),
     "automations":     F("program", "AI team", "Automations", "What runs for you on its own, with a switch for each", "/agents", "manager"),
@@ -124,7 +132,8 @@ DEFAULT_FEATURES: dict[str, dict] = {
     "ai_staff":        F("growth", "AI team", "AI staff", "6 AI staff: Sales Executive, Telecaller, Marketing, Accounts, Customer Care and Chief of Staff", "/staff", "manager"),
     "whatsapp_ai":     F("growth", "Systems", "WhatsApp chats", "Your Sales Executive replies to every inquiry on your own WhatsApp number, 24×7; your team sees every chat", "/chats"),
     "voice_agent":     F("growth", "AI team", "AI Telecaller", "Calls new leads within minutes and re-calls old ones; every call summarised and scored"),
-    "connections":     F("growth", "Systems", "Connections", "Employz.ai, your WhatsApp number, the voice agent and your own domain", "/connections", "owner"),
+    # v2.1: from Membership, showing only the connections the plan unlocks (the payment gateway first; WhatsApp, voice… later plans)
+    "connections":     F("lite", "Systems", "Connections", "Your own accounts — your payment gateway, and from higher plans your WhatsApp number, CRM and voice agent", "/connections", "owner"),
     "custom_domain":   F("growth", "Systems", "Own domain", "Your own domain with a multi-page website, connected for you"),
     "company_brain":   F("growth", "Structure", "Company Brain", "Price list, catalogue, FAQs and past quotations that every AI staff member answers from", "/company-brain", "manager"),
     "customer_import": F("growth", "Systems", "Customer import", "Your old customer list imported, cleaned and sorted A, B and C"),
@@ -145,7 +154,11 @@ DEFAULT_FEATURES: dict[str, dict] = {
     "more_connections": F("office", "Systems", "Tally, email and calendar", "Connections to Tally, email and your calendar"),
 }
 for _i, (_k, _f) in enumerate(DEFAULT_FEATURES.items()):
-    _f.update(key=_k, order=_i * 10, on=True, teaser=True)
+    _f.update(key=_k, order=_i * 10, on=True, teaser=True, sub="")
+DEFAULT_FEATURES["business_brain"]["sub"] = "Business Brain"
+# One dashboard: the Control Room is the Dashboard with the Growth tiles switched on, so it has no menu entry of its own
+# (its Monday CEO report and /control stay).
+DEFAULT_FEATURES["control_room"]["path"] = None
 
 FEATURE_EDITABLE = {"tier": str, "group": str, "label": str, "what": str, "order": int, "on": bool, "teaser": bool}
 
@@ -294,7 +307,7 @@ def unlocking_tier(feature: str) -> dict:
 
 def feature_view(key: str) -> dict:
     m = META[key]
-    return {"key": key, "label": m["label"], "what": m["what"], "tier": m["tier"], "group": m["group"], "path": m["path"],
+    return {"key": key, "label": m["label"], "sub": m.get("sub", ""), "what": m["what"], "tier": m["tier"], "group": m["group"], "path": m["path"],
             "role": m["role"], "order": m["order"], "on": m["on"], "teaser": m["teaser"], "core": m["core"]}
 
 
@@ -319,7 +332,7 @@ def menu_for(owner: dict, role: str) -> list[dict]:
         unlocked = has(owner, key)
         if not unlocked and not m["teaser"]:
             continue
-        groups[m["group"]].append({"key": key, "path": m["path"], "label": m["label"], "locked": not unlocked,
+        groups[m["group"]].append({"key": key, "path": m["path"], "label": m["label"], "sub": m.get("sub", ""), "locked": not unlocked,
                                    "tier": m["tier"], "tier_name": PLANS[m["tier"]]["name"], "tier_short": PLANS[m["tier"]]["short"],
                                    "order": m["order"]})
     return [{"group": g, "items": sorted(items, key=lambda i: i["order"])} for g, items in groups.items() if items]

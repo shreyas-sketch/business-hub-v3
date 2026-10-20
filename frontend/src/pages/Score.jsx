@@ -22,6 +22,46 @@ function FixLink({ feature }) {
   );
 }
 
+/** The six "your numbers" answers: asked with the questions but not scored, and optional here (the workshop flow stays
+    as quick as before). When the three that matter are filled, the score shows what the owner is missing in rupees. */
+function Numbers({ fields, numbers, setNumbers }) {
+  const set = (k, v) => setNumbers({ ...numbers, [k]: v });
+  return (
+    <div className="grid2">
+      {fields.map((n) => (
+        <label className="field" key={n.key}><span className="label">{n.label}</span>
+          {n.kind === "choice" ? (
+            <select className="select" value={numbers[n.key] ?? ""} onChange={(e) => set(n.key, e.target.value)}>
+              <option value="">Choose…</option>
+              {n.choices.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+            </select>
+          ) : (
+            <input className="input" type="number" inputMode="numeric" min={n.min} max={n.max} value={numbers[n.key] ?? ""}
+              placeholder={n.key === "aov" ? "₹" : ""} onChange={(e) => set(n.key, e.target.value === "" ? "" : Number(e.target.value))} />
+          )}
+          {n.hint && <span className="hint">{n.hint}</span>}
+        </label>
+      ))}
+    </div>
+  );
+}
+
+/** The ₹99 webinar's report, once saved with the WhatsApp code. */
+function WebinarReport() {
+  const [mine] = useLoad("/day1/mine");
+  const r = mine?.find((x) => x.status === "done");
+  if (!r) return null;
+  return (
+    <div className="panel flat">
+      <div className="row between"><span className="label">Your webinar report</span><span className="small muted">{day(r.created_at)}</span></div>
+      <div className="row">
+        <a className="btn sm" href={r.png_url} target="_blank" rel="noopener">Open the image</a>
+        <a className="btn sm ghost" href={r.pdf_url} target="_blank" rel="noopener">Open the PDF</a>
+      </div>
+    </div>
+  );
+}
+
 function Questions({ questions, answers, setAnswers }) {
   return (
     <div>
@@ -43,17 +83,21 @@ export default function Score() {
   const { me, toast } = useHub();
   const [data, reload] = useLoad("/score");
   const [answers, setAnswers] = useState({});
+  const [numbers, setNumbers] = useState({});
   const [taking, setTaking] = useState(false);
   const [err, setErr] = useState("");
   const latest = data?.latest;
-  useEffect(() => { if (latest?.answers) setAnswers(latest.answers); }, [latest?.id]);  // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (latest?.answers) setAnswers(latest.answers); if (latest?.numbers) setNumbers(latest.numbers); }, [latest?.id]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!data) return <Sheet kicker="Structure · Business score" id="ST-01" pillar="Structure" step={1} title={<>Your Business AI <em>Score</em>.</>}><Loading /></Sheet>;
 
+  const fields = data.numbers || [];
   const answered = data.questions.filter((q) => answers[q.key]).length;
+  const total = data.questions.length;
   const showForm = !latest || taking;
   const submit = async () => {
-    const r = await api("/score", { method: "POST", body: { answers } });
+    const filled = Object.fromEntries(Object.entries(numbers).filter(([, v]) => v !== "" && v != null));
+    const r = await api("/score", { method: "POST", body: { answers, numbers: filled } });
     setTaking(false);
     await reload();
     toast(`Your score: ${r.score} out of 100`);
@@ -84,6 +128,13 @@ export default function Score() {
                 <p>{latest.change > 0 ? <>Up <b>{latest.change}</b> since last time.</> : latest.change < 0 ? <>Down <b>{-latest.change}</b> since last time.</> : "Same as last time."}</p>
               )}
               <span className="small muted">75 and above is Strong · 50 to 74 is Getting there · below 50 needs attention.</span>
+              {latest.gap && (
+                <div className="stack" style={{ gap: 4 }}>
+                  <span className="label">What you're missing · Estimate</span>
+                  <p style={{ margin: 0 }}>About <span className="money">₹{new Intl.NumberFormat("en-IN").format(latest.gap.year)}</span> a year in enquiries that go cold, at your numbers.</p>
+                  <span className="small muted">Your enquiries a month × {latest.gap.cold_rate_pct}% that go cold × your close rate × your average order × 12.</span>
+                </div>
+              )}
             </div>
             <div className="panel">
               <span className="label">Your top 3 fixes</span>
@@ -111,6 +162,8 @@ export default function Score() {
         </>
       )}
 
+      <WebinarReport />
+
       {data.scan ? (
         <div className="panel flat">
           <div className="row between">
@@ -135,12 +188,16 @@ export default function Score() {
         <div className="panel">
           <div className="row between">
             <span className="label">{latest ? "Re-check your score" : "Answer honestly — yes, partly or no"}</span>
-            <span className="small muted">{answered} of {data.questions.length} answered</span>
+            <span className="small muted">{answered} of {total} answered</span>
           </div>
           <Questions questions={data.questions} answers={answers} setAnswers={setAnswers} />
+          {fields.length > 0 && <>
+            <span className="label" style={{ marginTop: 8 }}>Your numbers (optional) — not scored; they show what you're missing in rupees</span>
+            <Numbers fields={fields} numbers={numbers} setNumbers={setNumbers} />
+          </>}
           <FormError msg={err} />
           <div className="row">
-            <Busy className="btn primary" disabled={answered < data.questions.length} onError={setErr} run={submit}>{latest ? "Re-check my score" : "Work out my score"}</Busy>
+            <Busy className="btn primary" disabled={answered < total} onError={setErr} run={submit}>{latest ? "Re-check my score" : "Work out my score"}</Busy>
             {taking && <button className="btn ghost" onClick={() => { setTaking(false); setErr(""); }}>Cancel</button>}
           </div>
           {!latest && !me.features.score_recheck && <span className="small muted">Your first score is free. Re-checking it every month is part of {data.recheck_tier}.</span>}

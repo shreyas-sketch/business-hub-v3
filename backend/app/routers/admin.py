@@ -172,3 +172,40 @@ async def create_cohort(body: CohortIn):
     except Exception:
         raise HTTPException(409, "A cohort with this code already exists")
     return {"code": code, "join_link": f"{settings.app_url}/join?c={code}"}
+
+
+# ───────────────────────── Email (v2.1, 4.5) ─────────────────────────
+@router.get("/email")
+async def email_admin(days: int = 30):
+    """Sending-domain health (SPF / DKIM / DMARC), bounce and complaint rates per owner, and who is paused."""
+    from .. import mailer
+    days = max(1, min(days, 90))
+    rows = await mailer.rates(days)
+    ids = [r["owner_id"] for r in rows]
+    paused = {u["_id"]: u async for u in db().users.find({"email_paused": True}, {"name": 1, "phone": 1, "email_paused_at": 1})}
+    names = {u["_id"]: u async for u in db().users.find({"_id": {"$in": ids + list(paused)}}, {"name": 1, "phone": 1})}
+    biz = {b["owner_id"]: b.get("name", "") async for b in db().businesses.find({"owner_id": {"$in": ids + list(paused)}}, {"owner_id": 1, "name": 1})}
+    for r in rows:
+        u = names.get(r["owner_id"]) or {}
+        r.update(name=u.get("name", ""), business=biz.get(r["owner_id"], ""), paused=r["owner_id"] in paused)
+    return {"health": await mailer.health(), "days": days, "owners": rows,
+            "paused": [{"owner_id": k, "name": v.get("name", ""), "business": biz.get(k, ""),
+                        "at": v["email_paused_at"].isoformat() if v.get("email_paused_at") else None} for k, v in paused.items()],
+            "thresholds": {"bounce_rate": 5, "complaint_rate": 0.1}}
+
+
+class EmailPauseIn(BaseModel):
+    paused: bool
+
+
+@router.post("/owners/{user_id}/email-pause")
+async def email_pause(user_id: str, body: EmailPauseIn, admin: dict = Depends(require_admin)):
+    """Stops (or restarts) one owner's automatic emails — follow-ups, proposals and invoices."""
+    r = await db().users.update_one({"_id": user_id, "team_of": {"$exists": False}},
+                                    {"$set": {"email_paused": body.paused, "email_paused_at": now() if body.paused else None, "email_paused_by": admin["_id"]}})
+    if not r.matched_count:
+        raise HTTPException(404, "Not found")
+    if body.paused:
+        await notify(user_id, "Automatic emails from your hub are paused by the Business AI team. Your hub still works; we'll be in touch.")
+    await track("email_paused" if body.paused else "email_resumed", user_id)
+    return {"ok": True, "paused": body.paused}

@@ -133,12 +133,16 @@ async def mark_posted(month: str, day: str, ctx: Ctx = Depends(feature("content_
     cal = await db().calendars.find_one({"_id": f"{ctx.ws}:{month}"})
     if not cal:
         raise HTTPException(404, "Not found")
-    posts = cal["posts"]
-    for p in posts:
-        if p["date"] == day:
-            p["posted"] = not p.get("posted")
-    await db().calendars.update_one({"_id": cal["_id"]}, {"$set": {"posts": posts}})
-    return {"ok": True}
+    post = next((p for p in cal["posts"] if p["date"] == day), None)
+    if not post:
+        raise HTTPException(404, "Not found")
+    from . import social   # the posting log is the one record; the calendar's tick follows it
+    ref = f"cal:{month}:{day}"
+    if post.get("posted"):
+        await social.unmark(ctx.ws, ref)
+    else:
+        await social.mark(ctx.ws, ctx.actor, ref)
+    return {"ok": True, "posted": not post.get("posted")}
 
 
 # ───────────────────────── Member call ─────────────────────────

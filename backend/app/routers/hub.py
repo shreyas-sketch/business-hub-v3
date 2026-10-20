@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from pymongo.errors import DuplicateKeyError
 
-from .. import plans
+from .. import knowledge, plans
 from ..ai import tasks
 from ..config import settings
 from ..db import db, now, public
@@ -80,8 +80,11 @@ async def save_business(body: BusinessIn, ctx: Ctx = Depends(owner_ctx)):
     if data["whatsapp"] and not (10 <= len(wa_digits(data["whatsapp"])) <= 13):
         raise HTTPException(400, "Enter the WhatsApp number customers should message")
     data["review_link"] = clean_link(data["review_link"])
+    before = await db().businesses.find_one({"owner_id": user["_id"]})
     await db().businesses.update_one({"owner_id": user["_id"]}, {"$set": {**data, "updated_at": now()},
                                                                   "$setOnInsert": {"_id": new_id(), "owner_id": user["_id"], "created_at": now()}}, upsert=True)
+    if before:   # the first save is onboarding; later saves update everything built from the Brain
+        knowledge.after_save(user, knowledge.changed_sections(before, data))
     return public(await db().businesses.find_one({"owner_id": user["_id"]}))
 
 
@@ -116,6 +119,8 @@ async def choose_brand(body: BrandIn, ctx: Ctx = Depends(owner_ctx)):
     b = await _profile(ctx)
     await db().businesses.update_one({"_id": b["_id"]}, {"$set": {"brand": {**body.model_dump(), "chosen_at": now()}}})
     await track("brand_chosen", ctx.ws)
+    if (b.get("brand") or {}).get("message") and (b.get("brand") or {}).get("message") != body.message:
+        knowledge.after_save(ctx.owner, {"brand"})
     return {"ok": True}
 
 
@@ -213,19 +218,56 @@ async def generate_site(ctx: Ctx = Depends(owner_ctx)):
     content = await run_ai(user, "site", tasks.site_content(b, b.get("brand")), f"Website — {b['name']}", check=_site_from_ai)
     site = await db().sites.find_one({"owner_id": user["_id"]})
     if site:
-        await db().sites.update_one({"_id": site["_id"]}, {"$set": {"content": content, "updated_at": now()}})
+        await db().sites.update_one({"_id": site["_id"]}, {"$set": {"content": content, "generated_content": content, "updated_at": now()}})
     else:
         for attempt in range(5):
             slug = await _unique_slug(_slugify(b["name"]) + (f"-{new_id()[:4]}" if attempt else ""), user["_id"])
             try:
                 await db().sites.insert_one({"_id": new_id(), "owner_id": user["_id"], "slug": slug, "status": "draft", "content": content,
+                                             "generated_content": content,
                                              "accent": ACCENTS[0], "showcase": False, "views": 0, "created_at": now(), "updated_at": now()})
                 break
             except DuplicateKeyError:
                 if await db().sites.find_one({"owner_id": user["_id"]}):  # a double click created it already
-                    await db().sites.update_one({"owner_id": user["_id"]}, {"$set": {"content": content, "updated_at": now()}})
+                    await db().sites.update_one({"owner_id": user["_id"]}, {"$set": {"content": content, "generated_content": content, "updated_at": now()}})
                     break
     return site_view(await db().sites.find_one({"owner_id": user["_id"]}), user)
+
+
+# The website copy follows the Knowledge Hub: rewritten when untouched, flagged with a banner when the owner edited it.
+# Contact details (WhatsApp, phone) are read live when the page is served, so they never need a rewrite.
+async def _site_exists(ws: str) -> bool:
+    return bool(await db().sites.find_one({"owner_id": ws}, {"_id": 1}))
+
+
+async def _site_edited(ws: str) -> bool:
+    site = await db().sites.find_one({"owner_id": ws}, {"content": 1, "generated_content": 1}) or {}
+    return site.get("generated_content") is None or site.get("content") != site.get("generated_content")
+
+
+async def _site_rewrite(owner: dict) -> None:
+    b = await profile_of(owner["_id"])
+    content = await run_ai(owner, "site", tasks.site_content(b, b.get("brand")), f"Website refreshed from your Knowledge Hub — {b['name']}",
+                           check=_site_from_ai)
+    await db().sites.update_one({"owner_id": owner["_id"]}, {"$set": {"content": content, "generated_content": content, "updated_at": now(),
+                                                                      "brain_refreshed_at": now()}})
+
+
+async def _site_refresh(owner: dict, sections: set) -> str | None:
+    if sections <= {"contact"}:
+        return None  # the page reads contact details live; the copy didn't depend on them
+    before = await db().sites.find_one({"owner_id": owner["_id"]}, {"updated_at": 1}) or {}
+    b = await profile_of(owner["_id"])
+    content = await run_ai(owner, "site", tasks.site_content(b, b.get("brand")), f"Website refreshed from your Knowledge Hub — {b['name']}",
+                           check=_site_from_ai)
+    # written only if the owner didn't save the page while the AI was writing; otherwise their version stays, with the banner
+    r = await db().sites.update_one({"owner_id": owner["_id"], "updated_at": before.get("updated_at")},
+                                    {"$set": {"content": content, "generated_content": content, "updated_at": now(), "brain_refreshed_at": now()}})
+    return None if r.matched_count else "kept_edits"
+
+
+knowledge.register(knowledge.Dependent("website", "Website copy", "website", "/website", {"basics", "brand", "contact"}, _site_exists, _site_edited,
+                                       _site_refresh, overwrite=_site_rewrite, note="Your phone and WhatsApp number on the page are always current.", order=1))
 
 
 @router.put("/site")
@@ -234,8 +276,10 @@ async def save_site(body: SiteIn, ctx: Ctx = Depends(owner_ctx)):
     site = await db().sites.find_one({"owner_id": user["_id"]})
     if not site:
         raise HTTPException(400, "Create your website first")
-    patch = {"content": body.content.model_dump(), "accent": body.accent if body.accent in ACCENTS else ACCENTS[0],
-             "showcase": body.showcase, "updated_at": now()}
+    from ..brand import tokens_for
+    brand_primary = (await tokens_for(user["_id"])).get("primary")
+    accent = body.accent if body.accent in ACCENTS or (brand_primary and body.accent.upper() == brand_primary.upper()) else ACCENTS[0]
+    patch = {"content": body.content.model_dump(), "accent": accent, "showcase": body.showcase, "updated_at": now()}
     if body.slug and body.slug != site["slug"]:
         slug = body.slug.strip().lower()
         if not SLUG.match(slug) or slug in RESERVED:
@@ -300,6 +344,8 @@ async def update_lead(lead_id: str, body: LeadPatch, ctx: Ctx = Depends(get_ctx)
     if "stage" in patch and before.get("stage") != patch["stage"]:
         patch["stage_at"] = now()
     first_action = {"first_action_at": now()} if patch.get("status") and patch["status"] != "new" and not before.get("first_action_at") else {}
+    if patch.get("status") and patch["status"] != before.get("status"):   # the day it was won, for "Am I on target" (edits don't move it)
+        patch["won_at"] = now() if patch["status"] == "won" else None
     await db().leads.update_one({"_id": lead_id}, {"$set": {**patch, **first_action, "updated_at": now(), "updated_by": ctx.actor}})
     if patch.get("status") and patch["status"] != before.get("status"):
         if patch["status"] == "won":

@@ -52,9 +52,16 @@ class Settings:
     aisensy_otp_campaign: str = os.getenv("AISENSY_OTP_CAMPAIGN", "")
     aisensy_otp_button: bool = os.getenv("AISENSY_OTP_BUTTON", "true").lower() in ("1", "true", "yes")
     # The hub's own number only ever messages owners (never their customers): login codes, new-inquiry alerts, the digest
-    # and other owner alerts. Customer messages go from each owner's own number (Growth Mentorship) or their own phone.
+    # and other owner alerts — and a webinar attendee their own Day-1 report. Customer messages go from each owner's own
+    # number (Growth Mentorship) or their own phone.
     aisensy_lead_alert_campaign: str = os.getenv("AISENSY_LEAD_ALERT_CAMPAIGN", "")  # to the owner: {{1}} business, {{2}} name, {{3}} phone, {{4}} message
     aisensy_digest_campaign: str = os.getenv("AISENSY_DIGEST_CAMPAIGN", "")          # to the owner: {{1}} business, {{2}} summary
+    # Day-1 report (₹99 webinar): one approved AiSensy media template, sent from the hub's own number like the owner alerts.
+    # Template: the report as an image (or PDF) header, body "{{1}}, your Business AI report is ready. {{2}}", and a URL button
+    # "See the full report" → APP_URL/r/{{1}} (the button's {{1}} is the report's share token).
+    aisensy_report_campaign: str = os.getenv("AISENSY_REPORT_CAMPAIGN", "")
+    aisensy_report_media: str = os.getenv("AISENSY_REPORT_MEDIA", "image").lower()      # image | pdf
+    aisensy_report_link: str = os.getenv("AISENSY_REPORT_LINK", "button").lower()       # button | text (the link as {{3}})
     msg91_auth_key: str = os.getenv("MSG91_AUTH_KEY", "")
     msg91_otp_template_id: str = os.getenv("MSG91_OTP_TEMPLATE_ID", "")
 
@@ -93,6 +100,32 @@ class Settings:
     campaign_daily_cap: int = _int("CAMPAIGN_DAILY_CAP", 200)          # money-campaign messages per owner per day
     ai_replies_per_chat_per_day: int = _int("AI_REPLIES_PER_CHAT_PER_DAY", 20)
     calls_per_owner_per_day: int = _int("CALLS_PER_OWNER_PER_DAY", 60)
+
+    # Day-1 report: the no-login run during the ₹99 webinar (Admin → Day-1 reports)
+    day1_daily_cap: int = _int("DAY1_DAILY_CAP", 5000)                 # public runs a day (India time), all webinars together
+    day1_runs_per_ip: int = _int("DAY1_RUNS_PER_IP_PER_10MIN", 30)     # per network address, every 10 minutes
+    day1_workers: int = _int("DAY1_WORKERS", 8)                        # reports built at the same time, per server process
+    day1_site_seconds: int = _int("DAY1_SITE_SECONDS", 20)             # longest the website check may take on a run
+    day1_status_secret: str = os.getenv("DAY1_STATUS_WEBHOOK_SECRET", "")  # AiSensy sent/delivered/read webhook: /api/hooks/day1-status/<secret>
+
+    # v2.1: email to customers (payment follow-ups, proposals, invoices). mock = written to the outbox, like WhatsApp in development
+    email_provider: str = os.getenv("EMAIL_PROVIDER", "mock").lower()          # ses | mock
+    aws_region: str = os.getenv("AWS_REGION", "ap-south-1")
+    aws_access_key_id: str = os.getenv("AWS_ACCESS_KEY_ID", "")
+    aws_secret_access_key: str = os.getenv("AWS_SECRET_ACCESS_KEY", "")
+    ses_configuration_set: str = os.getenv("SES_CONFIGURATION_SET", "")       # sends delivery/bounce/complaint events to the webhook
+    email_from_domain: str = os.getenv("EMAIL_FROM_DOMAIN", "mail.employz.ai")  # SPF, DKIM and DMARC records required
+    inbound_email_domain: str = os.getenv("INBOUND_EMAIL_DOMAIN", "")         # e.g. in.employz.ai (MX → SES inbound); empty = no inbound
+    email_events_secret: str = os.getenv("EMAIL_EVENTS_SECRET", "")           # SNS → APP_URL/api/hooks/email-events/<secret>
+    email_events_topic_arn: str = os.getenv("EMAIL_EVENTS_TOPIC_ARN", "")     # only this SNS topic's events are accepted (recommended)
+    email_inbound_secret: str = os.getenv("EMAIL_INBOUND_SECRET", "")         # SNS → APP_URL/api/hooks/email-in/<secret>
+    email_inbound_topic_arn: str = os.getenv("EMAIL_INBOUND_TOPIC_ARN", "")   # only this SNS topic's mail is accepted (recommended)
+    proposals_per_owner_per_day: int = _int("PROPOSALS_PER_OWNER_PER_DAY", 100)
+    emails_per_owner_per_day: int = _int("EMAILS_PER_OWNER_PER_DAY", 300)
+    upload_max_mb: int = _int("UPLOAD_MAX_MB", 10)
+    compliance_reminder_days: tuple = tuple(int(d) for d in os.getenv("COMPLIANCE_REMINDER_DAYS", "30,7,1,0").split(",") if d.strip().isdigit())
+    cashflow_alert_days: int = _int("CASHFLOW_ALERT_DAYS", 10)
+    dashboard_cache_seconds: int = _int("DASHBOARD_CACHE_SECONDS", 60)
 
     # Upgrade destinations (used only when Razorpay is not configured)
     upgrade_urls: dict = field(default_factory=lambda: {

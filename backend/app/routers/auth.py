@@ -1,3 +1,4 @@
+import logging
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -14,6 +15,7 @@ from ..services import attach_referral, invite_link, new_id, new_ref_code, runs_
 from ..sites import site_url
 
 router = APIRouter(prefix="/api")
+log = logging.getLogger("auth")
 MAX_OTP_ATTEMPTS = 5
 
 
@@ -38,7 +40,11 @@ def _allowed_country(phone: str) -> bool:
 
 @router.post("/auth/otp")
 async def request_otp(body: OtpIn, request: Request):
-    phone = normalise_phone(body.phone)
+    return await send_login_code(normalise_phone(body.phone), request)
+
+
+async def send_login_code(phone: str, request: Request) -> dict:
+    """The one login-code sender (the login page and "save your Day-1 report" both use it)."""
     if not _allowed_country(phone):
         raise HTTPException(400, "Please use an Indian mobile number.")
     await rate_limit(f"otp:{phone}", 5, 3600, "Too many codes requested for this number. Try again in an hour.")
@@ -60,7 +66,13 @@ async def request_otp(body: OtpIn, request: Request):
 
 @router.post("/auth/verify")
 async def verify_otp(body: VerifyIn, request: Request, response: Response):
-    phone = normalise_phone(body.phone)
+    _, created = await login_with_code(normalise_phone(body.phone), body, request, response)
+    return {"ok": True, "new": created}
+
+
+async def login_with_code(phone: str, body: VerifyIn, request: Request, response: Response) -> tuple[dict, bool]:
+    """Checks the code, creates the account the first time (Free plan), starts the session. Day-1 reports made with
+    this number are attached here, whichever way the person logs in."""
     await rate_limit(f"verify-ip:{client_ip(request)}", settings.otp_per_ip_per_hour * 2, 3600, "Too many attempts from this network. Try again later.")
     otp = await db().otps.find_one({"phone": phone})
     if not otp or otp["expires_at"] < now():
@@ -84,7 +96,12 @@ async def verify_otp(body: VerifyIn, request: Request, response: Response):
     role = "admin" if phone in settings.admin_phones else "owner"  # ADMIN_PHONES is the single source of truth
     await db().users.update_one({"_id": user["_id"]}, {"$set": {"last_seen_at": now(), "role": role}})
     issue_session(response, user)
-    return {"ok": True, "new": created}
+    from ..day1_runs import attach_runs  # the number is now proven, so reports made with it can be opened here
+    try:
+        await attach_runs(user)
+    except Exception:  # noqa: BLE001  logging in must never depend on the Day-1 report
+        log.exception("attaching Day-1 reports failed for %s", user["_id"])
+    return user, created
 
 
 async def _claim_attempt(otp: dict) -> bool:
@@ -170,6 +187,9 @@ async def me(user: dict = Depends(current_user)):
     sub = owner.get("sub") or {}
     approvals = await db().approvals.count_documents({"ws": ws, "status": "pending"}) if role != "staff" else 0
     my_tasks = await db().tasks.count_documents({"ws": ws, "assignee_id": user["_id"], "status": "open"})
+    from .. import knowledge
+    from .dashboard import landing_for
+    kh = (await knowledge.completeness_for(ws, business))["percent"] if business else 0
     return {
         "user": {"id": user["_id"], "phone": user["phone"], "name": user.get("name", ""),
                  "role": "admin" if user.get("role") == "admin" and user["phone"] in settings.admin_phones else "owner",
@@ -195,6 +215,8 @@ async def me(user: dict = Depends(current_user)):
         "notices": notices,
         "approvals_waiting": approvals,
         "my_open_tasks": my_tasks,
+        "knowledge_percent": kh,
+        "landing": await landing_for(owner, role, kh),
         "program": {"name": settings.program_name, "speakers": settings.speaker_line},
     }
 
