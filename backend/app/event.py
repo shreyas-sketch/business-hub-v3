@@ -851,7 +851,8 @@ async def apply(run: dict, user: dict, email: str, name: str, late: bool = False
         await db().event_runs.update_one({"_id": run["_id"]}, {"$set": {"applied": merged, "late_applied_at": now()}})
         return merged
     user_patch: dict = {}
-    if email and not user.get("email"):
+    # email login keeps each email on one account: one typed here that another account has stays on the business only
+    if email and not user.get("email") and not await db().users.find_one({"email": email, "_id": {"$ne": ws}}, {"_id": 1}):
         user_patch["email"] = email
     if name and not user.get("name"):
         user_patch["name"] = name[:80]
@@ -872,7 +873,11 @@ async def apply(run: dict, user: dict, email: str, name: str, late: bool = False
             user_patch["trial"] = {"plan": "lite", "until": until, "reason": "event", "cohort": run["cohort"]}
             out["trial"] = until.isoformat()
     if user_patch:
-        await db().users.update_one({"_id": ws}, {"$set": user_patch})
+        try:
+            await db().users.update_one({"_id": ws}, {"$set": user_patch})
+        except DuplicateKeyError:  # the email was taken between the check and the save
+            user_patch.pop("email", None)
+            await db().users.update_one({"_id": ws}, {"$set": user_patch})
     await db().event_runs.update_one({"_id": run["_id"]}, {"$set": {"applied": out, "applied_at": now()}})
     await track("event_saved", ws, cohort=run["cohort"])
     if out.get("trial"):

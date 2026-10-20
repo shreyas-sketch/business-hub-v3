@@ -24,6 +24,15 @@ def watch(page, label):
     page.on("response", lambda r: r.status >= 500 and problems.append(f"[{label}] {r.status} {r.url}"))
     page.on("dialog", lambda d: (DIALOGS.append(d.message), d.dismiss() if DISMISS else d.accept()))
 
+def go(page, label, scope=".nav"):
+    """Click a menu link. On a long menu the groups start folded, so open any folded group first."""
+    folded = page.locator(f"{scope} button.group[aria-expanded=false]")
+    for _ in range(12):
+        if not folded.count():
+            break
+        folded.first.click()
+    page.locator(f"{scope} a:has-text('{label}')").first.click()
+
 def login(page, phone):
     page.goto(f"{BASE}/login") if "/login" not in page.url else None
     page.fill("input[inputmode=tel]", phone); page.click("button:has-text('Send code')")
@@ -63,7 +72,7 @@ with sync_playwright() as p:
         expect(pg.locator("button:has-text('Next')")).to_be_disabled()
         pg.fill("input[placeholder='Shree Ganesh Interiors']", "Patel Pumps & Motors"); pg.fill("input[placeholder='Thane, Mumbai']", "Ahmedabad")
         pg.fill("input[placeholder^='Home and office']", "Industrial pumps and motor rewinding"); pg.click("button:has-text('Next')")
-        pg.fill("input[aria-label='Product or service']", "Motor rewinding"); pg.fill("input[aria-label='Price']", "₹2,500"); pg.click("button:has-text('Next')")
+        pg.fill("input[aria-label='Product or service']", "Motor rewinding"); pg.fill("input[aria-label='Price in rupees']", "₹2,500"); pg.click("button:has-text('Next')")
         pg.fill("textarea", "Same-day pickup\nGenuine copper winding"); pg.click("button:has-text('Next')")
         expect(pg.locator("button:has-text('Write my brand message')")).to_be_disabled()
         pg.fill("input[placeholder='98200 00000']", "98300 00001"); pg.click("button:has-text('Write my brand message')")
@@ -98,7 +107,7 @@ with sync_playwright() as p:
     check("customer sends inquiry from phone, sees thank-you", inquiry)
 
     def leads():
-        pg.click(".nav >> text=Leads"); expect(pg.locator("table.t tbody tr")).to_have_count(1)
+        go(pg, "Leads"); expect(pg.locator("table.t tbody tr")).to_have_count(1)
         expect(pg.locator("h1")).to_contain_text("1 lead waiting")
         pg.click("button:has-text('Draft reply')"); expect(pg.locator(".modal textarea")).to_have_value(re.compile("Ramesh"))
         expect(pg.locator(".modal a:has-text('Open in WhatsApp')")).to_have_attribute("href", re.compile(r"wa\.me/919825012345\?text="))
@@ -106,7 +115,7 @@ with sync_playwright() as p:
         expect(pg.locator("h1")).to_contain_text("Every lead has a reply")
     check("lead arrives, reply drafted with WhatsApp link, status set", leads)
     def writer():
-        pg.click(".nav >> text=AI Writer"); expect(pg.locator("text=Your writing assistant")).to_be_visible()
+        go(pg, "AI Writer"); expect(pg.locator("text=Your writing assistant")).to_be_visible()
         pg.click("button:has-text(\"Write this week's posts\")"); expect(pg.locator("text=Copy").first).to_be_visible(timeout=8000)
         pg.click("button[role=tab]:has-text('Reply to a customer')"); pg.locator("textarea").last.fill("Do you repair submersible pumps?"); pg.click("button:has-text('Draft my reply')")
         expect(pg.locator(".prompt").first).to_contain_text("Patel Pumps")
@@ -121,21 +130,21 @@ with sync_playwright() as p:
         expect(pg.locator("input[aria-label='Your score card link']")).to_have_value(re.compile(r"/score/"))
     check("Business Score: 10 questions → score and a share card", score)
     def outputs():
-        pg.click(".nav >> text=My outputs"); expect(pg.locator(".stack > .panel")).to_have_count(6)
+        go(pg, "My outputs"); expect(pg.locator(".stack > .panel")).to_have_count(6)
         pg.locator(".stack > .panel").first.locator("button:has-text('Show')").click(); expect(pg.locator(".prompt").first).to_be_visible()
         pg.locator(".stack > .panel").first.locator("button:has-text('Delete')").click(); expect(pg.locator(".stack > .panel")).to_have_count(5)
     check("My outputs: 6 saved, show and delete", outputs)
     def home_progress():
-        pg.click(".nav >> text=Home"); expect(pg.locator("h1")).to_contain_text("working"); expect(pg.locator(".progress .done")).to_have_count(5)
+        go(pg, "Home"); expect(pg.locator("h1")).to_contain_text("working"); expect(pg.locator(".progress .done")).to_have_count(5)
     check("home shows all five steps done", home_progress)
     def edit_brain():
-        pg.click(".nav >> text=Business Brain"); pg.wait_for_url("**/start")
+        go(pg, "Knowledge Hub"); pg.locator("a:has-text('Edit')").first.click(); pg.wait_for_url("**/start")
         expect(pg.locator("input[placeholder='Shree Ganesh Interiors']")).to_have_value("Patel Pumps & Motors")
         for _ in range(3): pg.click("button:has-text('Next')")
         pg.click("button:has-text('Save')"); pg.wait_for_url("**/home")
     check("Business Brain can be edited later", edit_brain)
     def plans():
-        pg.click(".nav >> text=Plans & billing"); pg.wait_for_url("**/plans")
+        go(pg, "Plans & billing"); pg.wait_for_url("**/plans")
         expect(pg.locator(".panel.active").first).to_contain_text("Free")
         expect(pg.locator("[id^=tier-]")).to_have_count(6)
         DISMISS.append(1); DIALOGS.clear()
@@ -159,12 +168,12 @@ with sync_playwright() as p:
         expect(j.locator(".grid3 .panel")).to_have_count(3, timeout=8000); j.locator(".grid3 .panel").first.click()
         j.click("button:has-text('Use this and build my website')"); j.click("button:has-text('Build my website')")
         j.click("button:has-text('Publish')", timeout=10000); expect(j.locator("h1")).to_contain_text("live", timeout=8000)
-        j.click(".nav >> text=Plans & billing"); expect(j.locator(".panel.active").first).to_contain_text("Membership")
+        go(j, "Plans & billing"); expect(j.locator(".panel.active").first).to_contain_text("Membership")
     check("badge → join with invite → friend gets Membership trial → goes live", badge_join)
     def referrer_rewarded():
-        pg.click(".nav >> text=Home"); pg.reload(); expect(pg.locator(".notice")).to_contain_text("Joshi Sweets just went live")
+        go(pg, "Home"); pg.reload(); expect(pg.locator(".notice")).to_contain_text("Joshi Sweets just went live")
         pg.click(".notice button"); expect(pg.locator(".notice")).to_have_count(0)
-        pg.click(".nav >> text=Invite & earn"); expect(pg.locator("table.t")).to_contain_text("Joshi Sweets")
+        go(pg, "Invite & earn"); expect(pg.locator("table.t")).to_contain_text("Joshi Sweets")
     check("referrer sees reward notice and friend in invite list", referrer_rewarded)
 
     # ── Free owner runs out of AI runs ──
@@ -182,7 +191,7 @@ with sync_playwright() as p:
     def mobile():
         m = b.new_context(viewport={"width": 390, "height": 844}).new_page(); watch(m, "mobile")
         m.goto(f"{BASE}/login"); login(m, "9830000001"); m.wait_for_url("**/home")
-        m.click("button:has-text('Menu')"); m.click(".rail.open >> text=Leads"); m.wait_for_url("**/leads")
+        m.click("button:has-text('Menu')"); go(m, "Leads", ".rail.open"); m.wait_for_url("**/leads")
         expect(m.locator(".rail.open")).to_have_count(0); expect(m.locator("button:has-text('Draft reply')").first).to_be_visible()
         expect(m.locator("table.t select").first).to_be_visible(); m.screenshot(path=f"{OUT}/e2e_m_leads.png", full_page=True)
         m.goto(f"{BASE}/website"); m.wait_for_timeout(800); m.screenshot(path=f"{OUT}/e2e_m_website.png")
@@ -191,7 +200,7 @@ with sync_playwright() as p:
     # ── Admin ──
     def admin():
         a = b.new_context(viewport={"width": 1366, "height": 900}).new_page(); watch(a, "admin")
-        a.goto(f"{BASE}/login"); login(a, "9999900000"); a.wait_for_url("**/home"); a.goto(f"{BASE}/admin")
+        a.goto(f"{BASE}/login"); login(a, "9999900000"); a.wait_for_url("**/admin"); a.goto(f"{BASE}/admin")
         expect(a.locator("h1")).to_contain_text("referral")
         a.fill("input[placeholder='BAI-OCT-11']", "BAI-NOV-08"); a.fill("input[placeholder^='Business AI workshop']", "Workshop 8 Nov"); a.click("button:has-text('Create')")
         expect(a.locator(".toast")).to_contain_text("join?c=BAI-NOV-08"); expect(a.locator("table.t:has(th:has-text('Signups'))")).to_contain_text("BAI-NOV-08")
@@ -213,7 +222,7 @@ with sync_playwright() as p:
     def paid_owner_effects():
         cust.goto(f"{BASE}/s/patel-pumps-motors"); expect(cust.locator(".badge")).to_have_count(0)
         cust.fill("input[name=name]", "Kiran Patel"); cust.fill("input[name=phone]", "9825099999"); cust.click("button:has-text('Send inquiry')")
-        pg.click(".nav >> text=Leads"); pg.reload(); expect(pg.locator("table.t")).to_contain_text("Kiran Patel")
+        go(pg, "Leads"); pg.reload(); expect(pg.locator("table.t")).to_contain_text("Kiran Patel")
         expect(pg.locator("table.t")).not_to_contain_text("Auto-replied")   # below ₹1.5L nothing goes to customers on its own
         pg.goto(f"{BASE}/week"); expect(pg.locator("text=Plan my week")).to_be_visible()
     check("after upgrade: badge gone, lead arrives, no auto-message, weekly plan opens", paid_owner_effects)

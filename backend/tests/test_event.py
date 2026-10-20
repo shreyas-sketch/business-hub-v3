@@ -484,3 +484,21 @@ async def test_when_the_ai_account_is_at_its_limit_a_pack_waits_its_turn_instead
     await ev.drain()
     run = await db().event_runs.find_one({"token": made["token"]})
     assert calls["n"] == 3 and run["steps"]["brand_message"]["status"] == "done" and len(run["brand"]["options"]) == 3
+
+
+async def test_an_email_another_account_uses_doesnt_stop_the_save(client):
+    """Email login (main) keeps emails unique; an attendee who types one that's taken still gets their pack and trial."""
+    import httpx
+    from app.main import app
+    other = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="https://hub.example.in")
+    r = await other.post("/api/auth/register", json={"name": "Taken", "email": "taken@example-dup.in", "password": "longpassword1", "phone": "9833099001"})
+    assert r.status_code == 200, r.text
+    await open_event()
+    made = await make(client, form(None, business_name="Riya Tiffins", about="Home-cooked lunch tiffins delivered to offices", city="Pune"))
+    await ev.drain()
+    code = (await client.post(f"/api/event/runs/{made['token']}/code", json={"phone": "9833099002"})).json()["dev_code"]
+    r = await client.post(f"/api/event/runs/{made['token']}/verify", json={"phone": "9833099002", "code": code, "email": "Taken@example-dup.in", "name": "Riya"})
+    assert r.status_code == 200, r.text
+    user = await db().users.find_one({"phone": "+919833099002"})
+    assert user.get("email") != "taken@example-dup.in" and user["name"] == "Riya" and user["trial"]["reason"] == "event"
+    assert (await db().users.find_one({"phone": "+919833099001"}))["email"] == "taken@example-dup.in"
