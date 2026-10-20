@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { allPages, findPage } from "./shell.jsx";
 import { api } from "./api.js";
 
 export const HubCtx = createContext(null);
@@ -18,26 +19,23 @@ export function useLoad(path, deps = []) {
   return [data, reload, error];
 }
 
-/** Every view is a blueprint sheet: kicker, one headline with one coloured word, sheet ID, footer rail. */
-export function Sheet({ kicker, title, sub, id, pillar, money, actions, children, step = 0 }) {
+/** Every view: one title, one line under it, its actions. Where it sits shows in the top bar ("Systems / Website");
+    the kicker only shows when the page isn't in the menu, or on a phone, where there's no top bar. */
+export function Sheet({ kicker, title, sub, actions, children }) {
   const { me } = useHub() || {};
+  const loc = useLocation();
+  const page = me ? findPage(allPages(me), loc.pathname) : null;
   return (
     <div className="sheet">
       <div className="sheet-head">
-        <span className="sheet-id">{money ? "₹ " : ""}{id}</span>
-        <span className="kicker">{kicker}</span>
-        <div className="row between" style={{ alignItems: "flex-end" }}>
+        <div className="titles">
+          {page ? <span className="kicker phone-only">{page.group}</span> : kicker && <span className="kicker">{kicker}</span>}
           <h1>{title}</h1>
-          {actions && <div className="row">{actions}</div>}
+          {sub && <p className="sub">{sub}</p>}
         </div>
-        {sub && <p className="sub">{sub}</p>}
+        {actions && <div className="actions">{actions}</div>}
       </div>
       {children}
-      <div className="rail-foot">
-        <span>{me?.program?.speakers || "Akshat Dani · Chirag J."} · {me?.program?.name || "Business AI Action Hub"}{pillar ? ` · ${pillar}` : ""}</span>
-        <span className="steps-glyphs" aria-hidden="true">{[0, 1, 2, 3].map((i) => <i key={i} className={i < step ? "done" : i === step ? "now" : ""} />)}</span>
-        <span>{money ? "₹ " : ""}{id}</span>
-      </div>
     </div>
   );
 }

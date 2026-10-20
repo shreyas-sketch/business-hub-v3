@@ -335,7 +335,7 @@ def menu_for(owner: dict, role: str) -> list[dict]:
         unlocked = has(owner, key)
         if not unlocked and not m["teaser"]:
             continue
-        groups[m["group"]].append({"key": key, "path": m["path"], "label": m["label"], "sub": m.get("sub", ""), "locked": not unlocked,
+        groups[m["group"]].append({"key": key, "path": m["path"], "label": m["label"], "sub": m.get("sub", ""), "what": m.get("what", ""), "locked": not unlocked,
                                    "tier": m["tier"], "tier_name": PLANS[m["tier"]]["name"], "tier_short": PLANS[m["tier"]]["short"],
                                    "order": m["order"]})
     return [{"group": g, "items": sorted(items, key=lambda i: i["order"])} for g, items in groups.items() if items]

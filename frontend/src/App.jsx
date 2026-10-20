@@ -2,6 +2,8 @@ import React, { Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { api, rupees, setLimitHandler, setLockedHandler, localPhone } from "./api.js";
 import { Copy, Gate, HubCtx, Modal } from "./ui.jsx";
+import { Finder, Icon, allPages, findPage, rememberPage } from "./shell.jsx";
+import "./app-theme.css";
 import Landing from "./pages/Landing.jsx";
 import Login from "./pages/Login.jsx";
 import Onboarding from "./pages/Onboarding.jsx";
@@ -139,7 +141,7 @@ function Nav({ me, pathname }) {
         return (
           <div key={group} className={`nav-group ${expanded ? "open" : ""}`}>
             <button type="button" className="group" aria-expanded={expanded} onClick={() => !here && toggle(group, !expanded)} disabled={here}>
-              <span>{group}</span>
+              <span><Icon name={group} />{group}</span>
               <span className="meta">{!expanded && <span className="n">{open_.length || items.length}</span>}{!here && <i className="chev" aria-hidden="true" />}</span>
             </button>
             {expanded && (
@@ -160,33 +162,99 @@ function Nav({ me, pathname }) {
 
 function Shell({ me, children }) {
   const [open, setOpen] = useState(false);
+  const [finding, setFinding] = useState(false);
+  const [account, setAccount] = useState(false);
   const loc = useLocation();
-  useEffect(() => setOpen(false), [loc.pathname]);
+  const pages = allPages(me);
+  const here = findPage(pages, loc.pathname);
+  useEffect(() => { setOpen(false); setAccount(false); if (here && !here.locked) rememberPage(here.path); }, [loc.pathname]);  // eslint-disable-line react-hooks/exhaustive-deps
   // keep the current page visible in a long menu
   useEffect(() => { document.querySelector(".nav a.on")?.scrollIntoView({ block: "nearest" }); }, [loc.pathname]);
+  // the workspace look is for the logged-in hub only; public pages keep the blueprint look
+  useEffect(() => { document.body.classList.add("app"); return () => document.body.classList.remove("app"); }, []);
+  // "/" or Ctrl/⌘ K opens Go to, unless someone is typing
+  useEffect(() => {
+    const k = (e) => {
+      const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
+      if ((e.key === "k" && (e.metaKey || e.ctrlKey)) || (e.key === "/" && !typing)) { e.preventDefault(); setFinding(true); }
+    };
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, []);
+  // the account menu closes on a click anywhere else, or Esc
+  useEffect(() => {
+    if (!account) return undefined;
+    const click = (e) => { if (!e.target.closest(".me-menu, .me-btn")) setAccount(false); };
+    const esc = (e) => { if (e.key === "Escape") setAccount(false); };
+    document.addEventListener("mousedown", click); window.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("mousedown", click); window.removeEventListener("keydown", esc); };
+  }, [account]);
   const logout = async () => { await api("/auth/logout", { method: "POST" }); window.location.href = "/"; };
+  const who = me.workspace.is_team ? `${me.user.name || "Team"} · ${me.workspace.role}` : me.program.name;
+  const name = me.business_name || "Your business";
+  const initials = (me.user.name || name).trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "AH";
+  const runsPct = Math.min(100, (me.runs.left / Math.max(me.runs.allowance + me.runs.bonus, 1)) * 100);
+  const can = (key) => pages.some((p) => p.key === key && !p.locked);
+  const leadsTab = can("inquiry_desk") ? ["/inquiries", "Inquiries"] : ["/leads", "Leads"];
+  const isOn = (path) => loc.pathname === path || loc.pathname.startsWith(path + "/");
   return (
     <div className="shell">
       <div className="topbar">
         <div className="mark"><b>{me.business_name || "Action Hub"}</b><span>{me.workspace.is_team ? me.workspace.role : me.user.plan_name}</span></div>
         <button className="btn sm ghost" onClick={() => setOpen(true)}>Menu</button>
       </div>
-      <aside className={`rail ${open ? "open" : ""}`}>
-        <div className="row between">
-          <div className="mark"><b>{me.business_name || "Your business"}</b><span>{me.workspace.is_team ? `${me.user.name || "Team"} · ${me.workspace.role}` : me.program.name}</span></div>
+      <aside className={`rail ${open ? "open" : ""}`} aria-label="Menu">
+        <div className="row between" style={{ flexWrap: "nowrap" }}>
+          <div className="mark"><span className="seal" aria-hidden="true">{name.trim()[0]?.toUpperCase() || "A"}</span><b>{name}</b><span>{who}</span></div>
           {open && <button className="btn sm ghost" onClick={() => setOpen(false)}>Close</button>}
         </div>
+        <button type="button" className="find-btn" onClick={() => { setOpen(false); setFinding(true); }}><Icon name="search" />Go to…<kbd>/</kbd></button>
         <Nav me={me} pathname={loc.pathname} />
         <div className="foot">
           <div className="stack" style={{ gap: 6 }}>
             <span className="label">AI runs this month</span>
-            <div className="meter"><i style={{ width: `${Math.min(100, (me.runs.left / Math.max(me.runs.allowance + me.runs.bonus, 1)) * 100)}%` }} /></div>
+            <div className="meter"><i style={{ width: `${runsPct}%` }} /></div>
             <span className="small muted">{me.runs.left} left · {me.user.plan_name}</span>
           </div>
           <button className="btn sm ghost" onClick={logout}>Log out</button>
         </div>
       </aside>
-      <main className="main">{children}</main>
+      <main className="main">
+        <header className="appbar">
+          <nav className="crumbs" aria-label="You are here">
+            {here ? <><span>{here.group}</span><span className="sep" aria-hidden="true">/</span><b>{here.label}</b></> : <b>{name}</b>}
+          </nav>
+          <button type="button" className="find" onClick={() => setFinding(true)}><Icon name="search" />Go to a page<kbd>/</kbd></button>
+          {me.approvals_waiting > 0 && (
+            <NavLink to="/approvals" className="waiting" title="Messages waiting for you to send"><b>{me.approvals_waiting}</b>Send list</NavLink>
+          )}
+          <button type="button" className="me-btn" aria-haspopup="true" aria-expanded={account} aria-label="Your account" onClick={() => setAccount((a) => !a)}>{initials}</button>
+          {account && (
+            <div className="me-menu" role="menu">
+              <div className="who"><b>{me.user.name || name}</b><span className="small muted">{me.user.plan_name}{me.workspace.is_team ? ` · ${me.workspace.role}` : ""}</span></div>
+              <div className="stack" style={{ gap: 6 }}>
+                <span className="small muted">AI runs this month: {me.runs.left} left</span>
+                <div className="meter"><i style={{ width: `${runsPct}%` }} /></div>
+              </div>
+              <div>
+                {me.workspace.role === "owner" && <NavLink to="/plans" role="menuitem">Plans & billing</NavLink>}
+                {can("business_brain") && <NavLink to="/knowledge" role="menuitem">Knowledge Hub</NavLink>}
+                <button type="button" className="linkish" role="menuitem" onClick={logout}>Log out</button>
+              </div>
+            </div>
+          )}
+        </header>
+        <div className="desk">{children}</div>
+      </main>
+      <nav className="tabbar" aria-label="Shortcuts">
+        <NavLink to={me.landing || "/home"} className={isOn(me.landing || "/home") ? "on" : ""}><Icon name="Start" />Home</NavLink>
+        <NavLink to={leadsTab[0]} className={isOn(leadsTab[0]) ? "on" : ""}><Icon name="inbox" />{leadsTab[1]}</NavLink>
+        {can("approvals")
+          ? <NavLink to="/approvals" className={isOn("/approvals") ? "on" : ""}><Icon name="send" />Send list{me.approvals_waiting > 0 && <span className="badge">{me.approvals_waiting}</span>}</NavLink>
+          : <NavLink to="/website" className={isOn("/website") ? "on" : ""}><Icon name="Systems" />Website</NavLink>}
+        <button type="button" onClick={() => setFinding(true)}><Icon name="search" />Go to</button>
+      </nav>
+      {finding && <Finder me={me} onClose={() => setFinding(false)} />}
     </div>
   );
 }
