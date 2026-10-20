@@ -1,0 +1,374 @@
+{
+ "config": {
+  "base": "http://127.0.0.1:8830",
+  "web": "http://127.0.0.1:8850",
+  "n": 200,
+  "arrive": 10.0,
+  "typing": [
+   0.0,
+   1.0
+  ],
+  "reading": [
+   0.0,
+   5.0
+  ],
+  "share": 0.95,
+  "stage_limit": 300.0,
+  "code": "LT-79087",
+  "out": "run4_burst_tight_wait.json",
+  "cores": 2
+ },
+ "seconds": 808,
+ "calls": {
+  "GET /api/me": {
+   "n": 400,
+   "p50": 0.02,
+   "p95": 0.03,
+   "max": 0.13,
+   "errors": {}
+  },
+  "GET cash-flow": {
+   "n": 200,
+   "p50": 0.01,
+   "p95": 0.03,
+   "max": 0.05,
+   "errors": {}
+  },
+  "GET cash-flow what-if": {
+   "n": 200,
+   "p50": 0.01,
+   "p95": 0.03,
+   "max": 0.07,
+   "errors": {}
+  },
+  "GET dashboard": {
+   "n": 200,
+   "p50": 0.03,
+   "p95": 0.06,
+   "max": 0.19,
+   "errors": {}
+  },
+  "GET form": {
+   "n": 200,
+   "p50": 0.67,
+   "p95": 2.99,
+   "max": 3.24,
+   "errors": {}
+  },
+  "GET inquiries (poll)": {
+   "n": 689,
+   "p50": 0.01,
+   "p95": 0.01,
+   "max": 0.03,
+   "errors": {}
+  },
+  "GET pack (poll every 2 s)": {
+   "n": 26268,
+   "p50": 0.02,
+   "p95": 0.7,
+   "max": 3.61,
+   "errors": {
+    "RemoteProtocolError": 11
+   }
+  },
+  "GET post png": {
+   "n": 200,
+   "p50": 2.14,
+   "p95": 3.84,
+   "max": 5.87,
+   "errors": {}
+  },
+  "GET poster png": {
+   "n": 298,
+   "p50": 1.53,
+   "p95": 3.57,
+   "max": 4.37,
+   "errors": {}
+  },
+  "GET site": {
+   "n": 200,
+   "p50": 0.0,
+   "p95": 0.01,
+   "max": 0.01,
+   "errors": {}
+  },
+  "GET site qr": {
+   "n": 97,
+   "p50": 0.02,
+   "p95": 0.03,
+   "max": 0.04,
+   "errors": {}
+  },
+  "GET target": {
+   "n": 200,
+   "p50": 0.01,
+   "p95": 0.03,
+   "max": 0.05,
+   "errors": {}
+  },
+  "POST about (site unreadable)": {
+   "n": 26,
+   "p50": 0.02,
+   "p95": 1.81,
+   "max": 1.97,
+   "errors": {}
+  },
+  "POST brand pick": {
+   "n": 98,
+   "p50": 0.01,
+   "p95": 0.05,
+   "max": 1.06,
+   "errors": {}
+  },
+  "POST brand-kit/generate (AI, waits)": {
+   "n": 200,
+   "p50": 2.02,
+   "p95": 11.24,
+   "max": 19.11,
+   "errors": {
+    "502": 158
+   }
+  },
+  "POST code (WhatsApp OTP)": {
+   "n": 200,
+   "p50": 0.88,
+   "p95": 1.44,
+   "max": 1.91,
+   "errors": {}
+  },
+  "POST gstin": {
+   "n": 172,
+   "p50": 1.15,
+   "p95": 3.48,
+   "max": 3.69,
+   "errors": {
+    "ReadError": 1
+   }
+  },
+  "POST inquiry (WhatsApp paste)": {
+   "n": 200,
+   "p50": 0.01,
+   "p95": 0.02,
+   "max": 0.03,
+   "errors": {}
+  },
+  "POST money (a due)": {
+   "n": 200,
+   "p50": 0.01,
+   "p95": 0.01,
+   "max": 0.05,
+   "errors": {}
+  },
+  "POST neighbour's website form": {
+   "n": 97,
+   "p50": 0.01,
+   "p95": 0.02,
+   "max": 0.04,
+   "errors": {}
+  },
+  "POST quotes (save)": {
+   "n": 73,
+   "p50": 0.01,
+   "p95": 0.01,
+   "max": 0.02,
+   "errors": {}
+  },
+  "POST quotes/draft (AI, waits)": {
+   "n": 200,
+   "p50": 2.02,
+   "p95": 12.72,
+   "max": 32.03,
+   "errors": {
+    "502": 127
+   }
+  },
+  "POST runs (build my pack)": {
+   "n": 200,
+   "p50": 2.79,
+   "p95": 3.95,
+   "max": 4.33,
+   "errors": {}
+  },
+  "POST score": {
+   "n": 200,
+   "p50": 0.01,
+   "p95": 0.03,
+   "max": 0.05,
+   "errors": {}
+  },
+  "POST score (re-take)": {
+   "n": 200,
+   "p50": 0.01,
+   "p95": 0.02,
+   "max": 0.04,
+   "errors": {}
+  },
+  "POST site publish": {
+   "n": 200,
+   "p50": 0.01,
+   "p95": 0.02,
+   "max": 0.03,
+   "errors": {
+    "400": 103
+   }
+  },
+  "POST verify (account + pack inside)": {
+   "n": 200,
+   "p50": 0.07,
+   "p95": 0.15,
+   "max": 0.24,
+   "errors": {}
+  },
+  "PUT knowledge money": {
+   "n": 200,
+   "p50": 0.02,
+   "p95": 0.03,
+   "max": 0.09,
+   "errors": {}
+  },
+  "PUT knowledge targets": {
+   "n": 200,
+   "p50": 0.02,
+   "p95": 0.04,
+   "max": 0.09,
+   "errors": {}
+  },
+  "page /": {
+   "n": 200,
+   "p50": 0.01,
+   "p95": 0.02,
+   "max": 0.06,
+   "errors": {}
+  },
+  "page /event": {
+   "n": 200,
+   "p50": 2.85,
+   "p95": 5.99,
+   "max": 6.29,
+   "errors": {}
+  }
+ },
+ "journey": {
+  "first things on screen (s after Build)": {
+   "n": 200,
+   "p50": 17.8,
+   "p95": 29.37,
+   "max": 33.54
+  },
+  "whole pack ready (s after Build)": {
+   "n": 200,
+   "p50": 299.51,
+   "p95": 416.01,
+   "max": 443.6
+  },
+  "code asked \u2192 in the hub (s)": {
+   "n": 200,
+   "p50": 6.8,
+   "p95": 8.98,
+   "max": 9.71
+  },
+  "scan \u2192 saved in the hub (s)": {
+   "n": 200,
+   "p50": 312.57,
+   "p95": 429.47,
+   "max": 461.16
+  },
+  "inquiry \u2192 reply written (s)": {
+   "n": 200,
+   "p50": 9.03,
+   "p95": 18.06,
+   "max": 24.08
+  }
+ },
+ "notes": {
+  "website unreadable \u2192 typed a line": 26,
+  "step site: skipped": 38,
+  "step compliance: done": 200,
+  "step check: skipped": 38,
+  "step brand: done": 200,
+  "step knowledge: done": 200,
+  "step brand_message: done": 200,
+  "step lead_ideas: done": 200,
+  "step website: done": 97,
+  "step site: done": 136,
+  "step check: done": 136,
+  "step site: failed": 26,
+  "step check: failed": 26,
+  "step website: after_login": 103
+ },
+ "ai_limiter": {
+  "inflight": 0,
+  "calls": 18609,
+  "ok": 1020,
+  "busy": 17589,
+  "out_tokens": 934875,
+  "started": 1792479092.1219056,
+  "peak_inflight": 48,
+  "otpm": 80000,
+  "inflight_cap": 200,
+  "lat_p50": 7.880152741181306,
+  "lat_p95": 16.515475247018365
+ },
+ "speaker_screen": {
+  "code": "LT-79087",
+  "runs": {
+   "started": 200,
+   "waiting": 0,
+   "writing": 0,
+   "ready": 200,
+   "failed": 0,
+   "saved": 200
+  },
+  "accounts": 200,
+  "members_paid": 0,
+  "ai_cost_inr": 309.85,
+  "seconds": {
+   "first_things": 8.5,
+   "everything_median": 296.7,
+   "everything_slowest": 440.6
+  },
+  "counters": {
+   "packs": 200,
+   "ai": 200
+  },
+  "demos": {
+   "lead": {
+    "Website live": 97,
+    "Lead ideas ready": 200
+   },
+   "sales": {
+    "Quotations made": 73,
+    "Payment dues added": 200
+   },
+   "brand": {
+    "Brand kit written": 42
+   },
+   "operations": {
+    "Compliance calendars": 200,
+    "SOPs written": 0
+   },
+   "conversion": {
+    "Sent themselves an inquiry": 200,
+    "Got a website inquiry": 97,
+    "Quotation from an inquiry": 73
+   },
+   "data": {
+    "Cash flow ready": 200,
+    "Target set": 200,
+    "Took the score": 200,
+    "Re-took the score": 200,
+    "Dashboard open (60%+)": 200
+   }
+  },
+  "open": true,
+  "ai": true,
+  "pack_cap": 2000,
+  "ai_cap": 2000,
+  "trial_until": "2026-10-23",
+  "name": "Load test event"
+ },
+ "machine_cpu": {
+  "avg": 36.2,
+  "peak": 99.7
+ }
+}

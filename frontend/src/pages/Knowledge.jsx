@@ -29,15 +29,45 @@ function SectionHead({ s, children }) {
   );
 }
 
-function Updates({ updates, onChange }) {
-  const { toast } = useHub();
-  const [confirm, setConfirm] = useState(null);
-  if (!updates?.length) return null;
+/** "Update my hub": what was built from the old details, and the AI runs bringing it up to date will use — shown before
+    anything runs. Saving the Knowledge Hub never spends runs on its own. */
+function UpdateHub({ updates, onChange }) {
+  const { toast, refresh } = useHub();
+  const [plan, setPlan] = useState(null);
+  const key = (updates || []).map((u) => `${u.key}:${u.reason}:${u.updated}`).join(",");
+  useEffect(() => { api("/knowledge/update").then(setPlan).catch(() => setPlan(null)); }, [key]);
+  if (!plan?.items?.length) return null;
+  const short = plan.runs > plan.runs_left;
   return (
     <div className="panel active kh-banner" role="status">
       <div className="stack" style={{ gap: 4 }}>
-        <span className="label">Your Knowledge Hub changed</span>
-        <p className="small muted">These were built from the old details. We didn't change them on our own.</p>
+        <span className="label">Update my hub</span>
+        <p className="small">Built from your old details: {plan.items.map((i) => i.label).join(", ")}.</p>
+        <p className="small muted">Updating uses {plan.runs} AI {plan.runs === 1 ? "run" : "runs"} — you have {plan.runs_left} left this month. Anything you edited yourself is kept.</p>
+      </div>
+      <div className="row">
+        <Busy className="btn primary" disabled={short || plan.runs === 0} run={async () => {
+          const r = await api("/knowledge/update", { method: "POST" });
+          onChange(r.updates); setPlan(r.plan); refresh();
+          const done = Object.values(r.result).filter((v) => v.startsWith("refreshed")).length;
+          toast(done ? `Updated ${done} ${done === 1 ? "thing" : "things"}` : "Nothing could be updated just now", done ? "ok" : "warn");
+        }}>Update my hub · {plan.runs} {plan.runs === 1 ? "run" : "runs"}</Busy>
+        {short && <span className="small" style={{ color: "var(--amber)" }}>Not enough runs left this month for all of it.</span>}
+      </div>
+    </div>
+  );
+}
+
+function Updates({ updates, onChange }) {
+  const { toast } = useHub();
+  const [confirm, setConfirm] = useState(null);
+  updates = (updates || []).filter((u) => u.reason === "edited");   // the rest is on "Update my hub"
+  if (!updates.length) return null;
+  return (
+    <div className="panel active kh-banner" role="status">
+      <div className="stack" style={{ gap: 4 }}>
+        <span className="label">You edited these yourself</span>
+        <p className="small muted">They were built from the old details, and you've changed them since, so we kept your version. Your choice:</p>
       </div>
       {updates.map((u) => (
         <div key={u.key} className="kh-update">
@@ -235,7 +265,7 @@ export default function Knowledge() {
   const [loaded, reload, err] = useLoad("/knowledge");
   const [d, setD] = useState(null);
   useEffect(() => { if (loaded) setD(loaded); }, [loaded]);
-  // The rest of the hub updates in the background after a save; look again shortly for "your Knowledge Hub changed".
+  // After a save, what costs no AI run updates in the background; look again shortly for what waits for "Update my hub".
   const saved = (next) => { setD(next); setTimeout(() => reload(), 4000); };
 
   const head = { kicker: "Structure · Knowledge Hub", id: "KH-01", pillar: "Structure", title: <>Your <em>Knowledge Hub</em>.</>,
@@ -262,6 +292,7 @@ export default function Knowledge() {
         </div>
       </div>
 
+      <UpdateHub updates={d.updates} onChange={(updates) => setD({ ...d, updates })} />
       <Updates updates={d.updates} onChange={(updates) => setD({ ...d, updates })} />
 
       <section id="kh-basics" className="panel">

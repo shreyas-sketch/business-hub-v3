@@ -6,6 +6,8 @@ import { Empty, Loading, Pill, Tabs } from "../v2.jsx";
 import "./inquiries.css";
 
 const STATUS = { new: "New", proposal_sent: "Proposal sent", in_pipeline: "In pipeline" };
+// iPhone and iPad can't share from WhatsApp into a web app (no Web Share Target on iOS): there, pasting is the main way in
+const IOS = typeof navigator !== "undefined" && (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
 const STATUS_KIND = { new: "warn", proposal_sent: "on", in_pipeline: "off" };
 
 /** Settings: the inquiry address, and what goes out on its own. */
@@ -44,10 +46,21 @@ function Paste({ prefill, onDone }) {
   const [f, setF] = useState({ name: "", phone: pick(prefill), message: prefill || "" });
   const [err, setErr] = useState("");
   const { toast } = useHub();
+  const fromClipboard = async () => {
+    try {
+      const t = (await navigator.clipboard.readText()).trim();
+      if (!t) { setErr("Nothing copied yet. In WhatsApp, press and hold the message, tap Copy, then come back."); return; }
+      setF((cur) => ({ ...cur, message: t.slice(0, 3000), phone: cur.phone || pick(t) }));
+      setErr("");
+    } catch { setErr("Your phone didn't allow pasting from here. Press and hold in the message box below, then tap Paste."); }
+  };
   return (
     <div className="panel stack">
-      <span className="label">New WhatsApp inquiry</span>
-      <p className="small muted">Paste the customer's message and number. The hub writes a proposal you send from your own WhatsApp with one tap.</p>
+      <span className="label">{IOS ? "Paste a WhatsApp inquiry" : "New WhatsApp inquiry"}</span>
+      <p className="small muted">{IOS
+        ? "In WhatsApp, press and hold the customer's message and tap Copy. Come back here and tap Paste the message. Add their number and the hub writes a proposal you send with one tap."
+        : "Paste the customer's message and number. The hub writes a proposal you send from your own WhatsApp with one tap."}</p>
+      {navigator.clipboard?.readText && <button type="button" className={`btn ${IOS ? "primary" : "sm"}`} onClick={fromClipboard}>Paste the message</button>}
       <div className="inq-grid">
         <Field label="Customer's name"><input className="input" value={f.name} maxLength={80} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field>
         <Field label="WhatsApp number"><input className="input" inputMode="tel" value={f.phone} maxLength={24} onChange={(e) => setF({ ...f, phone: e.target.value })} /></Field>
@@ -132,12 +145,13 @@ export default function Inquiries() {
     <Sheet kicker="Systems · Inquiries" id="SY-12" pillar="Systems"
       title={c.new ? <>{c.new} {c.new === 1 ? "inquiry" : "inquiries"} <em>waiting</em>.</> : <>Every inquiry, <em>answered</em>.</>}
       sub="Website, lead magnet, email and WhatsApp inquiries in one place, each with a proposal written from your Knowledge Hub."
-      actions={<button className="btn" onClick={() => { setPaste(!paste); if (shared) nav("/inquiries", { replace: true }); }}>{paste ? "Close" : "New WhatsApp inquiry"}</button>}>
+      actions={<button className={`btn${IOS && !paste ? " primary" : ""}`} onClick={() => { setPaste(!paste); if (shared) nav("/inquiries", { replace: true }); }}>
+        {paste ? "Close" : IOS ? "Paste a WhatsApp inquiry" : "New WhatsApp inquiry"}</button>}>
       {paste && <Paste prefill={shared || ""} onDone={() => { setPaste(false); if (shared) nav("/inquiries", { replace: true }); reload(); }} />}
       {canAct(me, "manager") && s && s.address !== undefined && <Setup s={s} reload={reloadS} />}
       <Tabs value={tab} onChange={setTab} tabs={[["all", "All"], ["new", `New${c.new ? ` · ${c.new}` : ""}`], ["proposal_sent", "Proposal sent"], ["in_pipeline", "In pipeline"]]} />
       {!data ? (err ? <FormError msg={err.message} /> : <Loading />) : !items.length ? (
-        <Empty>{tab === "all" ? "No inquiries yet. Share your website, or add a WhatsApp inquiry above." : "Nothing here."}</Empty>
+        <Empty>{tab === "all" ? (IOS ? "No inquiries yet. Share your website, or paste a WhatsApp inquiry with the button above." : "No inquiries yet. Share your website, or add a WhatsApp inquiry above.") : "Nothing here."}</Empty>
       ) : (
         <div className="stack">
           {items.map((it) => (
@@ -154,6 +168,11 @@ export default function Inquiries() {
                 </div>
               </div>
               {it.message && <p className="inq-msg">{it.message}</p>}
+              {(it.attachments || []).length > 0 && (
+                <div className="row small">{it.attachments.map((a) => (
+                  <a key={a.id} className="btn sm ghost" href={`/api/inquiries/${it.id}/files/${a.id}`}>{a.name} · {Math.max(1, Math.round(a.size / 1024))} KB</a>))}
+                </div>
+              )}
               {it.channel === "email" && it.verified === false && <span className="small muted">The sender's address couldn't be confirmed — check before you reply.</span>}
               {(it.replies || []).map((r, i) => <div key={i} className="inq-reply small"><b>They replied {ago(r.at)}:</b> {r.text}</div>)}
               <Proposal it={it} reload={reload} />

@@ -162,7 +162,8 @@ async def _regenerate(owner: dict, sections: set) -> None:
 
 
 knowledge.register(knowledge.Dependent("compliance", "Compliance calendar", "compliance_calendar", "/compliance", {"identity"}, _has_identity,
-                                       _never_edited, _regenerate, note="Your own items and documents are never changed.", order=3))
+                                       _never_edited, _regenerate, note="Your own items and documents are never changed.", order=3,
+                                       cost=lambda sections: 0))
 
 
 # ───────────────────────── reading ─────────────────────────

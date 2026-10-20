@@ -168,6 +168,7 @@ async def design(token: str, name: str):
     run = await _run(token)
     if not run.get("design") or not (run.get("profile") or {}).get("name"):
         raise HTTPException(404, "Not ready yet")
+    await rate_limit(f"event-design:{run['_id']}", 60, 600, "Too many pictures just now. Try again in a minute.")
     data = await ev.design_png(run, m.group(1))
     return Response(data, media_type="image/png", headers={"Cache-Control": "private, max-age=60"})
 
@@ -186,9 +187,13 @@ def _indian(phone_raw: str) -> str:
 @router.post("/api/event/runs/{token}/code")
 async def run_code(token: str, body: CodeIn, request: Request):
     run = await _run(token)
+    phone = _indian(body.phone)
     if run.get("user_id"):
-        raise HTTPException(409, "This pack is already saved. Log in with your WhatsApp number to open it.")
-    out = await send_login_code(_indian(body.phone), request)
+        owner = await db().users.find_one({"_id": run["user_id"]}, {"phone": 1})
+        # saved, but putting it into the account didn't finish: the same number may finish it
+        if run.get("applied") or not owner or owner.get("phone") != phone:
+            raise HTTPException(409, "This pack is already saved. Log in with your WhatsApp number to open it.")
+    out = await send_login_code(phone, request)
     return {**out, "to": "your WhatsApp number"}
 
 
@@ -216,8 +221,11 @@ async def run_verify(token: str, body: SaveIn, request: Request, response: Respo
     user, created = await login_with_code(phone, VerifyIn(phone=phone, code=body.code, name=name, cohort=run["cohort"], src="event"), request, response)
     if not await ev.adopt(run, user):
         raise HTTPException(409, "This pack is already saved in another account.")
-    applied = run.get("applied") or await ev.apply(await db().event_runs.find_one({"_id": run["_id"]}), user, email, name)
-    return {"ok": True, "new": created, "applied": applied}
+    fresh = await db().event_runs.find_one({"_id": run["_id"]})
+    applied = fresh.get("applied") or await ev.apply(fresh, user, email, name)
+    applied = await ev.late_apply(run["_id"]) or applied       # it finished while we were saving
+    pending = bool((await db().event_runs.find_one({"_id": run["_id"]}, {"apply_pending": 1}) or {}).get("apply_pending"))
+    return {"ok": True, "new": created, "applied": applied, "pending": pending}
 
 
 @router.get("/api/event/mine")
@@ -225,6 +233,10 @@ async def mine(user: dict = Depends(current_user)):
     run = await db().event_runs.find_one({"user_id": user["_id"]}, sort=[("saved_at", -1)])
     if not run:
         return None
+    if not run.get("applied") and not user.get("team_of"):   # saved, but the save stopped before the pack went in: finish it now
+        await ev.apply(run, user, user.get("email", ""), user.get("name", ""))
+        await ev.late_apply(run["_id"])
+        run = await db().event_runs.find_one({"_id": run["_id"]})
     return {"token": run["token"], "applied": run.get("applied") or {}, "saved_at": run["saved_at"].isoformat() if run.get("saved_at") else None,
             **{k: v for k, v in ev.view(run).items() if k in ("steps", "compliance", "check")}}
 

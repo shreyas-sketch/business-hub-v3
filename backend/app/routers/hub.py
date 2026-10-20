@@ -267,7 +267,8 @@ async def _site_refresh(owner: dict, sections: set) -> str | None:
 
 
 knowledge.register(knowledge.Dependent("website", "Website copy", "website", "/website", {"basics", "brand", "contact"}, _site_exists, _site_edited,
-                                       _site_refresh, overwrite=_site_rewrite, note="Your phone and WhatsApp number on the page are always current.", order=1))
+                                       _site_refresh, overwrite=_site_rewrite, note="Your phone and WhatsApp number on the page are always current.", order=1,
+                                       cost=lambda sections: 0 if sections <= {"contact"} else 1))
 
 
 @router.put("/site")

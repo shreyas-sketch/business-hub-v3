@@ -138,8 +138,8 @@ async def test_the_link_works_only_while_the_admin_has_it_open_and_stops_at_its_
     assert (await client.get("/api/event/form?e=NOPE")).json()["valid"] is False
     r = await admin.put(f"/api/admin/event/{CODE}", json={"open": True, "ai": True, "pack_cap": 2, "ai_cap": 1})
     assert r.status_code == 200 and r.json()["open"]
-    first, second = await make(client, body), await make(client, body)
-    third = await client.post("/api/event/runs", json=body)
+    first, second = await make(client, body), await make(client, {**body, "gstin": gstin("29", "P")})
+    third = await client.post("/api/event/runs", json={**body, "gstin": gstin("24", "P")})
     assert third.status_code == 429
     a = await db().event_runs.find_one({"token": first["token"]})
     b = await db().event_runs.find_one({"token": second["token"]})
@@ -378,3 +378,109 @@ async def test_when_the_website_cant_be_read_a_line_about_the_business_brings_th
     v = (await client.get(f"/api/event/runs/{made['token']}")).json()
     assert v["status"] == "done" and v["business"]["name"] == "Kaveri Home Appliances" and v["business"]["city"] == "Pune"
     assert v["website"] and len(v["brand"]["options"]) == 3 and v["ideas"]
+
+
+async def test_saved_while_still_being_written_the_rest_goes_in_when_ready(client):
+    await open_event()
+    with site_server() as site:
+        made = await make(client, form(site))
+        run = await ev._claim("queued", "rules")              # only phase 1 has run when they press Save
+        assert await ev.build_rules(run)
+    assert (await db().event_runs.find_one({"token": made["token"]}))["status"] == "ai_queued"
+    code = (await client.post(f"/api/event/runs/{made['token']}/code", json={"phone": "9833071111"})).json()["dev_code"]
+    r = await client.post(f"/api/event/runs/{made['token']}/verify", json={"phone": "9833071111", "code": code, "email": "a@example-early.in", "name": "A"})
+    assert r.status_code == 200 and r.json()["pending"] and "website" not in r.json()["applied"]
+    user = await db().users.find_one({"phone": "+919833071111"})
+    assert not await db().sites.find_one({"owner_id": user["_id"]})
+    assert (await client.get(f"/api/event/runs/{made['token']}")).json()["pending"]
+    await ev.drain()                                            # phase 2 finishes: the late part goes in by itself
+    run = await db().event_runs.find_one({"token": made["token"]})
+    assert run["status"] == "done" and not run["apply_pending"] and run["applied"]["website"] == "added" and run["applied"]["compliance"] == "added"
+    assert await db().sites.find_one({"owner_id": user["_id"]}) and await db().lead_ideas.find_one({"owner_id": user["_id"]})
+    b = await db().businesses.find_one({"owner_id": user["_id"]})
+    assert b["brand"]["message"] and b["email"] == "a@example-early.in"
+    assert await ev.late_apply(run["_id"]) is None             # once only
+
+
+async def test_one_gst_number_gets_at_most_two_packs_per_event(client):
+    await open_event()
+    body = form(None, business_name="Riya Tiffins", about="Home-cooked lunch tiffins delivered to offices")
+    await make(client, body)
+    await make(client, body)
+    r = await client.post("/api/event/runs", json=body)
+    assert r.status_code == 409 and "already built" in r.json()["detail"]
+    other = await client.post("/api/event/runs", json={**body, "gstin": gstin("29", "P")})
+    assert other.status_code == 200
+    assert (await ev.counters(CODE))["packs"] == 3
+
+
+async def test_a_pack_stuck_in_a_dead_process_is_finished_and_its_unwritten_pieces_wait_for_the_hub(client):
+    await open_event()
+    made = await make(client, form(None, business_name="Riya Tiffins", about="Home-cooked lunch tiffins delivered to offices"))
+    old = now() - timedelta(minutes=30)
+    await db().event_runs.update_one({"token": made["token"]}, {"$set": {"status": "ai", "started_at": old, "attempts": 3, "claim": "dead",
+                                                                         "steps.website": {"status": "working"}}})
+    await ev.requeue_stale()
+    run = await db().event_runs.find_one({"token": made["token"]})
+    assert run["status"] == "done" and run["steps"]["website"]["status"] == "after_login"
+    # a write from the build that was presumed dead lands nowhere
+    await ev._set({"_id": run["_id"], "claim": "dead"}, {"steps.website": {"status": "working"}})
+    assert (await db().event_runs.find_one({"_id": run["_id"]}))["steps"]["website"]["status"] == "after_login"
+
+
+async def test_the_event_trial_stretches_a_shorter_one_and_never_touches_a_plan_they_have(client):
+    await open_event(trial_days=3)
+    made = await make(client, form(None, business_name="Riya Tiffins", about="Home-cooked lunch tiffins delivered to offices"))
+    await ev.drain()
+    run = await db().event_runs.find_one({"token": made["token"]})
+    short = {"_id": "u-short", "phone": "+919833081111", "ref_code": "RSHORT1", "plan": "free", "trial": {"plan": "lite", "until": now() + timedelta(days=1)}}
+    await db().users.insert_one(short)
+    out = await ev.apply(run, short, "", "")
+    assert out.get("trial") and (await db().users.find_one({"_id": "u-short"}))["trial"]["reason"] == "event"
+    paid = {"_id": "u-paid", "phone": "+919833081112", "ref_code": "RPAID01", "plan": "lite"}
+    await db().users.insert_one(paid)
+    await db().businesses.delete_many({})
+    assert "trial" not in await ev.apply(run, paid, "", "") and "trial" not in await db().users.find_one({"_id": "u-paid"})
+
+
+async def test_about_only_when_the_website_gave_nothing_and_logos_must_really_be_images(client):
+    await open_event()
+    with site_server() as site:
+        made = await make(client, form(site))
+        await ev.drain()
+        r = await client.post(f"/api/event/runs/{made['token']}/about", json={"business_name": "X Business", "about": "Something else entirely"})
+        assert r.status_code == 409                                   # its website was read: no second AI round
+        PAGES["/fake.png"] = (b"GIF89a" + b"\x00" * 64, "image/png")   # says PNG, isn't
+        try:
+            from app import fetch
+            with pytest.raises(fetch.FetchError):
+                await fetch.fetch_image(site + "/fake.png")
+            data, kind = await fetch.fetch_image(site + "/logo.png")
+            assert kind == "image/png" and data == LOGO
+        finally:
+            PAGES.pop("/fake.png", None)
+
+
+async def test_a_picture_asked_for_many_times_at_once_is_drawn_once(client):
+    await open_event()
+    made = await make(client, form(None, business_name="Riya Tiffins", about="Home-cooked lunch tiffins delivered to offices"))
+    await ev.drain()
+    rs = await asyncio.gather(*(client.get(f"/api/event/runs/{made['token']}/design/status_poster.png") for _ in range(6)))
+    assert all(r.status_code == 200 for r in rs) and len({r.content for r in rs}) == 1
+    assert await db().event_files.count_documents({"_id": {"$regex": ":status_poster:"}}) == 1
+
+
+async def test_when_the_ai_account_is_at_its_limit_a_pack_waits_its_turn_instead_of_dropping_pieces(client, monkeypatch):
+    await open_event()
+    real, calls = tasks.brand_message, {"n": 0}
+
+    async def busy_twice(p):
+        calls["n"] += 1
+        if calls["n"] <= 2:
+            raise Busy("simulated 429", 0)
+        return await real(p)
+    monkeypatch.setattr(tasks, "brand_message", busy_twice)
+    made = await make(client, form(None, business_name="Riya Tiffins", about="Home-cooked lunch tiffins delivered to offices"))
+    await ev.drain()
+    run = await db().event_runs.find_one({"token": made["token"]})
+    assert calls["n"] == 3 and run["steps"]["brand_message"]["status"] == "done" and len(run["brand"]["options"]) == 3

@@ -182,17 +182,25 @@ function Pack() {
   const [pickBusy, setPickBusy] = useState(false);
   const [save, setSave] = useState(false);
   const [kick, setKick] = useState(0);
+  const [saved, setSaved] = useState(null);     // what the save put in (kept here: later polls don't carry it)
   const saveRef = useRef(null);
   useEffect(() => {
     let stop = false;
     let timer;
+    let misses = 0;
     const tick = async () => {
       try {
         const r = await api(`/event/runs/${token}`);
         if (stop) return;
+        misses = 0;
         setRun(r);
-        if (!["done", "failed"].includes(r.status)) timer = setTimeout(tick, 2000);
-      } catch { if (!stop) setGone(true); }
+        if (!["done", "failed"].includes(r.status) || r.pending) timer = setTimeout(tick, 2000);
+      } catch (e) {
+        if (stop) return;
+        if (e.status === 404) { setGone(true); return; }
+        misses += 1;              // a Wi-Fi blip in a full hall: keep trying, a little slower each time
+        timer = setTimeout(tick, Math.min(2000 * (misses + 1), 10000));
+      }
     };
     tick();
     return () => { stop = true; clearTimeout(timer); };
@@ -297,12 +305,12 @@ function Pack() {
       </div>
 
       <section className="panel d1-sheet ev-save" ref={saveRef}>
-        {run.saved ? <Saved token={token} /> : !save ? (
+        {run.saved ? <Saved applied={saved?.applied} pending={run.pending || saved?.pending} /> : !save ? (
           <div className="row between">
             <div className="stack" style={{ gap: 4 }}><b className="ev-save-t">Keep all of this in your own hub.</b><span className="small muted">Free. Your WhatsApp number and email, and a 6-digit code on WhatsApp.</span></div>
             <button className="btn primary" onClick={() => setSave(true)}>Save it to my hub</button>
           </div>
-        ) : <SaveForm token={token} onSaved={() => setRun({ ...run, saved: true })} />}
+        ) : <SaveForm token={token} building={!["done", "failed"].includes(run.status)} onSaved={(r) => { setSaved(r); setRun({ ...run, saved: true, pending: r.pending }); setKick((k) => k + 1); }} />}
       </section>
       {!run.saved && !save && <div className="ev-sticky"><button className="btn primary" onClick={() => setSave(true)}>Save it to my hub</button></div>}
     </Frame>
@@ -334,7 +342,7 @@ function AboutForm({ token, siteError, onDone, ai }) {
   );
 }
 
-function SaveForm({ token, onSaved }) {
+function SaveForm({ token, onSaved, building }) {
   const [f, setF] = useState({ name: "", email: "", phone: "" });
   const [sent, setSent] = useState(null);
   const [code, setCode] = useState("");
@@ -353,12 +361,14 @@ function SaveForm({ token, onSaved }) {
     try {
       const r = await api(`/event/runs/${token}/verify`, { method: "POST", body: { phone: digits, code, email: f.email.trim(), name: f.name.trim() } });
       setDone(r);
+      onSaved(r);
     } catch (e2) { setErr(e2.message); } finally { setBusy(false); }
   };
-  if (done) return <Saved applied={done.applied} onOpen={onSaved} />;
+  if (done) return <Saved applied={done.applied} pending={done.pending} />;
   return (
     <div className="stack">
       <h2>Save it with your WhatsApp <em>code</em>.</h2>
+      {building && <p className="small muted">Your pack is still being written. Save now if you like — the rest goes into your hub the moment it's ready.</p>}
       {!sent ? (
         <>
           <div className="grid2">
@@ -389,18 +399,19 @@ function SaveForm({ token, onSaved }) {
 
 const APPLIED = { knowledge: "Knowledge Hub", compliance: "Compliance calendar", brand: "Brand colours and logo", brand_message: "Brand message", website: "Website draft", lead_ideas: "Ways to get more leads" };
 
-function Saved({ applied, onOpen }) {
+function Saved({ applied, pending }) {
   const a = applied || {};
   const kept = Object.entries(a).filter(([k, x]) => x === "kept" && APPLIED[k]).map(([k]) => APPLIED[k]);
   const trial = a.trial ? new Date(a.trial).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : null;
   return (
     <div className="stack">
-      <h2>Saved. It's all in your <em>hub</em>.</h2>
+      <h2>Saved. It's in your <em>hub</em>.</h2>
+      {pending && <p className="sub">The last pieces are still being written. They go into your hub by themselves in a minute or two.</p>}
       {a.all === "team" ? <p className="sub">This number is a team member's login, so the pack wasn't added to the business owner's hub.</p> : <>
         {trial && <p className="sub">Membership features are open for you until {trial}, so you can try everything in the sessions.</p>}
         {kept.length > 0 && <p className="small muted">You already had these, so we kept yours: {kept.join(", ")}.</p>}
       </>}
-      <button className="btn primary" onClick={() => { onOpen?.(); window.location.href = "/"; }}>Open my hub</button>
+      <button className="btn primary" onClick={() => { window.location.href = "/"; }}>Open my hub</button>
     </div>
   );
 }

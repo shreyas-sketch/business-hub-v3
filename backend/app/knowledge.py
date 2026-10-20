@@ -10,9 +10,11 @@ who buys, why us, proof, contact) and gains four optional sections:
     brand     the chosen brand message and the tone of voice (written in the Brand kit)              → every AI writer
 
 Propagation ("the rest of the hub updates"): every save records a new `brain_version` and the sections that changed.
-Each output built from the Brain registers here as a dependent (website copy, brand kit, compliance calendar, SOP map,
-proposal templates) with what it watches, whether the owner has edited it by hand, and how to refresh it:
-- never edited by hand → refreshed automatically;
+Each output built from the Brain registers here as a dependent (website copy, brand kit, compliance calendar, SOP map)
+with what it watches, whether the owner has edited it by hand, how to refresh it, and how many AI runs a refresh uses:
+- a refresh that uses no AI run (the compliance calendar; a phone or email change) → done on save, as before;
+- one that uses AI runs → never on save: it waits, and "Update my hub" on the Knowledge Hub shows the runs it will use
+  before it runs (the owner presses it when they're done editing — not on every save);
 - edited by hand → kept, and a banner offers "Refresh" or "Keep mine". Owner edits are never overwritten silently.
 """
 import asyncio
@@ -128,6 +130,8 @@ class Dependent:
     refresh: Callable[[dict, set[str]], Awaitable[str | None]]  # (owner, changed sections) — never replaces what the owner wrote;
                                                                 # returns "kept_edits" when some of it was left as the owner wrote it
     overwrite: Callable[[dict], Awaitable[None]] | None = None  # "Refresh" on the banner: the owner chose to replace their edits
+    cost: Callable[[set[str]], int] | None = None    # AI runs a refresh for these sections uses (default 1); 0 = done on save
+    has_edits: Callable[[str], Awaitable[bool]] | None = None   # anything the owner wrote themselves (default: `edited`)
     note: str = ""
     order: int = 0
     meta: dict = field(default_factory=dict)
@@ -149,7 +153,8 @@ async def bump(ws: str, sections: set[str]) -> int:
 
 
 async def mark_stale(ws: str, key: str, version: int, reason: str, sections: set[str]) -> None:
-    await db().brain_stale.update_one({"_id": f"{ws}:{key}"}, {"$set": {"ws": ws, "dep": key, "version": version, "reason": reason, "at": now()},
+    await db().brain_stale.update_one({"_id": f"{ws}:{key}"}, {"$set": {"ws": ws, "dep": key, "version": version, "reason": reason, "at": now(),
+                                                                        "updated": False},
                                                                "$addToSet": {"sections": {"$each": sorted(sections)}}}, upsert=True)
 
 
@@ -157,8 +162,26 @@ async def clear_stale(ws: str, key: str) -> None:
     await db().brain_stale.delete_one({"_id": f"{ws}:{key}"})
 
 
+async def settle_sections(ws: str, key: str, done: set[str]) -> None:
+    """A free refresh brought these sections up to date. Anything else still waiting (an earlier change that needs AI runs,
+    or the owner's edits) keeps waiting."""
+    s = await db().brain_stale.find_one({"_id": f"{ws}:{key}"})
+    if not s:
+        return
+    left = sorted(set(s.get("sections") or []) - set(done))
+    if left:
+        await db().brain_stale.update_one({"_id": s["_id"]}, {"$set": {"sections": left}})
+    else:
+        await clear_stale(ws, key)
+
+
+def runs_for(dep: Dependent, sections: set[str]) -> int:
+    return dep.cost(sections) if dep.cost else 1
+
+
 async def propagate(owner: dict, sections: set[str]) -> dict:
-    """Brings every dependent output up to the new Brain: refreshed when untouched, flagged when the owner edited it."""
+    """After a save: what costs no AI run is brought up to the new Brain now; what would use AI runs waits for "Update my
+    hub" (marked "ready"); what the owner edited is flagged for their choice."""
     ws = owner["_id"]
     if not sections:
         return {}
@@ -171,6 +194,11 @@ async def propagate(owner: dict, sections: set[str]) -> dict:
         try:
             if not await dep.exists(ws):
                 continue
+            if runs_for(dep, hit) > 0:
+                edited = await (dep.has_edits or dep.edited)(ws)
+                await mark_stale(ws, dep.key, version, "edited" if edited else "ready", hit)
+                result[dep.key] = "flagged" if edited else "ready"
+                continue
             if await dep.edited(ws):
                 await mark_stale(ws, dep.key, version, "edited", hit)
                 result[dep.key] = "flagged"
@@ -180,7 +208,7 @@ async def propagate(owner: dict, sections: set[str]) -> dict:
                 await mark_stale(ws, dep.key, version, "edited", hit)
                 result[dep.key] = "refreshed_kept_edits"
             else:
-                await clear_stale(ws, dep.key)
+                await settle_sections(ws, dep.key, hit)
                 result[dep.key] = "refreshed"
         except HTTPException as e:
             reason = "no_runs" if e.status_code == 402 else "failed"
@@ -211,7 +239,8 @@ async def settle() -> None:
 
 
 REASONS = {"edited": "You've edited it, so we kept your version.", "no_runs": "It couldn't refresh: this month's AI runs are used up.",
-           "failed": "It couldn't refresh just now."}
+           "failed": "It couldn't refresh just now.", "ready": "Built from your old details. Update my hub refreshes it."}
+WAITING = ("ready", "no_runs", "failed")      # what "Update my hub" refreshes; "edited" stays the owner's choice on its banner
 
 
 async def updates(owner: dict) -> list[dict]:
@@ -221,8 +250,58 @@ async def updates(owner: dict) -> list[dict]:
         if not dep or not plans.has(owner, dep.feature):
             continue
         out.append({"key": dep.key, "label": dep.label, "path": dep.path, "reason": s.get("reason"), "why": REASONS.get(s.get("reason"), ""),
-                    "sections": s.get("sections") or [], "since": s["at"].isoformat(), "note": dep.note})
+                    "sections": s.get("sections") or [], "since": s["at"].isoformat(), "note": dep.note,
+                    "runs": runs_for(dep, set(s.get("sections") or SECTIONS)), "updated": bool(s.get("updated"))})
     return sorted(out, key=lambda u: DEPENDENTS[u["key"]].order)
+
+
+async def _waiting(owner: dict) -> list[dict]:
+    """Waiting for "Update my hub": anything marked ready (or that couldn't refresh before), plus an output edited item by item
+    (the brand kit) whose untouched items haven't been brought up to date yet — its edits are kept either way."""
+    out = []
+    for u in await updates(owner):
+        if u["reason"] in WAITING:
+            out.append(u)
+        elif u["reason"] == "edited" and not u["updated"] and not await DEPENDENTS[u["key"]].edited(owner["_id"]):
+            out.append(u)
+    return out
+
+
+async def update_plan(owner: dict) -> dict:
+    """What "Update my hub" will refresh, and the AI runs it will use — shown before the owner presses it."""
+    from .services import runs_status
+    items = await _waiting(owner)
+    return {"items": [{"key": u["key"], "label": u["label"], "runs": u["runs"]} for u in items], "runs": sum(u["runs"] for u in items),
+            "runs_left": (await runs_status(owner))["left"]}
+
+
+async def update_hub(owner: dict) -> dict:
+    """"Update my hub": refreshes everything waiting, one by one. Owner edits stay (item by item where the output allows it);
+    if the month's runs run out part-way, what's left keeps waiting."""
+    ws = owner["_id"]
+    out: dict[str, str] = {}
+    for u in await _waiting(owner):
+        dep = DEPENDENTS[u["key"]]
+        try:
+            outcome = await dep.refresh(owner, set(u["sections"] or SECTIONS))
+            if outcome == "kept_edits":    # the rest is up to date; the owner's own items wait on the banner
+                await db().brain_stale.update_one({"_id": f"{ws}:{dep.key}"}, {"$set": {"reason": "edited", "updated": True, "at": now()}})
+                out[dep.key] = "refreshed_kept_edits"
+            else:
+                await clear_stale(ws, dep.key)
+                out[dep.key] = "refreshed"
+        except HTTPException as e:
+            if e.status_code == 402:
+                await db().brain_stale.update_one({"_id": f"{ws}:{dep.key}"}, {"$set": {"reason": "no_runs"}})
+                out[dep.key] = "no_runs"
+                break
+            await db().brain_stale.update_one({"_id": f"{ws}:{dep.key}"}, {"$set": {"reason": "failed"}})
+            out[dep.key] = "failed"
+        except Exception:  # noqa: BLE001
+            log.exception("Update my hub: %s failed", dep.key)
+            await db().brain_stale.update_one({"_id": f"{ws}:{dep.key}"}, {"$set": {"reason": "failed"}})
+            out[dep.key] = "failed"
+    return out
 
 
 async def apply(owner: dict, key: str) -> None:

@@ -83,6 +83,39 @@ async def ses(method: str, path: str, payload: dict | None = None) -> dict:
     return r.json() if r.content else {}
 
 
+# ───────────────────────── an inbound email stored in S3 by SES ─────────────────────────
+class TooLarge(Exception):
+    pass
+
+
+S3_KEY = re.compile(r"^[A-Za-z0-9!_.*'()/+=-]{1,1024}$")
+
+
+async def s3_get(bucket: str, key: str) -> bytes:
+    """One stored email from the inbound bucket (SES's S3 action), read with the hub's AWS key (it needs s3:GetObject on that
+    bucket only). Refuses a key with odd characters and anything over EMAIL_INBOUND_MAX_MB."""
+    if not S3_KEY.match(key or ""):
+        raise ValueError("unexpected S3 key")
+    region = settings.email_inbound_bucket_region or settings.aws_region
+    url = f"https://{bucket}.s3.{region}.amazonaws.com/{key}"
+    empty = hashlib.sha256(b"").hexdigest()
+    headers = sigv4("GET", url, {"x-amz-content-sha256": empty}, b"", region=region, service="s3",
+                    access_key=settings.aws_access_key_id, secret_key=settings.aws_secret_access_key, at=datetime.now(timezone.utc))
+    limit = settings.email_inbound_max_mb * 1024 * 1024
+    async with http_client() as client:
+        async with client.stream("GET", url, headers=headers) as r:
+            if r.status_code != 200:
+                raise RuntimeError(f"S3 {r.status_code}")
+            if int(r.headers.get("content-length") or 0) > limit:
+                raise TooLarge()
+            body = b""
+            async for chunk in r.aiter_bytes():
+                body += chunk
+                if len(body) > limit:
+                    raise TooLarge()
+    return body
+
+
 # ───────────────────────── building a message ─────────────────────────
 def build(*, from_name: str, to: str, subject: str, text: str, html: str | None, reply_to: list[str],
           attachments: list[tuple[str, bytes, str]] | None, headers: dict | None = None) -> EmailMessage:

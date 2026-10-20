@@ -185,6 +185,20 @@ class FactIn(BaseModel):
     text: str = Field(min_length=3, max_length=200)
 
 
+@router.get("/update")
+async def update_preview(ctx: Ctx = Depends(owner_ctx)):
+    """What "Update my hub" will refresh and how many AI runs it will use."""
+    return await knowledge.update_plan(ctx.owner)
+
+
+@router.post("/update")
+async def update_now(ctx: Ctx = Depends(owner_ctx)):
+    """"Update my hub": the owner saw the cost and pressed it."""
+    result = await knowledge.update_hub(ctx.owner)
+    await track("knowledge_update", ctx.ws, refreshed=sorted(k for k, v in result.items() if v.startswith("refreshed")))
+    return {"result": result, "updates": await knowledge.updates(ctx.owner), "plan": await knowledge.update_plan(ctx.owner)}
+
+
 @router.post("/facts")
 async def add_fact(body: FactIn, ctx: Ctx = Depends(owner_ctx)):
     """'Add this to your Knowledge Hub?' — a fact the owner stated (e.g. while editing the website by prompt) goes into the

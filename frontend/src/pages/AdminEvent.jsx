@@ -41,9 +41,11 @@ function Settings({ e, reload }) {
   const [err, setErr] = useState("");
   return (
     <div className="stack">
-      <div className="ev-settings">
+      <div className="row" style={{ gap: 24 }}>
         <Switch checked={f.open} label="Link open" onChange={(v) => setF({ ...f, open: v })} />
         <Switch checked={f.ai} label="AI before login" onChange={(v) => setF({ ...f, ai: v })} />
+      </div>
+      <div className="ev-settings">
         <Field label="Packs, at most"><input className="input" type="number" min={1} max={20000} value={f.pack_cap} onChange={(x) => setF({ ...f, pack_cap: x.target.value })} /></Field>
         <Field label="Packs with AI, at most"><input className="input" type="number" min={0} max={20000} value={f.ai_cap} onChange={(x) => setF({ ...f, ai_cap: x.target.value })} /></Field>
         <Field label="Membership features open until" hint="The last day of the event. Empty: none.">

@@ -59,6 +59,30 @@ def strip_quoted(body: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
 
 
+ATTACH_MAX = 5
+
+
+def attachments(msg) -> list[tuple[str, bytes, str]]:
+    """The customer's files worth keeping on the inquiry: PDF, PNG or JPEG (checked from their first bytes), each within
+    UPLOAD_MAX_MB, at most 5. Anything else stays out."""
+    from .config import settings
+    from .files import sniff
+    out = []
+    for part in msg.iter_attachments():
+        try:
+            data = part.get_payload(decode=True) or b""
+        except Exception:  # noqa: BLE001
+            continue
+        mime = sniff(data)
+        if not mime or len(data) > settings.upload_max_mb * 1024 * 1024:
+            continue
+        name = re.sub(r"[\r\n/\\]", " ", str(part.get_filename() or "attachment")).strip()[:120] or "attachment"
+        out.append((name, data, mime))
+        if len(out) >= ATTACH_MAX:
+            break
+    return out
+
+
 def parse(raw: bytes) -> dict:
     msg = email.message_from_bytes(raw, policy=policy.default)
     name, addr = parseaddr(str(msg.get("From", "")))
@@ -75,7 +99,7 @@ def parse(raw: bytes) -> dict:
     return {"from_name": (name or "").strip()[:80], "from_email": (addr or "").strip().lower()[:254], "to": to,
             "subject": str(msg.get("Subject", ""))[:200], "text": strip_quoted(body)[:4000], "full_text": body[:20000],
             "message_id": str(msg.get("Message-ID", "")).strip()[:300], "in_reply_to": str(msg.get("In-Reply-To", "")).strip()[:300],
-            "references": re.findall(r"<[^<>\s]+>", refs)[:20], "automatic": auto}
+            "references": re.findall(r"<[^<>\s]+>", refs)[:20], "automatic": auto, "attachments": attachments(msg)}
 
 
 def forwarded_sender(body: str) -> tuple[str, str] | None:

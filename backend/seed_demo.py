@@ -491,8 +491,12 @@ async def v21_demo(d, admin, today):
     await kav.post("/api/inquiries/whatsapp", json={"name": "Varsha Kulkarni", "phone": "98300 71001",
                                                     "message": "Hi, need a chimney with installation for our new flat in Baner. What's the price?"})
     from app.routers import inquiries
+    # website inquiries get a written proposal too on the launch demo (the owner's switch; off by default for everyone else)
+    assert (await kav.put("/api/inquiries/settings", json={"auto_web": True})).json()["auto_web"] is True
     b = await d.businesses.find_one({"owner_id": uid})
     async for lead in d.leads.find({"owner_id": uid, "source": "email", "status": "new"}).limit(2):
+        await inquiries.on_new_inquiry(await d.users.find_one({"_id": uid}), b, lead)
+    async for lead in d.leads.find({"owner_id": uid, "source": "website", "status": "new"}).limit(2):
         await inquiries.on_new_inquiry(await d.users.find_one({"_id": uid}), b, lead)
     await inquiries.settle()
     await knowledge.settle()

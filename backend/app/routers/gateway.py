@@ -541,6 +541,44 @@ async def _customer(ws: str, ev: PaymentEvent) -> dict:
             "state": state, **({"customer_id": known["_id"]} if known else {})}
 
 
+async def payer_customer(ws: str, ev: PaymentEvent, name: str = "") -> str | None:
+    """Everyone who pays through the gateway is on the Customers list: matched by phone, else by email, else added. Each
+    payment is counted once (a webhook delivered twice doesn't double their purchases)."""
+    phone = _phone(ev.contact)
+    email = (ev.email or "").strip().lower()
+    if not phone and not email:
+        return None          # nothing to recognise them by next time: not listed as an anonymous "Customer"
+    known = await db().customers.find_one({"ws": ws, "phone": phone}) if phone else None
+    if not known and email:
+        known = await db().customers.find_one({"ws": ws, "email": email})
+    rupees = round(float(ev.amount or 0), 2)
+    day = today().isoformat()
+    if known:
+        fill = {**({"email": email} if email and not known.get("email") else {}), **({"phone": phone} if phone and not known.get("phone") else {})}
+        await db().customers.update_one({"_id": known["_id"], "payment_ids": {"$ne": ev.payment_id}},
+                                        {"$set": {"last_purchase": day, "updated_at": now(), **fill},
+                                         "$inc": {"purchases": 1, "total_value": rupees}, "$addToSet": {"payment_ids": ev.payment_id}})
+        cid = known["_id"]
+    else:
+        notes = {k.lower(): v for k, v in (ev.notes or {}).items()}
+        label = (name or ev.name or notes.get("name") or notes.get("customer") or "").strip() or (email.split("@")[0].replace(".", " ").title() if email else phone)
+        cid = new_id()
+        await db().customers.insert_one({"_id": cid, "ws": ws, "name": str(label)[:80], "phone": phone, "email": email, "tier": "",
+                                         "total_value": rupees, "purchases": 1, "first_purchase": day, "last_purchase": day, "last_item": "",
+                                         "reorder_days": None, "occasion": None, "source": "razorpay", "payment_ids": [ev.payment_id], "notes": "",
+                                         "created_at": now(), "updated_at": now()})
+    from .desk import retier
+    await retier(ws)
+    return cid
+
+
+async def _payer_customer_safely(ws: str, ev: PaymentEvent, name: str = "") -> None:
+    try:
+        await payer_customer(ws, ev, name)
+    except Exception:  # noqa: BLE001  the invoice or the paid due matters more than the list
+        log.exception("could not add the payer of %s to Customers", ev.payment_id)
+
+
 async def captured(owner: dict, ev: PaymentEvent) -> dict:
     ws = owner["_id"]
     existing = await db().quotes.find_one({"ws": ws, "gateway_payment_id": ev.payment_id}, {"number": 1})
@@ -550,6 +588,8 @@ async def captured(owner: dict, ev: PaymentEvent) -> dict:
         return {"result": "already_matched"}
     settled = await settle_with_dues(owner, ev)
     if settled:
+        due = await db().dues.find_one({"_id": settled.get("due_id")}, {"customer": 1}) if settled.get("due_id") else None
+        await _payer_customer_safely(ws, ev, (due or {}).get("customer", ""))
         return settled
     tax = await _owner_tax(ws)
     cust = await _customer(ws, ev)
@@ -574,6 +614,7 @@ async def captured(owner: dict, ev: PaymentEvent) -> dict:
         await db().gateway_payments.delete_one({"_id": rec})   # not made: a retry may make it
         raise
     await db().gateway_payments.update_one({"_id": rec}, {"$set": {"invoice_id": inv["_id"]}})
+    await _payer_customer_safely(ws, ev, cust.get("name", "") if cust.get("name") not in (ev.email, cust.get("phone"), "Customer") else "")
     return {"result": "invoiced", "number": inv["number"], "invoice_id": inv["_id"]}
 
 

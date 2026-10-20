@@ -315,5 +315,10 @@ async def _overwrite(owner: dict) -> None:
     await _write_voice(owner["_id"], new)
 
 
+async def _has_edits(ws: str) -> bool:
+    return bool(edited_of(await _kit(ws)))
+
+
 knowledge.register(knowledge.Dependent("brand_kit", "Brand kit messages", "brand_kit", "/brand-kit", {"basics", "brand", "contact"}, _exists, _never,
-                                       _refresh, overwrite=_overwrite, note="Only the items you edited are waiting for you.", order=2))
+                                       _refresh, overwrite=_overwrite, note="Only the items you edited are waiting for you.", order=2,
+                                       cost=lambda sections: 0 if sections <= {"contact"} else 1, has_edits=_has_edits))

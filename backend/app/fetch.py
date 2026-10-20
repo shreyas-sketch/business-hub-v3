@@ -176,7 +176,11 @@ async def fetch_image(raw_url: str, max_bytes: int = 800_000) -> tuple[bytes, st
                         raise FetchError("The logo file is too large.")
             finally:
                 await resp.aclose()
-            return body, ctype
+            from .files import sniff
+            real = sniff(body)
+            if real not in IMAGE_TYPES:      # the header said PNG/JPEG; the bytes must say so too
+                raise FetchError("The logo isn't a PNG or JPG.")
+            return body, real
         raise FetchError("The logo address redirects too many times.")
 
 

@@ -26,11 +26,11 @@ import logging
 import re
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from pymongo.errors import DuplicateKeyError
 
-from .. import company_brain, dashboard_cache, inbound, mailer, plans
+from .. import company_brain, dashboard_cache, files, inbound, mailer, plans
 from ..agents import catalog
 from ..agents.approvals import create_approval, link_hosts
 from ..ai import proposal_tasks
@@ -262,9 +262,23 @@ async def list_inquiries(channel: str = "", status: str = "", ctx: Ctx = Depends
                       "channel_label": CHANNELS.get(x.get("source", "website"), (x.get("source") or "").title()), "message": x.get("message", ""),
                       "created_at": x["created_at"].isoformat(), "status": st, "stage": x.get("stage", "identification"), "proposal": p or None,
                       "replies": [{"at": r["at"].isoformat(), "from": r.get("from", ""), "text": r.get("text", "")} for r in (x.get("replies") or [])[-3:]],
-                      "verified": x.get("sender_verified")})
+                      "verified": x.get("sender_verified"), "attachments": x.get("attachments") or []})
     counts = {k: sum(1 for i in items if i["status"] == k) for k in ("new", "proposal_sent", "in_pipeline")}
     return {"items": items[:200], "counts": counts, "channels": CHANNELS}
+
+
+@router.get("/inquiries/{lead_id}/files/{file_id}")
+async def inquiry_file(lead_id: str, file_id: str, ctx: Ctx = Depends(feature("inquiry_desk"))):
+    """A file a customer attached to their email inquiry — only for this business, and only if it's on that inquiry."""
+    lead = await db().leads.find_one({"_id": lead_id, "owner_id": ctx.ws}, {"attachments": 1})
+    if not lead or file_id not in {a["id"] for a in lead.get("attachments") or []}:
+        raise HTTPException(404, "Not found")
+    f = await files.get(file_id, ctx.ws)
+    if not f:
+        raise HTTPException(404, "Not found")
+    name = re.sub(r"[^A-Za-z0-9 ._()-]", "", f.get("filename") or "attachment").strip() or "attachment"
+    return Response(bytes(f["data"]), media_type=f["content_type"], headers={"Content-Disposition": f'attachment; filename="{name}"',
+                                                                          "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"})
 
 
 @router.get("/inquiries/settings")
@@ -463,6 +477,12 @@ async def inquiry_in(handle: str, mail: dict, verified: bool) -> str:
     phone = inbound.phone_in(text) if verified else None     # a number in an unauthenticated email isn't trusted as the customer's
     lead = await save_lead(site, owner, b, (name or sender.split("@")[0].replace(".", " ").title())[:80], phone or "", message, "email",
                            email=sender, message_id=mail.get("message_id", "")[:300], sender_verified=verified)
+    kept = []
+    for fname, data, mime in mail.get("attachments") or []:     # the customer's drawings, photos and PDFs stay with the inquiry
+        f = await files.put(ws, data, fname, mime, "inquiry_attachment", lead_id=lead["_id"])
+        kept.append({"id": f["_id"], "name": fname, "size": len(data), "type": mime})
+    if kept:
+        await db().leads.update_one({"_id": lead["_id"]}, {"$set": {"attachments": kept}})
     dashboard_cache.bust(ws)
     await db().inbound_emails.update_one({"_id": _key(ws, "inquiry", mail)}, {"$set": {"lead_id": lead["_id"]}})
     return "lead"
@@ -519,6 +539,21 @@ async def email_in(secret: str, request: Request):
     if any((receipt.get(v) or {}).get("status") == "FAIL" for v in ("spamVerdict", "virusVerdict")):
         return {"ok": True, "handled": ["rejected"]}
     raw = inbound.raw_from_sns(note)
+    action = receipt.get("action") or {}
+    if not raw and action.get("type") == "S3":
+        # SES's S3 action: the email (any size, attachments included) is in the inbound bucket; SNS only says where
+        if not settings.email_inbound_bucket or action.get("bucketName") != settings.email_inbound_bucket:
+            return {"ok": True, "handled": ["wrong_bucket"]}
+        key = action.get("objectKey") or f"{action.get('objectKeyPrefix') or ''}{(note.get('mail') or {}).get('messageId') or ''}"
+        try:
+            raw = await mailer.s3_get(action["bucketName"], key)
+        except mailer.TooLarge:
+            return {"ok": True, "handled": ["too_large"]}
+        except ValueError:
+            return {"ok": True, "handled": ["bad_key"]}
+        except Exception:  # noqa: BLE001  S3 not readable yet: a 5xx makes SNS deliver the notification again
+            log.exception("reading an inbound email from S3 failed")
+            raise HTTPException(502, "The email couldn't be read from storage yet.")
     if not raw:
         return {"ok": True, "handled": ["no_content"]}
     mail = inbound.parse(raw)

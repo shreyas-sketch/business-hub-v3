@@ -113,6 +113,8 @@ class Settings:
     # Live event link (Admin → Live event): website + GST number → the event pack, before login
     event_workers: int = _int("EVENT_WORKERS", 24)                    # packs in phase 1 (website + rules) at once, per server process
     event_ai_workers: int = _int("EVENT_AI_WORKERS", 40)              # packs in phase 2 (AI) at once, per server process
+    event_ai_concurrency: int = _int("EVENT_AI_CONCURRENCY", 24)      # AI calls for packs at once, per process (below AI_CONCURRENCY,
+                                                                      # so people already in their hub always get a turn)
     event_runs_per_ip: int = _int("EVENT_RUNS_PER_IP_PER_10MIN", 600)  # per network address: a whole hall shares one Wi-Fi address
     event_site_seconds: int = _int("EVENT_SITE_SECONDS", 20)          # longest the website read may take
     event_ai_seconds: int = _int("EVENT_AI_SECONDS", 150)             # longest one AI step may take, waiting in line included
@@ -129,6 +131,10 @@ class Settings:
     email_events_topic_arn: str = os.getenv("EMAIL_EVENTS_TOPIC_ARN", "")     # only this SNS topic's events are accepted (recommended)
     email_inbound_secret: str = os.getenv("EMAIL_INBOUND_SECRET", "")         # SNS → APP_URL/api/hooks/email-in/<secret>
     email_inbound_topic_arn: str = os.getenv("EMAIL_INBOUND_TOPIC_ARN", "")   # only this SNS topic's mail is accepted (recommended)
+    email_inbound_bucket: str = os.getenv("EMAIL_INBOUND_BUCKET", "")         # SES's S3 action stores each email here (any size;
+                                                                              # the SNS action alone bounces mail over 150 KB)
+    email_inbound_bucket_region: str = os.getenv("EMAIL_INBOUND_BUCKET_REGION", "")   # empty = AWS_REGION
+    email_inbound_max_mb: int = _int("EMAIL_INBOUND_MAX_MB", 30)              # larger emails are skipped (SES itself takes up to 40 MB)
     proposals_per_owner_per_day: int = _int("PROPOSALS_PER_OWNER_PER_DAY", 100)
     emails_per_owner_per_day: int = _int("EMAILS_PER_OWNER_PER_DAY", 300)
     upload_max_mb: int = _int("UPLOAD_MAX_MB", 10)
