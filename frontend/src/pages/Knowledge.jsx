@@ -46,7 +46,7 @@ function UpdateHub({ updates, onChange }) {
         <p className="small muted">Updating uses {plan.runs} AI {plan.runs === 1 ? "run" : "runs"} — you have {plan.runs_left} left this month. Anything you edited yourself is kept.</p>
       </div>
       <div className="row">
-        <Busy className="btn primary" disabled={short || plan.runs === 0} run={async () => {
+        <Busy className="btn primary" disabled={short} run={async () => {
           const r = await api("/knowledge/update", { method: "POST" });
           onChange(r.updates); setPlan(r.plan); refresh();
           const done = Object.values(r.result).filter((v) => v.startsWith("refreshed")).length;
