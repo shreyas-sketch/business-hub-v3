@@ -197,8 +197,9 @@ would bounce. This build reads each email from S3 instead.
 
    Expected: everything passes except `test_agents.py::test_monthly_review_on_the_first_with_last_months_data`.
    - That test inserts two Business Scores without a share token, and the `scores.token` unique index refuses the second.
-   - It fails the same way on a real MongoDB server here, and the same will happen on Atlas. It's in the test's own data, not
-     in the hub.
+   - It fails the same way on a real MongoDB server here (3.6), so expect it on Atlas too (not run on Atlas yet). It's in the
+     test's own data, not in the hub.
+   - The tests make their own database (`action_hub_test_<random>`), so a throwaway cluster user is enough.
    - Fixing it means adding tokens to that test's data. I haven't changed it, because existing tests stay as they are until you
      say so.
 
