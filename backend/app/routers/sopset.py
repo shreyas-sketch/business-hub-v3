@@ -260,9 +260,8 @@ async def _edited(ws: str) -> bool:
 
 
 async def _refresh(owner: dict, sections: set) -> None:
-    p = await profile_of(owner["_id"])
-    procs = await run_ai(owner, "sop_map", kit_tasks.process_map(p), f"Process map refreshed — {p['name']}", save_output=False, check=_shape_map)
-    await db().sop_maps.update_one({"_id": owner["_id"]}, {"$set": {"processes": procs, "edited": False, "generated_at": now()}})
+    """A new map from the Knowledge Hub. Never loses a written SOP: processes that have one keep it (as the banner's Refresh does)."""
+    await _overwrite(owner)
 
 
 async def _overwrite(owner: dict) -> None:

@@ -27,6 +27,7 @@ proportion; the last refund takes whatever GST is left. A refund for a payment t
 it's logged and the owner is told.
 Every event is logged in payment_events. Nothing here sends anything on WhatsApp.
 """
+import asyncio
 import json
 import logging
 import re
@@ -548,9 +549,21 @@ async def payer_customer(ws: str, ev: PaymentEvent, name: str = "") -> str | Non
     email = (ev.email or "").strip().lower()
     if not phone and not email:
         return None          # nothing to recognise them by next time: not listed as an anonymous "Customer"
-    known = await db().customers.find_one({"ws": ws, "phone": phone}) if phone else None
-    if not known and email:
-        known = await db().customers.find_one({"ws": ws, "email": email})
+
+    async def find():
+        k = await db().customers.find_one({"ws": ws, "phone": phone}) if phone else None
+        return k or (await db().customers.find_one({"ws": ws, "email": email}) if email else None)
+    known = await find()
+    if not known:
+        # two payments from the same new payer at once: only one may add them (a key per payer), the other waits and updates
+        try:
+            await db().gateway_payers.insert_one({"_id": f"{ws}:{phone or email}", "at": now()})
+        except DuplicateKeyError:
+            for _ in range(20):
+                known = await find()
+                if known:
+                    break
+                await asyncio.sleep(0.1)
     rupees = round(float(ev.amount or 0), 2)
     day = today().isoformat()
     if known:
@@ -568,8 +581,19 @@ async def payer_customer(ws: str, ev: PaymentEvent, name: str = "") -> str | Non
                                          "reorder_days": None, "occasion": None, "source": "razorpay", "payment_ids": [ev.payment_id], "notes": "",
                                          "created_at": now(), "updated_at": now()})
     from .desk import retier
-    await retier(ws)
+    task = asyncio.create_task(retier(ws))     # A, B and C follow in the background: the gateway's webhook doesn't wait for it
+    _retiers.add(task)
+    task.add_done_callback(_retiers.discard)
     return cid
+
+
+_retiers: set = set()
+
+
+async def settle() -> None:
+    """Waits for background re-tiering (tests)."""
+    while _retiers:
+        await asyncio.gather(*list(_retiers), return_exceptions=True)
 
 
 async def _payer_customer_safely(ws: str, ev: PaymentEvent, name: str = "") -> None:

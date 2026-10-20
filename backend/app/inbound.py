@@ -68,7 +68,12 @@ def attachments(msg) -> list[tuple[str, bytes, str]]:
     from .config import settings
     from .files import sniff
     out = []
-    for part in msg.iter_attachments():
+    for part in msg.walk():         # every level: Apple Mail puts photos inside multipart/related within multipart/alternative
+        if part.is_multipart():
+            continue
+        disposition = (part.get_content_disposition() or "").lower()
+        if not part.get_filename() and disposition not in ("attachment", "inline"):
+            continue                # the message's own text or HTML
         try:
             data = part.get_payload(decode=True) or b""
         except Exception:  # noqa: BLE001

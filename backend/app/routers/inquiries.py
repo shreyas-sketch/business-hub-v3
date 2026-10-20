@@ -478,14 +478,30 @@ async def inquiry_in(handle: str, mail: dict, verified: bool) -> str:
     lead = await save_lead(site, owner, b, (name or sender.split("@")[0].replace(".", " ").title())[:80], phone or "", message, "email",
                            email=sender, message_id=mail.get("message_id", "")[:300], sender_verified=verified)
     kept = []
-    for fname, data, mime in mail.get("attachments") or []:     # the customer's drawings, photos and PDFs stay with the inquiry
+    # the customer's drawings, photos and PDFs stay with the inquiry — only from a sender whose address is proven (DMARC), and
+    # within a daily allowance per business, so an anonymous sender can't fill the database with files
+    room = ATTACH_BYTES_PER_DAY - await _attached_today(ws) if verified else 0
+    for fname, data, mime in mail.get("attachments") or []:
+        if len(data) > room:
+            break
         f = await files.put(ws, data, fname, mime, "inquiry_attachment", lead_id=lead["_id"])
         kept.append({"id": f["_id"], "name": fname, "size": len(data), "type": mime})
+        room -= len(data)
     if kept:
         await db().leads.update_one({"_id": lead["_id"]}, {"$set": {"attachments": kept}})
     dashboard_cache.bust(ws)
     await db().inbound_emails.update_one({"_id": _key(ws, "inquiry", mail)}, {"$set": {"lead_id": lead["_id"]}})
     return "lead"
+
+
+ATTACH_BYTES_PER_DAY = 50 * 1024 * 1024
+
+
+async def _attached_today(ws: str) -> int:
+    since = now() - timedelta(days=1)
+    sizes = [int(f.get("size") or 0) async for f in db().files.find({"owner_id": ws, "kind": "inquiry_attachment", "created_at": {"$gte": since}},
+                                                                    {"size": 1})]
+    return sum(sizes)
 
 
 async def route(mail: dict, recipients: list[str], verified: bool = False) -> list[str]:
@@ -556,7 +572,7 @@ async def email_in(secret: str, request: Request):
             raise HTTPException(502, "The email couldn't be read from storage yet.")
     if not raw:
         return {"ok": True, "handled": ["no_content"]}
-    mail = inbound.parse(raw)
+    mail = await asyncio.to_thread(inbound.parse, raw)     # a 30 MB email mustn't hold up everyone else on this server
     return {"ok": True, "handled": await route(mail, [r.lower() for r in receipt.get("recipients") or []], _passed(receipt))}
 
 

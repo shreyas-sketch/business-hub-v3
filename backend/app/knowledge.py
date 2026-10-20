@@ -165,14 +165,9 @@ async def clear_stale(ws: str, key: str) -> None:
 async def settle_sections(ws: str, key: str, done: set[str]) -> None:
     """A free refresh brought these sections up to date. Anything else still waiting (an earlier change that needs AI runs,
     or the owner's edits) keeps waiting."""
-    s = await db().brain_stale.find_one({"_id": f"{ws}:{key}"})
-    if not s:
-        return
-    left = sorted(set(s.get("sections") or []) - set(done))
-    if left:
-        await db().brain_stale.update_one({"_id": s["_id"]}, {"$set": {"sections": left}})
-    else:
-        await clear_stale(ws, key)
+    _id = f"{ws}:{key}"
+    await db().brain_stale.update_one({"_id": _id}, {"$pullAll": {"sections": sorted(done)}})
+    await db().brain_stale.delete_one({"_id": _id, "sections": {"$size": 0}})   # only when nothing else is waiting
 
 
 def runs_for(dep: Dependent, sections: set[str]) -> int:
@@ -282,13 +277,22 @@ async def update_hub(owner: dict) -> dict:
     out: dict[str, str] = {}
     for u in await _waiting(owner):
         dep = DEPENDENTS[u["key"]]
+        _id = f"{ws}:{dep.key}"
+        seen = (await db().brain_stale.find_one({"_id": _id}, {"at": 1}) or {}).get("at")
         try:
+            # edited by hand since it was marked (the website's headline, an SOP written on the map): never rewritten from here —
+            # it moves to the banner, where replacing the owner's edits is their own choice
+            if await dep.edited(ws):
+                await db().brain_stale.update_one({"_id": _id}, {"$set": {"reason": "edited"}})
+                out[dep.key] = "edited"
+                continue
             outcome = await dep.refresh(owner, set(u["sections"] or SECTIONS))
+            # a save made while this was running marked it again (a newer "at"): that newer change keeps waiting
             if outcome == "kept_edits":    # the rest is up to date; the owner's own items wait on the banner
-                await db().brain_stale.update_one({"_id": f"{ws}:{dep.key}"}, {"$set": {"reason": "edited", "updated": True, "at": now()}})
+                await db().brain_stale.update_one({"_id": _id, "at": seen}, {"$set": {"reason": "edited", "updated": True, "at": now()}})
                 out[dep.key] = "refreshed_kept_edits"
             else:
-                await clear_stale(ws, dep.key)
+                await db().brain_stale.delete_one({"_id": _id, "at": seen})
                 out[dep.key] = "refreshed"
         except HTTPException as e:
             if e.status_code == 402:

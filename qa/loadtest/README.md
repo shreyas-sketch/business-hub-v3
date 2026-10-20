@@ -44,7 +44,11 @@ python attendees.py --n 200 --arrive 90 --typing 20,45 --reading 10,30 --out res
 2. Keep it in development mode on localhost.
 It then spends real AI money: about ₹2 a pack (an estimate).
 
-## Results (20 Oct 2026, a 2-core machine running the load generator too, MongoDB 3.6)
+## Results (20 Oct 2026, a 2-core machine running the load generator too)
+
+The database was a real MongoDB server, but an old one: 3.6.8, the only server build this sandbox could install. It was reached
+with PyMongo 4.9.2 / Motor 3.6, the newest drivers that still talk to 3.6. Production uses MongoDB 7+ with the pinned driver,
+so treat the database side of these numbers as indicative.
 
 These are in `results/`, measured with the stand-ins above:
 

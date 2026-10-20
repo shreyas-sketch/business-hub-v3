@@ -186,3 +186,58 @@ def test_the_demo_seed_switches_website_proposals_on():
     import pathlib
     src = (pathlib.Path(__file__).resolve().parents[1] / "seed_demo.py").read_text()
     assert "json={\"auto_web\": True}" in src and "\"source\": \"website\", \"status\": \"new\"" in src
+
+
+# ───────────────────────── review fixes ─────────────────────────
+async def test_update_my_hub_never_rewrites_a_page_the_owner_edited_after_the_save(client):
+    c, uid, _ = await owner_on("9853000010", "lite")
+    await c.put("/api/business", json={**PROFILE, "industry": "Modular kitchens and wardrobes"})
+    await knowledge.settle()
+    assert [i["key"] for i in (await c.get("/api/knowledge/update")).json()["items"]] == ["website"]
+    s = (await c.get("/api/site")).json()                     # now the owner edits the headline, before pressing Update
+    assert (await c.put("/api/site", json={"content": {**s["content"], "headline": "MY OWN HEADLINE"}, "accent": s["accent"]})).status_code == 200
+    runs = await used_runs(uid)
+    r = (await c.post("/api/knowledge/update")).json()
+    assert r["result"] == {"website": "edited"} and await used_runs(uid) == runs
+    assert (await c.get("/api/site")).json()["content"]["headline"] == "MY OWN HEADLINE"
+    assert [u["reason"] for u in r["updates"] if u["key"] == "website"] == ["edited"]     # their choice, on the banner
+
+
+def nested_mail(to: str) -> bytes:
+    """Apple Mail's shape: alternative > [plain, related > [html, the photo]]."""
+    m = EmailMessage()
+    m["From"], m["To"], m["Subject"] = "Neha Joshi <neha@family.example>", to, "Photo of the old chimney"
+    m["Message-ID"] = "<nested-1@mail.example>"
+    m.set_content("Photo attached. Please quote for a replacement.")
+    m.add_alternative("<p>Photo attached. Please quote for a replacement.</p>", subtype="html")
+    html = m.get_payload()[1]
+    html.add_related(b"\xff\xd8\xff\xe0" + b"2" * 5000, maintype="image", subtype="jpeg", cid="<p1>", filename="chimney.jpg")
+    return m.as_bytes()
+
+
+async def test_attachments_come_from_any_level_and_only_from_a_proven_sender(client, inbound):  # noqa: F811
+    from app import inbound as inbound_mod
+    from tests.test_v21_p1_inquiries import sns
+    c, uid, _ = await owner_on("9853000011", "lite")
+    addr = await address_of(c)
+    raw = nested_mail(addr)
+    assert [a[0] for a in inbound_mod.parse(raw)["attachments"]] == ["chimney.jpg"]
+    r = await client.post(f"/api/hooks/email-in/{SECRET}", json=sns(addr, raw.decode(), dmarc="FAIL"))
+    assert r.json()["handled"] == ["lead"]
+    lead = await db().leads.find_one({"owner_id": uid, "source": "email"})
+    assert not lead.get("attachments") and not await db().files.count_documents({"kind": "inquiry_attachment"})
+
+
+async def test_a_team_members_save_while_building_doesnt_leave_the_page_waiting(client):
+    from app import event as ev
+    from tests.test_event import form, make, open_event
+    await open_event()
+    made = await make(client, form(None, business_name="Riya Tiffins", about="Home-cooked lunch tiffins delivered to offices"))
+    run = await db().event_runs.find_one({"token": made["token"]})
+    member = {"_id": "member-9", "phone": "+919853000012", "team_of": "owner-9"}
+    assert await ev.adopt(run, member)
+    assert not (await db().event_runs.find_one({"_id": run["_id"]})).get("apply_pending")
+    await ev.apply(await db().event_runs.find_one({"_id": run["_id"]}), member, "", "")
+    await ev.drain()
+    v = (await client.get(f"/api/event/runs/{made['token']}")).json()
+    assert v["status"] == "done" and not v["pending"]

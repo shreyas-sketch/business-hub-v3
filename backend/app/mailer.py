@@ -97,7 +97,8 @@ async def s3_get(bucket: str, key: str) -> bytes:
     if not S3_KEY.match(key or ""):
         raise ValueError("unexpected S3 key")
     region = settings.email_inbound_bucket_region or settings.aws_region
-    url = f"https://{bucket}.s3.{region}.amazonaws.com/{key}"
+    # a bucket name with dots doesn't match S3's wildcard certificate as a subdomain: those are read path-style
+    url = f"https://s3.{region}.amazonaws.com/{bucket}/{key}" if "." in bucket else f"https://{bucket}.s3.{region}.amazonaws.com/{key}"
     empty = hashlib.sha256(b"").hexdigest()
     headers = sigv4("GET", url, {"x-amz-content-sha256": empty}, b"", region=region, service="s3",
                     access_key=settings.aws_access_key_id, secret_key=settings.aws_secret_access_key, at=datetime.now(timezone.utc))
@@ -108,12 +109,12 @@ async def s3_get(bucket: str, key: str) -> bytes:
                 raise RuntimeError(f"S3 {r.status_code}")
             if int(r.headers.get("content-length") or 0) > limit:
                 raise TooLarge()
-            body = b""
+            body = bytearray()
             async for chunk in r.aiter_bytes():
                 body += chunk
                 if len(body) > limit:
                     raise TooLarge()
-    return body
+    return bytes(body)
 
 
 # ───────────────────────── building a message ─────────────────────────

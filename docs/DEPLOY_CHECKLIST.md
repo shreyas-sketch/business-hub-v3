@@ -132,9 +132,12 @@ would bounce. This build reads each email from S3 instead.
 
 1. SES → Identities → verify the domain `in.employz.ai`.
 2. DNS: `MX in.employz.ai → 10 inbound-smtp.ap-south-1.amazonaws.com`.
-3. S3 bucket in `ap-south-1`, e.g. `employz-hub-inbound`:
+3. S3 bucket in `ap-south-1`, e.g. `employz-hub-inbound`. A name without dots is simplest; one with dots works too, read
+   path-style:
    - **Block all public access**: on.
-   - **Default encryption**: SSE-S3. If you choose KMS instead, the hub's IAM user also needs `kms:Decrypt`.
+   - **Default encryption**: SSE-S3. If you choose SSE-KMS instead, the hub's IAM user also needs `kms:Decrypt`, and SES needs
+     `kms:GenerateDataKey` on that key. Don't turn on the S3 action's own "encrypt message" option: that encrypts on the client
+     side, and the hub can't read it.
    - **Lifecycle rule**: delete objects under `inbound/` after 30 days. The hub keeps what it needs: the text, and PDF/JPG/PNG
      attachments, on the inquiry.
    - **Bucket policy**: allow `ses.amazonaws.com` to `s3:PutObject` on `arn:aws:s3:::employz-hub-inbound/inbound/*`, with
@@ -156,6 +159,8 @@ would bounce. This build reads each email from S3 instead.
    - once with a one-line message;
    - once with a 2 MB PDF.
    Both should become inquiries. The PDF should show under the second one, and only that owner can download it.
+   - Attachments are kept only when the sender's address is proven (DMARC passes, as it does for Gmail).
+   - Each business can keep up to 50 MB of them a day.
 
 ## 9. AI engine
 

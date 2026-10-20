@@ -305,7 +305,7 @@ function Pack() {
       </div>
 
       <section className="panel d1-sheet ev-save" ref={saveRef}>
-        {run.saved ? <Saved applied={saved?.applied} pending={run.pending || saved?.pending} /> : !save ? (
+        {run.saved ? <Saved applied={saved?.applied} pending={run.pending} /> : !save ? (
           <div className="row between">
             <div className="stack" style={{ gap: 4 }}><b className="ev-save-t">Keep all of this in your own hub.</b><span className="small muted">Free. Your WhatsApp number and email, and a 6-digit code on WhatsApp.</span></div>
             <button className="btn primary" onClick={() => setSave(true)}>Save it to my hub</button>

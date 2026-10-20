@@ -294,7 +294,8 @@ async def requeue_stale() -> None:
         async for r in db().event_runs.find({"status": working, "started_at": {"$lt": cutoff}, "attempts": {"$gte": MAX_ATTEMPTS}}, {"_id": 1}):
             if working == "rules":
                 await db().event_runs.update_one({"_id": r["_id"], "status": "rules"}, {"$set": {"status": "failed", "finished_at": now(),
-                                                                                                "error": "Stopped part-way three times."}})
+                                                                                                "error": "Stopped part-way three times.",
+                                                                                                "apply_pending": False}})
             else:
                 await _finish(r["_id"], "ai", "Stopped part-way three times.")
 
@@ -364,7 +365,7 @@ async def build_rules(run: dict) -> bool:
         last = run.get("attempts", 1) >= MAX_ATTEMPTS
         await db().event_runs.update_one({"_id": rid, "status": "rules", "claim": run.get("claim")}, {"$set": {
             "status": "failed" if last else "queued", "error": f"{type(e).__name__}: {str(e)[:160]}",
-            "queued_at": now() + timedelta(seconds=3 * run.get("attempts", 1)), **({"finished_at": now()} if last else {})}})
+            "queued_at": now() + timedelta(seconds=3 * run.get("attempts", 1)), **({"finished_at": now(), "apply_pending": False} if last else {})}})
         return False
 
 
@@ -723,7 +724,7 @@ async def adopt(run: dict, user: dict) -> bool:
     rest is added to the account when it's ready (late_apply)."""
     r = await db().event_runs.find_one_and_update({"_id": run["_id"], "$or": [{"user_id": None}, {"user_id": user["_id"]}]},
                                                   {"$set": {"user_id": user["_id"], "saved_at": now()}}, return_document=ReturnDocument.AFTER)
-    if r and r["status"] not in ("done", "failed") and not r.get("applied"):
+    if r and r["status"] not in ("done", "failed") and not r.get("applied") and not user.get("team_of"):
         await db().event_runs.update_one({"_id": r["_id"]}, {"$set": {"apply_pending": True}})
     return bool(r)
 
@@ -757,8 +758,9 @@ async def apply(run: dict, user: dict, email: str, name: str, late: bool = False
     from .routers.hub import ACCENTS, _slugify, _unique_slug
     ws = user["_id"]
     out: dict[str, str] = {}
-    if user.get("team_of"):
-        return {"all": "team"}   # a team member's login: their pack never goes into the team owner's hub
+    if user.get("team_of"):      # a team member's login: their pack never goes into the team owner's hub
+        await db().event_runs.update_one({"_id": run["_id"]}, {"$set": {"applied": {"all": "team"}, "apply_pending": False}})
+        return {"all": "team"}
     b = await db().businesses.find_one({"owner_id": ws}) or {}
     p = run.get("profile") or {}
     patch: dict = {}
@@ -863,8 +865,10 @@ async def apply(run: dict, user: dict, email: str, name: str, late: bool = False
         sources = plans.plan_sources(user)
         kept = max((plans.rank(t) for k, t in sources.items() if k != "trial"), default=0)
         trial = user.get("trial") or {}
-        longer = isinstance(trial.get("until"), datetime) and trial["until"] >= until and plans.rank(trial.get("plan", "free")) >= plans.rank("lite")
-        if kept < plans.rank("lite") and not longer:
+        valid = isinstance(trial.get("until"), datetime) and trial["until"] > now()
+        better = valid and (plans.rank(trial.get("plan", "free")) > plans.rank("lite")      # a higher plan's trial is never swapped down
+                            or (plans.rank(trial.get("plan", "free")) == plans.rank("lite") and trial["until"] >= until))
+        if kept < plans.rank("lite") and not better:
             user_patch["trial"] = {"plan": "lite", "until": until, "reason": "event", "cohort": run["cohort"]}
             out["trial"] = until.isoformat()
     if user_patch:
