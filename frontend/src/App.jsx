@@ -3,7 +3,6 @@ import { Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "reac
 import { api, rupees, setLimitHandler, setLockedHandler, localPhone } from "./api.js";
 import { Copy, Gate, HubCtx, Modal } from "./ui.jsx";
 import { Finder, Icon, allPages, findPage, rememberPage } from "./shell.jsx";
-import "./app-theme.css";
 import Landing from "./pages/Landing.jsx";
 import Login from "./pages/Login.jsx";
 import Onboarding from "./pages/Onboarding.jsx";
@@ -170,8 +169,6 @@ function Shell({ me, children }) {
   useEffect(() => { setOpen(false); setAccount(false); if (here && !here.locked) rememberPage(here.path); }, [loc.pathname]);  // eslint-disable-line react-hooks/exhaustive-deps
   // keep the current page visible in a long menu
   useEffect(() => { document.querySelector(".nav a.on")?.scrollIntoView({ block: "nearest" }); }, [loc.pathname]);
-  // the workspace look is for the logged-in hub only; public pages keep the blueprint look
-  useEffect(() => { document.body.classList.add("app"); return () => document.body.classList.remove("app"); }, []);
   // "/" or Ctrl/⌘ K opens Go to, unless someone is typing
   useEffect(() => {
     const k = (e) => {

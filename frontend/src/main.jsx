@@ -9,6 +9,8 @@ import "@fontsource/space-grotesk/400.css";
 import "@fontsource/space-grotesk/500.css";
 import "./styles.css";
 import "./v2.css";
+import "./app-theme.css";
 import App from "./App.jsx";
 
+document.body.classList.add("app");  // the workspace look (app-theme.css), on every screen
 createRoot(document.getElementById("root")).render(<BrowserRouter><App /></BrowserRouter>);

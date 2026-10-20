@@ -60,7 +60,6 @@ export default function Landing() {
           </ul>
         </div>
         <HubPreview />
-        <div className="titleblock">Project: a business that runs without you<br />Sheet 01 · Scale 1:1<br />Drawn. Business AI Action Hub</div>
       </section>
       <div className="pillars">
         {PILLARS.map(([n, pillar, title, text]) => (
@@ -118,10 +117,10 @@ export default function Landing() {
         <p className="sub">Free includes your brand message, a live website with inquiries to WhatsApp, and 10 AI runs a month. Membership removes the badge, replies to every new lead instantly on WhatsApp and gives you 150 runs a month, with two coaching calls.</p>
         <div><Link className="btn" to="/login">Create my free hub</Link></div>
       </section>
-      <div className="rail-foot" style={{ marginTop: 72 }}>
-        <span>Akshat Dani · Chirag J. · Business AI Action Hub</span>
-        <span>AH-00</span>
-      </div>
+      <footer className="public-foot">
+        <span>Business AI Action Hub, with Akshat Dani and Chirag J.</span>
+        <Link to="/login">Log in</Link>
+      </footer>
     </div>
   );
 }

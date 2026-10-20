@@ -1,6 +1,6 @@
-/* The hub's workspace (logged in). A light desk with white sheets, the brand's dark ink kept for the sidebar.
-   The public pages (landing, login, the event link, the report) keep the blueprint look: everything here sits under
-   body.app, which the shell sets. Pages use the same tokens, so they follow without changes.
+/* The hub's look, on every screen: a light desk with white sheets, the brand's dark ink kept for the sidebar and the mark.
+   Everything here sits under body.app, which main.jsx sets, over the older blueprint styles in styles.css.
+   Pages use the same tokens, so they follow without changes.
    Teal = something the hub does or you can do. Marigold = money, and only money. */
 body.app {
   --ink: #EEF1F4;          /* the desk behind the sheets; also field backgrounds */
@@ -266,3 +266,73 @@ body.app .cf-short { border-color: #E9C98F; background: var(--amber-wash); borde
 body.app .cf-chart .cf-bar.low.sel { fill: #7A4500; }
 body.app .wk .slot:hover .hit { fill: rgba(19, 33, 58, .04); }
 body.app .wk .slot:hover .col { fill: #096A63; }
+
+/* ── The screens outside the menu: landing, login, setting up, the event link, the report ── */
+body.app .public { padding: 0 var(--gutter); }
+body.app .public > header { padding: 18px 0; }
+body.app .public > header .mark { grid-template-columns: 34px auto; column-gap: 10px; align-items: center; }
+body.app .public > header .mark::before { content: "A"; grid-row: span 2; width: 34px; height: 34px; border-radius: 9px; background: #0A1826; color: #3FD6C9;
+  display: grid; place-items: center; font: 700 15px/1 var(--head); font-stretch: 87.5%; }
+body.app .public > header .mark b { font: 600 15.5px/1.2 var(--head); font-stretch: 87.5%; color: var(--paper); }
+body.app .public > header .mark span { font: 400 12.5px/1.2 var(--body); letter-spacing: 0; text-transform: none; color: var(--grey); }
+body.app .public > header .mark:hover { text-decoration: none; }
+body.app .title-sheet { background: var(--white); border: 1px solid var(--ink-line); border-radius: 16px; padding: clamp(22px, 4vw, 44px); gap: 18px; overflow: visible; }
+body.app .title-sheet::before { display: none; }
+body.app .title-sheet h1 { font-size: clamp(30px, 4vw, 46px); max-width: 20ch; }
+body.app .login-sheet h1, body.app .title-sheet h1[style] { font-size: clamp(28px, 3.6vw, 38px) !important; }
+body.app .steps-glyphs { gap: 5px; }
+body.app .steps-glyphs i { width: 22px; height: 5px; border: 0; border-radius: 999px; background: var(--ink-line); }
+body.app .steps-glyphs i.done { background: var(--aqua-deep); }
+body.app .steps-glyphs i.now { background: var(--aqua); }
+body.app .invite-banner { border-color: var(--aqua-deep); background: var(--aqua-shadow); border-radius: 12px; }
+body.app .tabs[role=tablist] { border-bottom-color: var(--ink-line); }
+body.app .public-foot { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 64px; padding: 18px 0 28px;
+  border-top: 1px solid var(--ink-line); color: var(--grey); font-size: 13.5px; }
+
+/* Landing: the hero, with a picture of the hub as it looks now */
+body.app .hero { background: var(--white); }
+body.app .hero h1 { font-size: clamp(36px, 4.6vw, 60px); font-weight: 640; line-height: 1.04; max-width: 14ch; }
+body.app .hero-points { color: var(--grey); font-size: 14.5px; }
+body.app .hero-points li::before { width: 6px; height: 6px; border-radius: 50%; background: var(--aqua); top: .6em; }
+body.app .hero-points b { color: var(--paper); font-weight: 600; }
+body.app .hub-preview { background: var(--desk); border: 1px solid var(--ink-line); border-radius: 14px; overflow: hidden; gap: 10px; padding: 0 0 14px;
+  box-shadow: 0 30px 70px -36px rgba(19,33,58,.45); }
+body.app .hub-preview > * { background: var(--white); margin: 0 14px; border: 1px solid var(--ink-line); border-radius: 10px; }
+body.app .hub-preview > .hp-bar { margin: 0; border: 0; border-radius: 0; background: #0A1826; color: #9AABC2; padding: 12px 16px; font: 500 12.5px/1 var(--body); letter-spacing: 0; text-transform: none; }
+body.app .hp-bar i { border-color: #2A4058; border-radius: 50%; }
+body.app .hp-alert { background: var(--white) !important; border-left: 3px solid var(--aqua); margin: 0 14px; }
+body.app .hp-alert b { font: 600 16px/1.3 var(--head); }
+body.app .hp-reply { text-transform: none; letter-spacing: 0; font: 600 12.5px/1 var(--body); color: #fff; border-radius: 7px; }
+body.app .hp-stats { background: transparent !important; border: 0 !important; padding: 0 !important; }
+body.app .hp-stats > div { background: var(--white); border-radius: 10px; }
+body.app .hp-stats b { font-weight: 600; font-stretch: 75%; font-size: 26px; }
+body.app .hp-score { border-top: 0; }
+body.app .hp-score > b { font-weight: 600; font-stretch: 75%; }
+body.app .hp-meter { border-radius: 999px; overflow: hidden; }
+body.app .hp-posts { border-top: 0; }
+body.app .hp-posts span:not(.label) { text-transform: none; letter-spacing: 0; font: 500 12.5px/1 var(--body); border-radius: 6px; }
+body.app .pillars { border: 0; gap: 14px; margin-top: 14px; }
+body.app .pillars > div { background: var(--white); border: 1px solid var(--ink-line); border-radius: 14px; }
+body.app .ghost-num { font-size: 44px; color: var(--aqua-deep); }
+body.app .showcase a { border-radius: 12px; background: var(--white); }
+body.app .ladder { border: 0; gap: 10px; }
+body.app .ladder-step { border: 1px solid var(--ink-line) !important; border-radius: 12px; background: var(--white); overflow: hidden; }
+body.app .ladder-step.free { background: var(--hover); }
+body.app .ladder-n { color: var(--aqua-deep); font-weight: 600; font-stretch: 75%; }
+body.app .ladder-price small, body.app .ladder-meta { text-transform: none; letter-spacing: 0; font-size: 12.5px; }
+body.app .titleblock { display: none; }
+
+/* The event link and the report: one centred sheet on the desk */
+body.app .d1-sheet { border-radius: 16px; }
+body.app :is(.d1-steps li) { text-transform: none; letter-spacing: 0; font-size: 13px; }
+body.app .d1-foot { text-align: center; }
+@media (max-width: 900px) {
+  body.app .public > header { padding: 14px 0; }
+  body.app .pillars > div { border-right: 1px solid var(--ink-line); border-bottom: 1px solid var(--ink-line); }
+  body.app .ladder-step { border-bottom: 1px solid var(--ink-line) !important; }
+}
+body.app .fr-way { background: var(--white); border-radius: 12px; }
+body.app .fr-way:hover { border-color: var(--aqua-deep); }
+body.app .fr-way.on { background: var(--aqua-shadow); box-shadow: inset 0 3px 0 var(--aqua); }
+body.app .fr-way b { font-weight: 600; }
+body.app input[autocomplete=one-time-code]::placeholder { letter-spacing: 0; }
