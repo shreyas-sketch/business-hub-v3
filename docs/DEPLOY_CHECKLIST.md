@@ -67,7 +67,7 @@ change, so recheck before you buy.
 
 ## 4. AiSensy — the hub's own WhatsApp number
 
-Templates to submit to Meta through AiSensy. Approval can take a while, so do it the week before, not event week. Then make an
+Templates to submit to Meta through AiSensy (the exact wording, ready to paste, is in `docs/AISENSY_TEMPLATES.md`). Approval can take a while, so do it the week before, not event week. Then make an
 API campaign on each one and put its name in the variable:
 
 | Variable | Category | Content |
