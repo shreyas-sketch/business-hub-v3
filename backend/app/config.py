@@ -118,6 +118,10 @@ class Settings:
     pexels_api_key: str = os.getenv("PEXELS_API_KEY", "").strip()
     elevenlabs_api_base: str = os.getenv("ELEVENLABS_API_BASE", "https://api.elevenlabs.io").rstrip("/")
     aisensy_owner_alert_campaign: str = os.getenv("AISENSY_OWNER_ALERT_CAMPAIGN", "")  # to the owner: {{1}} business, {{2}} the message
+    # Google Places API (New): ratings, review counts and the latest reviews of a business on Google (Competitor Watch,
+    # Reviews & reputation). Optional: without it those parts say they need it. Billing is on the hub's Google Cloud account.
+    google_places_api_key: str = os.getenv("GOOGLE_PLACES_API_KEY", "")
+    google_places_api_base: str = os.getenv("GOOGLE_PLACES_API_BASE", "https://places.googleapis.com/v1").rstrip("/")
     campaign_daily_cap: int = _int("CAMPAIGN_DAILY_CAP", 200)          # money-campaign messages per owner per day
     ai_replies_per_chat_per_day: int = _int("AI_REPLIES_PER_CHAT_PER_DAY", 20)
     calls_per_owner_per_day: int = _int("CALLS_PER_OWNER_PER_DAY", 60)

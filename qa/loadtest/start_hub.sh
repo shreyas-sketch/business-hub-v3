@@ -6,4 +6,6 @@ cd "$HERE/../../backend" || exit 1
 export PYTHONPATH="$HERE:$PWD"
 export APP_ENV=development APP_URL=http://localhost:8830 MONGO_URL="${MONGO_URL:-mongodb://127.0.0.1:27017}" DB_NAME="${DB_NAME:-loadtest}" \
   AI_PROVIDER=anthropic ANTHROPIC_API_KEY=simulated-engine-no-key ADMIN_PHONES=+919999900000 RUN_SCHEDULER=false FETCH_ALLOW_PRIVATE=true
+# never real messages, e-mail or payments from a load test, whatever the shell has set
+export AISENSY_API_KEY= MSG91_AUTH_KEY= AWS_ACCESS_KEY_ID= AWS_SECRET_ACCESS_KEY= RAZORPAY_KEY_ID= RAZORPAY_KEY_SECRET= GOOGLE_PLACES_API_KEY=
 exec python -m uvicorn lt_app:app --host 127.0.0.1 --port 8830 --workers "${WORKERS:-2}" --log-level warning --no-access-log

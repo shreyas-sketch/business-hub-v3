@@ -30,6 +30,11 @@ def _inr(x: float) -> str:
 
 def render(q: dict, business: dict, qsettings: dict | None = None, accent: str = "#1F4E79") -> bytes:
     day1_render._register_pdf_fonts()
+    with day1_render.PDF_LOCK:      # the fonts are shared with the Day-1 report: one PDF at a time (see day1_render)
+        return _render(q, business, qsettings, accent)
+
+
+def _render(q: dict, business: dict, qsettings: dict | None, accent: str) -> bytes:
     s = qsettings or {}
     W, H = A4
     buf = io.BytesIO()

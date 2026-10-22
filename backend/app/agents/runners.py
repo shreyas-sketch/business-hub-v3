@@ -89,6 +89,12 @@ async def followup(owner: dict, run: dict):
     n, of = int(p.get("n", 1)), int(p.get("of", len(settings.followup_days) or 1))
     text = await run_ai(owner, "followup", agent_tasks.followup(profile, lead, n, of), f"Follow-up {n} to {who}",
                         save_output=False, check=agent_tasks.followup_text)
+    # the AI takes a few seconds: the lead may have been won, lost or deleted meanwhile — then nothing is drafted or sent
+    now_lead = await db().leads.find_one({"_id": lead["_id"], "owner_id": ws}, {"status": 1})
+    if not now_lead:
+        raise Skip(f"{who} was deleted while the follow-up was being written, so nothing was sent.")
+    if now_lead.get("status") in ("won", "lost"):
+        raise Skip(f"{who} was marked {now_lead['status']} while the follow-up was being written, so nothing was sent.")
     await expire({"ws": ws, "kind": "followup", "lead_id": lead["_id"]}, f"Replaced by follow-up {n}")
     a = await create_approval(owner, ws, "followup", "followup", f"Follow-up {n} of {of} to {who}", lead.get("name", ""), lead["phone"],
                               text, allow_act=not has_link(text), lead_id=lead["_id"], n=n)

@@ -34,6 +34,13 @@ function Setup({ s, reload }) {
           <Switch checked={s.auto_web} label="Also write a proposal for website and lead magnet inquiries"
             onChange={(v) => save({ auto_web: v }, v ? "Website inquiries get a proposal too" : "Website inquiries: no automatic proposal")} />
           <span className="hint">Each proposal uses 1 AI run. WhatsApp proposals always wait for you to tap Send.</span>
+          {s.followups?.available && (
+            <>
+              <Switch checked={s.followups.on} label={`Follow up on every inquiry — day ${s.followups.days.join(", ").replace(/, (\d+)$/, " and $1")}`}
+                onChange={async (v) => { await api("/agents/followup", { method: "PATCH", body: { on: v } }); toast(v ? "Follow-ups on" : "Follow-ups off"); reload(); }} />
+              <span className="hint">On each of those days a short follow-up is written for you (1 AI run) and waits here for you to tap Send on WhatsApp. It stops as soon as you mark the inquiry won or lost.{s.followups.opt_in && !s.followups.on ? " It's off until you switch it on." : ""}</span>
+            </>
+          )}
         </div>
       ) : <p className="small muted">The owner chooses what goes out on its own.</p>}
     </div>
@@ -123,6 +130,40 @@ function Proposal({ it, reload }) {
   );
 }
 
+const when = (iso) => new Date(iso).toLocaleString("en-IN", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+
+/** The follow-up automation's message for this inquiry: send it from here with one tap, or skip it. */
+function FollowUp({ it, reload }) {
+  const { me, toast } = useHub();
+  const [open, setOpen] = useState(false);
+  const f = it.followups;
+  if (!f || (!f.ready && !f.next_at && !f.sent)) return null;
+  const manager = canAct(me, "manager") && me.features?.approvals;
+  return (
+    <div className="stack inq-prop">
+      <div className="row between">
+        <span className="small">
+          {f.ready ? <b>Follow-up {f.ready.n} of {f.ready.of} is ready</b> : f.next_at ? `Next follow-up ${when(f.next_at)}` : null}
+          {f.sent ? <>{f.ready || f.next_at ? " · " : ""}<b className="ok-text">{f.sent} sent</b></> : null}
+        </span>
+        {f.ready && <button className="btn sm ghost" onClick={() => setOpen(!open)}>{open ? "Hide" : "Read it"}</button>}
+      </div>
+      {f.ready && open && <div className="prompt">{f.ready.text}</div>}
+      {f.ready && manager && it.phone && (
+        <div className="row">
+          <Busy className="btn sm primary" run={async () => {
+            const w = window.open("", "_blank");
+            const r = await api(`/approvals/${f.ready.id}/own`, { method: "POST" });
+            if (w) w.location = r.link; else window.location.href = r.link;
+            reload();
+          }}>Send on WhatsApp</Busy>
+          <Busy className="btn sm ghost" run={async () => { await api(`/approvals/${f.ready.id}/skip`, { method: "POST" }); toast("Skipped"); reload(); }}>Skip this one</Busy>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Inquiries() {
   const { me } = useHub();
   const loc = useLocation();
@@ -176,6 +217,7 @@ export default function Inquiries() {
               {it.channel === "email" && it.verified === false && <span className="small muted">The sender's address couldn't be confirmed — check before you reply.</span>}
               {(it.replies || []).map((r, i) => <div key={i} className="inq-reply small"><b>They replied {ago(r.at)}:</b> {r.text}</div>)}
               <Proposal it={it} reload={reload} />
+              <FollowUp it={it} reload={reload} />
               <div className="small"><Link to="/leads">Open in Leads</Link>{me.features?.pipeline ? <> · <Link to="/pipeline">Pipeline</Link></> : null}
                 {me.features?.quotations && canAct(me, "manager") ? <> · <Link to={`/quotes?inquiry=${it.id}`}>Make a quotation</Link></> : null}</div>
             </div>

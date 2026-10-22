@@ -84,7 +84,7 @@ export async function upload(path, form) {
   }
   if (!res.ok) {
     const d = data.detail;
-    const e = new Error(typeof d === "string" ? d : d?.message || "That file couldn't be uploaded. Please try again."); e.status = res.status; throw e;
+    const e = new Error(typeof d === "string" ? d : d?.message || "That file couldn't be uploaded. Please try again."); e.status = res.status; e.code = d?.code; throw e;
   }
   return data;
 }

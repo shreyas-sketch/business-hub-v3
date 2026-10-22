@@ -49,12 +49,15 @@ export function findPage(pages, pathname) {
 
 // Words owners use for a page that its name doesn't say
 const ALSO = {
-  gst: "compliance tax", tax: "compliance", tds: "compliance", invoice: "quotations invoices", bill: "quotations money owed", quote: "quotations",
+  gst: "compliance tax", tax: "compliance", tds: "compliance", invoice: "quotations invoices", bill: "expenses quotations money owed", quote: "quotations",
   payment: "money owed razorpay", pay: "money owed", due: "money owed", owed: "money", udhaar: "money owed", cash: "cash flow",
   poster: "launch kit brand kit status", logo: "brand kit", colour: "brand kit", color: "brand kit", post: "writer content calendar",
   instagram: "content calendar writer", staff: "team ai staff", employee: "team roles hiring", hire: "hiring", sales: "pipeline crm",
   customer: "customers crm", enquiry: "inquiries leads", inquiry: "inquiries leads", site: "website", web: "website", whatsapp: "chats leads",
   score: "business score", sop: "sop library", process: "sop library", call: "member call recordings", video: "recordings",
+  expense: "expenses", kharcha: "expenses", spend: "expenses", receipt: "expenses", bank: "bank statement", passbook: "bank statement",
+  statement: "bank statement", tally: "customer risk getting paid", excel: "customer risk getting paid", rival: "competitor watch",
+  review: "reviews", rating: "reviews", google: "reviews", lost: "win-back", inactive: "win-back", research: "content & company research",
 };
 
 function score(p, q) {

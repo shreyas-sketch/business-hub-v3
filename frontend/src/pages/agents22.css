@@ -1,0 +1,14 @@
+/* Win-Back and Lead Response (v2.2) */
+.wb-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px; }
+.lr-channels { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.lr-channels li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 4px 10px; padding: 10px 0; border-bottom: 1px solid var(--ink-line); }
+.lr-channels li:last-child { border-bottom: 0; }
+.lr-channels .mark { font-weight: 600; color: var(--aqua); }
+.lr-channels .no .mark { color: var(--grey); }
+.lr-channels .note { grid-column: 2; }
+.lr-seg { display: flex; flex-wrap: wrap; gap: 8px; }
+.lr-seg .btn.on { border-color: var(--aqua); color: var(--aqua); }
+
+@media (max-width: 640px) {
+  .wb-grid { grid-template-columns: minmax(0, 1fr); }
+}

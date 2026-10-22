@@ -6,13 +6,17 @@ The address comes from the owner, so it is treated as untrusted:
 - every host is resolved first and refused if any address is private, loopback, link-local, multicast or reserved
   (no reaching into the hub's own network), and the connection is then made to that checked address — so a DNS answer
   can't change between the check and the request;
-- at most 2 MB per page, HTML only, 10 seconds per request.
+- only addresses on the public internet (not private, shared, documentation or other special ranges);
+- at most 2 MB per page, HTML only, 10 seconds per request and 20 seconds for a whole answer however slowly it trickles in;
+- we ask for an uncompressed answer; a gzip/deflate one is unpacked in small steps and stopped at the size limit (so a
+  tiny "zip bomb" can't blow up into gigabytes), and any other packing is refused.
 Tests and a laptop may read private addresses (settings.fetch_private_ok).
 """
 import asyncio
 import ipaddress
 import re
 import socket
+import zlib
 from dataclasses import dataclass, field
 from urllib.parse import urljoin, urlparse
 
@@ -23,6 +27,7 @@ from .config import settings
 
 MAX_BYTES = 2_000_000
 TIMEOUT = 10
+DEADLINE = 20          # seconds for one whole fetch (redirects and body included)
 UA = "Mozilla/5.0 (compatible; BusinessAIActionHub/1.0; +https://employz.ai)"
 
 
@@ -83,7 +88,8 @@ def _blocked(ip: str) -> bool:
     a = ipaddress.ip_address(ip.split("%")[0])
     if getattr(a, "ipv4_mapped", None):
         a = a.ipv4_mapped
-    return a.is_private or a.is_loopback or a.is_link_local or a.is_multicast or a.is_reserved or a.is_unspecified
+    return (a.is_private or a.is_loopback or a.is_link_local or a.is_multicast or a.is_reserved or a.is_unspecified
+            or not a.is_global)        # also shared (100.64/10), documentation and benchmark ranges
 
 
 async def _one(client: httpx.AsyncClient, url: str, accept: str = "text/html,application/xhtml+xml") -> httpx.Response:
@@ -103,12 +109,63 @@ async def _one(client: httpx.AsyncClient, url: str, accept: str = "text/html,app
     if u.port:
         netloc += f":{u.port}"
     pinned = u._replace(netloc=netloc).geturl()
-    headers = {"Host": host + (f":{u.port}" if u.port else ""), "User-Agent": UA, "Accept": accept}
+    headers = {"Host": host + (f":{u.port}" if u.port else ""), "User-Agent": UA, "Accept": accept, "Accept-Encoding": "identity"}
     req = client.build_request("GET", pinned, headers=headers, extensions={"sni_hostname": host} if u.scheme == "https" else {})
     return await client.send(req, stream=True)
 
 
+TOO_SLOW = "That website took too long to answer. Try again, or fill the form instead."
+
+
+def _unpacker(resp: httpx.Response):
+    enc = (resp.headers.get("content-encoding") or "").strip().lower()
+    if enc in ("", "identity"):
+        return None
+    if enc in ("gzip", "x-gzip", "deflate"):
+        return zlib.decompressobj(zlib.MAX_WBITS | 32)          # gzip or zlib header, found automatically
+    raise FetchError("That website sent its page packed in a way we can't read.")
+
+
+async def _body(resp: httpx.Response, max_bytes: int, too_big: Exception | None = None) -> bytes:
+    """At most `max_bytes` of the answer. Raw bytes are read and, when packed, unpacked at most max_bytes+1 at a time, so a
+    small packed answer can never grow past the limit in memory. With `too_big`, a larger answer raises it instead."""
+    unpack = _unpacker(resp)
+    out = bytearray()
+    try:
+        async for raw in resp.aiter_raw():
+            data = raw
+            while data:
+                if unpack is None:
+                    out += data
+                    data = b""
+                else:
+                    out += unpack.decompress(data, max_bytes + 1 - len(out))
+                    data = unpack.unconsumed_tail
+                if len(out) > max_bytes:
+                    break
+            if len(out) > max_bytes:
+                if too_big is not None:
+                    raise too_big
+                break
+    except zlib.error:
+        raise FetchError("That website sent a page we couldn't unpack.")
+    return bytes(out[:max_bytes])
+
+
+async def _within(coro, message: str = TOO_SLOW):
+    """The whole fetch — every redirect and the body — must finish within DEADLINE seconds."""
+    try:
+        async with asyncio.timeout(DEADLINE):
+            return await coro
+    except TimeoutError:
+        raise FetchError(message)
+
+
 async def fetch(raw_url: str, client: httpx.AsyncClient | None = None) -> Page:
+    return await _within(_fetch(raw_url, client))
+
+
+async def _fetch(raw_url: str, client: httpx.AsyncClient | None = None) -> Page:
     url = normalise_url(raw_url)
     own = client is None
     client = client or httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=False, verify=True)
@@ -133,15 +190,12 @@ async def fetch(raw_url: str, client: httpx.AsyncClient | None = None) -> Page:
                 ctype = resp.headers.get("content-type", "")
                 if "html" not in ctype.lower():
                     raise FetchError("That address isn't a web page. Enter your website's home page.")
-                body = b""
-                async for chunk in resp.aiter_bytes():
-                    body += chunk
-                    if len(body) > MAX_BYTES:
-                        break
+                body = await _body(resp, MAX_BYTES)
+            except httpx.HTTPError:
+                raise FetchError(TOO_SLOW)
             finally:
                 await resp.aclose()
-            return Page(url=url, html=body[:MAX_BYTES].decode(resp.encoding or "utf-8", errors="replace"),
-                        https=url.startswith("https://"), bytes=len(body))
+            return Page(url=url, html=body.decode(_charset(resp), errors="replace"), https=url.startswith("https://"), bytes=len(body))
         raise FetchError("That website redirects too many times.")
     finally:
         if own:
@@ -151,9 +205,23 @@ async def fetch(raw_url: str, client: httpx.AsyncClient | None = None) -> Page:
 IMAGE_TYPES = ("image/png", "image/jpeg")
 
 
+def _charset(resp: httpx.Response) -> str:
+    import codecs
+    name = resp.charset_encoding or "utf-8"
+    try:
+        codecs.lookup(name)
+        return name
+    except LookupError:
+        return "utf-8"
+
+
 async def fetch_image(raw_url: str, max_bytes: int = 800_000) -> tuple[bytes, str]:
     """A small PNG or JPEG (a website's logo), with the same checks as a page: public addresses only, every redirect checked
     again, at most `max_bytes`. SVG and other formats are refused (they can't be drawn on a design safely)."""
+    return await _within(_fetch_image(raw_url, max_bytes), "The logo took too long to open.")
+
+
+async def _fetch_image(raw_url: str, max_bytes: int) -> tuple[bytes, str]:
     url = normalise_url(raw_url)
     async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=False, verify=True) as client:
         for _ in range(5):
@@ -169,11 +237,9 @@ async def fetch_image(raw_url: str, max_bytes: int = 800_000) -> tuple[bytes, st
                 ctype = resp.headers.get("content-type", "").split(";")[0].strip().lower()
                 if resp.status_code >= 400 or ctype not in IMAGE_TYPES:
                     raise FetchError("The logo isn't a PNG or JPG.")
-                body = b""
-                async for chunk in resp.aiter_bytes():
-                    body += chunk
-                    if len(body) > max_bytes:
-                        raise FetchError("The logo file is too large.")
+                body = await _body(resp, max_bytes, too_big=FetchError("The logo file is too large."))
+            except httpx.HTTPError:
+                raise FetchError("The logo couldn't be opened.")
             finally:
                 await resp.aclose()
             from .files import sniff
@@ -182,6 +248,50 @@ async def fetch_image(raw_url: str, max_bytes: int = 800_000) -> tuple[bytes, st
                 raise FetchError("The logo isn't a PNG or JPG.")
             return body, real
         raise FetchError("The logo address redirects too many times.")
+
+
+@dataclass
+class Text:
+    url: str
+    status: int
+    content_type: str
+    text: str
+
+
+async def fetch_text(raw_url: str, client: httpx.AsyncClient | None = None, max_bytes: int = 500_000,
+                     accept: str = "text/plain,*/*;q=0.5") -> Text:
+    """A small text file (like robots.txt) with every check a page gets: public addresses only, at most 4 redirects each
+    checked again, at most `max_bytes`, DEADLINE seconds in all. The body is read only for a 2xx answer — the caller
+    decides what an error status means. Network trouble raises FetchError."""
+    return await _within(_fetch_text(raw_url, client, max_bytes, accept))
+
+
+async def _fetch_text(raw_url: str, client: httpx.AsyncClient | None, max_bytes: int, accept: str) -> Text:
+    url = normalise_url(raw_url)
+    own = client is None
+    client = client or httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=False, verify=True)
+    try:
+        for _ in range(5):
+            try:
+                resp = await _one(client, url, accept=accept)
+            except httpx.HTTPError:
+                raise FetchError("We couldn't open that website.")
+            if resp.status_code in (301, 302, 303, 307, 308) and resp.headers.get("location"):
+                await resp.aclose()
+                url = normalise_url(urljoin(url, resp.headers["location"]))
+                continue
+            try:
+                ctype = resp.headers.get("content-type", "")
+                body = await _body(resp, max_bytes) if 200 <= resp.status_code < 300 else b""
+            except httpx.HTTPError:
+                raise FetchError(TOO_SLOW)
+            finally:
+                await resp.aclose()
+            return Text(url=url, status=resp.status_code, content_type=ctype, text=body.decode("utf-8-sig", errors="replace"))
+        raise FetchError("That website redirects too many times.")
+    finally:
+        if own:
+            await client.aclose()
 
 
 # ───────────────────────── reading a page ─────────────────────────

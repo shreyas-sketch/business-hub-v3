@@ -13,7 +13,7 @@ function Step({ s, prev, worst }) {
     <div className={`pg-leak ${worst ? "worst" : ""}`}>
       <div className="stack" style={{ gap: 4 }}>
         <span className="small"><b>{prev.label}</b> → <b>{s.label}</b></span>
-        <span className="small muted">{fmt(s.n)} of {fmt(prev.n)}{worst ? "" : s.rate >= s.target ? " · on target" : ""}</span>
+        <span className="small muted">{s.no_data ? `nothing came in from ${prev.label.toLowerCase()}` : `${fmt(s.n)} of ${fmt(prev.n)}`}{worst || s.no_data ? "" : s.rate >= s.target ? " · on target" : ""}</span>
         {worst && <span><Pill kind="on">Biggest leak</Pill></span>}
       </div>
       <div className="track" role="img" aria-label={`${fmt(s.rate)}% against a target of ${fmt(s.target)}%`}>
@@ -62,7 +62,7 @@ export default function Leaks() {
   const leak = result?.biggest_leak;
   const fixed = result?.if_fixed;
   const fixes = saved?.fixes;
-  const ready = n(nums[stages[0].key]) > 0;
+  const ready = n(nums[stages[0].key]) > 0 || n(nums[stages[1].key]) > 0;
 
   return (
     <Sheet {...head} sub={sub}
@@ -100,22 +100,26 @@ export default function Leaks() {
           {saved?.updated_at && !dirty && <span className="small muted">Saved {ago(saved.updated_at)}</span>}
           {saved && dirty && <span className="pg-stale">Changes not saved — the result below is from your last check.</span>}
         </div>
-        {!ready && <span className="hint">Start with the number of website visitors.</span>}
+        {!ready && <span className="hint">Start with your inquiries. Don't know your website visitors? Leave it at 0 — the hub starts from inquiries.</span>}
       </div>
 
       {!result ? (
         <Empty>Add your numbers and tap Find my biggest leak. Use one period for all of them — the last 30 days is a good start.</Empty>
       ) : (
         <div className="stack">
-          {result.steps.slice(1).map((s, i) => <Step key={s.key} s={s} prev={result.steps[i]} worst={leak?.key === s.key} />)}
-          {!leak && <div className="panel flat"><p className="small">Every step is at or above its target. Raise a target to find the next leak.</p></div>}
+          {result.steps.slice(1).map((s, i) => (s.skipped
+            ? <p key={s.key} className="small muted">No website visitors given, so your funnel starts at inquiries ({fmt(s.n)}).</p>
+            : <Step key={s.key} s={s} prev={result.steps[i]} worst={leak?.key === s.key} />))}
+          {!leak && (result.steps.every((s) => !n(s.n))
+            ? <div className="panel flat"><p className="small">All the numbers are 0, so there's nothing to compare yet. Add last month's numbers.</p></div>
+            : <div className="panel flat"><p className="small">Every step is at or above its target. Raise a target to find the next leak.</p></div>)}
           {leak && fixed && fixed.extra_customers > 0 && (
             <div className="pg-fixed">
               <span className="label">If you fix this one step</span>
               <span className="money" style={{ font: "400 26px/1.2 var(--head)" }}>
                 <span className="pg-nowrap">+{fmt(fixed.extra_customers)} {fixed.extra_customers === 1 ? "customer" : "customers"}</span>{fixed.extra_sales ? <>, <span className="pg-nowrap">+{rs(fixed.extra_sales)}</span></> : ""}
               </span>
-              <span className="small muted">From the same visitors, if {leak.label.toLowerCase()} reached {fmt(leak.target)}% instead of {fmt(leak.rate)}%.{!fixed.extra_sales ? " Add your average sale to see it in rupees." : ""}</span>
+              <span className="small muted">From the same {result.starts_at === "inquiries" ? "inquiries" : "visitors"}, if {leak.label.toLowerCase()} reached {fmt(leak.target)}% instead of {fmt(leak.rate)}%.{!fixed.extra_sales ? " Add your average sale to see it in rupees." : ""}</span>
             </div>
           )}
         </div>

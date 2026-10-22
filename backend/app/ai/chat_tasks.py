@@ -21,10 +21,54 @@ def shape(raw: dict) -> dict:
             "handover": bool(raw.get("handover")), "why": str(raw.get("why") or "")[:200], "summary": str(raw.get("summary") or "")[:300]}
 
 
-def mock_reply(p: dict, history: list[dict]) -> dict:
+# Lead Response's "booking only" rule (v2.2): prices, quotes, discounts and negotiation go to a person
+ASKS_PRICE = re.compile(r"\b(?:price|prices|pricing|rate|rates|cost|costs|charge|charges|fee|fees|package|packages|tariff|tariffs|payment|"
+                        r"amount|kitna|kitne|budget|how much|quote|quotes|quotation|quotations|estimate|discount|discounts|negotiat\w*|"
+                        r"best rate|final rate|lowest|cheaper|less price|any offers?|best deal|kam\s+(?:kar|karo|kijiye|ho|hoga)|thoda kam|"
+                        r"bhav|daam)\b", re.I)
+SAYS_PRICE = re.compile(r"₹|\b(?:rs|inr)\.?\s*\d|\d[\d,]*(?:\.\d+)?\s*(?:/-|rupees?\b|rs\b|inr\b|lakhs?\b|lacs?\b|crores?\b|k\b)|"
+                        r"\d+(?:\.\d+)?\s*%|\bdiscount|\bper\s+(?:sq\.?\s*ft|sqft|square feet|piece|pc|unit|kg|month|day|hour|visit|plate|person)\b",
+                        re.I)
+# booking only: any amount at all — a number of 3 or more digits (1,85,000 · 95000 · 1.85) or a number with L / lac / lakh / k / cr
+_AMOUNT = re.compile(r"\d[\d,.]*\d[\d,.]*\d|\d+(?:\.\d+)?\s*(?:l|lac|lacs|lakh|lakhs|k|cr|crore|crores)\b", re.I)
+_CLOCK = re.compile(r"\b\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.|noon|o'?clock)", re.I)
+_URL = re.compile(r"(?i)\bhttps?://\S+")
+
+
+def names_amount(reply: str, booking_line: str = "") -> bool:
+    """Booking only: True when the reply carries a price or any amount — outside the booking line, its link and clock times."""
+    rest = (reply or "").replace(booking_line, " ") if booking_line else (reply or "")
+    rest = _CLOCK.sub(" ", _URL.sub(" ", rest))
+    return bool(SAYS_PRICE.search(rest) or _AMOUNT.search(rest))
+
+
+def price_handover(p: dict, last: str, booking_line: str = "") -> dict:
+    name = _v(p, "name", "us")
+    book = f" {booking_line}" if booking_line else ""
+    return {"reply": f"Thank you for asking! The {name} team will share the price with you personally — someone will message you shortly.{book}",
+            "intent": "sales", "hot": True, "handover": True, "why": "Asked about price — prices and quotes come to you", "summary": last[:200]}
+
+
+def booking_guard(result: dict, history: list[dict], p: dict, booking_line: str = "") -> dict:
+    """With the booking-only rule on: a price question, or any reply that names a price, a discount or any amount, becomes the
+    hand-over line (no number in it) and goes to a person. Everything else passes as it is."""
+    last = next((m["text"] for m in reversed(history) if m["dir"] == "in"), "")
+    if ASKS_PRICE.search(last) or names_amount(result.get("reply") or "", booking_line):
+        return {**price_handover(p, last, booking_line), "summary": (result.get("summary") or last)[:300]}
+    return result
+
+
+def mock_reply(p: dict, history: list[dict], booking_only: bool = False, booking_line: str = "") -> dict:
     last = next((m["text"] for m in reversed(history) if m["dir"] == "in"), "")
     low = last.lower()
     name = _v(p, "name", "us")
+    if booking_only and not any(w in low for w in UNHAPPY):
+        if ASKS_PRICE.search(last):
+            return price_handover(p, last, booking_line)
+        if any(w in low for w in HOT) and booking_line:
+            return {"reply": f"Wonderful! {booking_line} Someone from {name} will confirm it with you.", "intent": "sales", "hot": True,
+                    "handover": True, "why": "Ready to go ahead", "summary": last[:200]}
+        return booking_guard(mock_reply(p, history), history, p, booking_line)
     if any(w in low for w in UNHAPPY):
         return {"reply": f"I'm sorry to hear that. I've passed this to the {name} team right away — someone will call you shortly to sort it out.",
                 "intent": "support", "hot": False, "handover": True, "why": "Customer is unhappy and needs a person", "summary": last[:200]}
@@ -43,10 +87,16 @@ def mock_reply(p: dict, history: list[dict]) -> dict:
             "intent": "sales", "hot": False, "handover": False, "why": "", "summary": last[:200]}
 
 
-async def reply(p: dict, history: list[dict], context: str, lead: dict | None):
+async def reply(p: dict, history: list[dict], context: str, lead: dict | None, booking_only: bool = False, booking_line: str = ""):
+    """`booking_only` (Lead Response with prices going to a person): never a price, quote, discount or negotiation — the team
+    shares those, and the chat is handed over. The caller also runs booking_guard on the result. Off: exactly as before."""
     convo = "\n".join(f"{'CUSTOMER' if m['dir'] == 'in' else 'BUSINESS'}: {m['text'][:600]}" for m in history[-12:])
     docs = f"\nFACTS FROM THE OWNER'S DOCUMENTS (price list, FAQs, policies):\n{context[:5000]}\n" if context else ""
     known = f"\nThis customer is already a lead: {lead.get('name', '')}, status {lead.get('status')}, notes: {lead.get('note', '')[:200]}\n" if lead else ""
+    booking = ("""
+- BOOKING ONLY: never share any price, rate, quote, estimate or discount, and never negotiate — even if it is in the profile or
+  the documents. If they ask, say the team will share it personally and set handover true. Help them book instead."""
+               + (f' The booking line you may use: "{booking_line}"' if booking_line else "")) if booking_only else ""
     return await complete(RULES + """
 You are the business's assistant replying on its own WhatsApp number. You speak for the business, warmly and briefly.
 - Answer only from the business profile and the documents. If a price or detail isn't there, don't guess: ask what they need and say the team will share it.
@@ -54,7 +104,7 @@ You are the business's assistant replying on its own WhatsApp number. You speak 
 - Reply in the customer's language (Hindi, Hinglish, Gujarati, Marathi or English), at most 60 words, no markdown.
 - intent: "sales" (wants to buy or know more), "support" (already a customer, needs help), "other".
 - hot: true when they are ready to buy, book a visit, or ask for a quote.
-- handover: true when a person must step in (ready to buy, unhappy, a decision only the owner can make, or you can't help).""",
+- handover: true when a person must step in (ready to buy, unhappy, a decision only the owner can make, or you can't help).""" + booking,
                           f"""{profile_text(p)}
 {docs}{known}
 THE CHAT SO FAR:
@@ -62,7 +112,7 @@ THE CHAT SO FAR:
 
 Write the next reply from the business.
 JSON only: {{"reply": "...", "intent": "sales|support|other", "hot": false, "handover": false, "why": "one line for the owner when hot or handover", "summary": "one line: what the customer wants"}}""",
-                          lambda: mock_reply(p, history), 600)
+                          (lambda: mock_reply(p, history, True, booking_line)) if booking_only else (lambda: mock_reply(p, history)), 600)
 
 
 # ───────────────────────── Sales Training Gym ─────────────────────────
