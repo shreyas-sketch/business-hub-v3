@@ -15,6 +15,7 @@ const PATHS = {
   inbox: "M3 13.5h5l1.5 2.5h5l1.5-2.5h5M5.2 5h13.6L21 13.5V19a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5.5z",
   menu: "M4 7h16M4 12h16M4 17h16",
   send: "M21 3 10 14M21 3l-7 18-4-7-7-4z",
+  logout: "M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M9 16l-4-4 4-4M5 12h10",
 };
 export function Icon({ name, ...p }) {
   return (
