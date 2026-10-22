@@ -46,7 +46,7 @@ from . import score as scoring
 from .ai import onboard_tasks, tasks
 from .ai.provider import AIError, cost_inr
 from .db import IST, db, now
-from .services import new_id, notify, track
+from .services import new_id, note_ai_failure, notify, track
 
 log = logging.getLogger("event")
 MAX_ATTEMPTS = 3
@@ -413,6 +413,8 @@ async def _ai(rid: str, key: str, make_job, check=None):
         return result
     except (AIError, asyncio.TimeoutError, ValueError, TypeError, KeyError) as e:
         log.warning("event %s: AI step %s didn't work: %s", rid, key, str(e)[:200])
+        if isinstance(e, AIError):
+            await note_ai_failure(f"event pack · {key}", e)
         return None
     except Exception:  # noqa: BLE001
         log.exception("event %s: AI step %s failed", rid, key)

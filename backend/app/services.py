@@ -86,6 +86,14 @@ async def refund_run(run: dict) -> None:
     await db().runs.update_one({"_id": run["_id"]}, {"$set": {"status": "refunded"}})
 
 
+async def note_ai_failure(kind: str, error: Exception) -> None:
+    """Keep the latest engine failure, so the admin's AI check can say what went wrong for an owner. Never breaks the caller."""
+    try:
+        await db().config.update_one({"_id": "ai_last_failure"}, {"$set": {"at": now(), "kind": kind, "error": str(error)[:300]}}, upsert=True)
+    except Exception:  # noqa: BLE001 — a note about a failure must not cause another one
+        log.exception("could not note the AI failure")
+
+
 async def run_ai(user: dict, kind: str, job, title: str, save_output: bool = True, check=None) -> dict:
     """Spends one run, calls the AI job, records tokens and cost, refunds on failure, saves to My Outputs.
     `check` (optional) shapes the AI result; if it raises, the draft is unusable and the run is refunded."""
@@ -99,6 +107,7 @@ async def run_ai(user: dict, kind: str, job, title: str, save_output: bool = Tru
     except AIError as e:
         log.warning("AI %s failed, run refunded: %s", kind, e)
         await refund_run(run)
+        await note_ai_failure(kind, e)
         raise HTTPException(502, "The AI is busy right now. Your run was not used — please try again in a minute.")
     except Exception:
         await refund_run(run)

@@ -159,6 +159,28 @@ class CohortIn(BaseModel):
     workshop_date: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
 
 
+@router.post("/ai/check")
+async def ai_check():
+    """One tiny real call to the AI engine, so the admin can see whether it works and, when it doesn't, the reason and the fix.
+    Uses no owner's runs; with AI_PROVIDER=mock it says the hub is on demo text."""
+    import time
+    from ..ai import provider
+    model = settings.ai_model or provider.DEFAULT_MODEL.get(settings.ai_provider, "")
+    out = {"provider": settings.ai_provider, "model": model, "effort": settings.ai_effort, "key_set": bool(
+        {"anthropic": settings.anthropic_api_key, "gemini": settings.gemini_api_key, "openai": settings.openai_api_key}.get(settings.ai_provider, "x"))}
+    last = await db().config.find_one({"_id": "ai_last_failure"})
+    if last:
+        out["last_failure"] = {"at": last["at"], "kind": last["kind"], "error": last["error"], "fix": provider.explain(last["error"])}
+    if settings.ai_provider == "mock":
+        return {**out, "ok": False, "error": "AI_PROVIDER is mock", "fix": "The hub is writing fixed demo text, not real AI. Set AI_PROVIDER=anthropic and ANTHROPIC_API_KEY in Railway → Variables."}
+    t = time.monotonic()
+    try:
+        _, usage = await provider.complete("You check that the line works.", 'Reply with {"ok": true}.', lambda: {"ok": True}, 50)
+    except provider.AIError as e:
+        return {**out, "ok": False, "error": str(e)[:300], "fix": provider.explain(str(e))}
+    return {**out, "ok": True, "seconds": round(time.monotonic() - t, 1), "tokens": usage.input_tokens + usage.output_tokens}
+
+
 @router.get("/cohorts")
 async def list_cohorts():
     return [{**public(c), "join_link": f"{settings.app_url}/join?c={c['code']}"} async for c in db().cohorts.find().sort("created_at", -1)]
