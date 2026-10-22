@@ -336,3 +336,8 @@ body.app .fr-way:hover { border-color: var(--aqua-deep); }
 body.app .fr-way.on { background: var(--aqua-shadow); box-shadow: inset 0 3px 0 var(--aqua); }
 body.app .fr-way b { font-weight: 600; }
 body.app input[autocomplete=one-time-code]::placeholder { letter-spacing: 0; }
+
+/* v2.2 pages: sentence-case chips and day headings, light versions of the money washes */
+body.app :is(.ex-chip, .ex-day) { text-transform: none; letter-spacing: 0; font-size: 13px; }
+body.app .ex-chip { border-radius: 999px; background: var(--white); }
+body.app :is(.ex-jumps, .gst-ask) { border-color: #E9C98F; background: var(--amber-wash); border-radius: 10px; }

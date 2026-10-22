@@ -14,6 +14,7 @@ log = logging.getLogger("agents")
 
 FOLLOWUP_LEADS_PER_SITE_PER_DAY = 40
 INSTANT_REPLIES_PER_DAY = 200
+LEAD_RESPONSE_SOURCES = ("website", "guide", "lead_magnet", "email")   # a pasted WhatsApp inquiry is already a WhatsApp chat
 
 
 async def on_new_lead(owner: dict, business: dict, site: dict | None, lead: dict) -> dict:
@@ -21,16 +22,33 @@ async def on_new_lead(owner: dict, business: dict, site: dict | None, lead: dict
     patch: dict = {}
     # Follow-up automation (Action Program and up): day 1, 3 and 7 follow-ups, each drafted when it falls due.
     try:
-        if plans.has(owner, "follow_up_agent") and await jobs.is_on(owner["_id"], "followup") and await _worth_following_up(site, lead):
+        if plans.has(owner, "follow_up_agent") and await jobs.is_on_for(owner, "followup") and await _worth_following_up(site, lead):
             await schedule_followups(owner["_id"], lead)
             patch["followups"] = True
     except Exception:
         log.exception("could not schedule follow-ups for lead %s", lead.get("_id"))
+    # Growth Mentorship, Lead Response (v2.2): when the owner switched it on, the first reply carries a booking line and replaces
+    # the plain instant reply for website, lead-magnet and email inquiries (an email's number only when its sender is verified).
+    # If it can't go, it says why and nothing else is sent.
+    lead_response = False
+    try:
+        if plans.has(owner, "lead_response") and lead.get("source") in LEAD_RESPONSE_SOURCES:
+            from ..routers.leadresponse import active
+            st = await active(owner)
+            if st is not None:
+                from .growth import lead_response_reply
+                got = await lead_response_reply(owner, business, lead, st)
+                patch.update(got)
+                # it replaced the plain instant reply — unless it couldn't go for a setup reason (number or template gone since it
+                # was switched on): then the plain instant reply below still answers, so the customer isn't left with nothing
+                lead_response = (got.get("lead_response") or {}).get("via") not in ("not-connected", "no-template")
+    except Exception:
+        log.exception("Lead Response failed for lead %s", lead.get("_id"))
     # Growth Mentorship: instant reply from the owner's own number, and the AI Telecaller's call — not for an email inquiry,
     # whose number was read out of an email anyone can write (its proposal goes by email, or waits for a tap).
     by_email = lead.get("source") == "email"
     try:
-        if not by_email and plans.has(owner, "whatsapp_ai") and await jobs.is_on(owner["_id"], "instant_reply"):
+        if not by_email and not lead_response and plans.has(owner, "whatsapp_ai") and await jobs.is_on(owner["_id"], "instant_reply"):
             from .growth import instant_reply
             patch["instant_reply"] = await instant_reply(owner, business, lead)
     except Exception:

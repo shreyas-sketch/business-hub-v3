@@ -299,6 +299,8 @@ async def edit_item(item_id: str, body: ItemPatch, ctx: Ctx = Depends(feature("c
         patch.pop("recurrence", None)
     if "due_date" in patch and patch["due_date"] != item.get("due_date"):
         patch["reminded"] = []
+    if "amount" in patch and patch["amount"] != item.get("amount"):
+        patch["amount_source"] = "owner"   # the owner's own figure: GST set-aside never overwrites it without asking
     if patch:
         await db().compliance_items.update_one({"_id": item_id}, {"$set": {**patch, "updated_at": now()}})
     return view(await db().compliance_items.find_one({"_id": item_id}))

@@ -163,6 +163,42 @@ async def apply_guide_membership(admin: dict = Depends(require_admin)):
     return {"moved": [k for k, *_ in moved], **await guide_membership_state()}
 
 
+# v2.2: everything the Membership is sold with — the guide's five, plus the funnel leak finder and the follow-ups (which
+# land in the Send list). The code's defaults stay as they are; this moves them for this deployment, undo per feature.
+MEMBERSHIP_V22 = GUIDE_MEMBERSHIP + ("funnel_leaks", "follow_up_agent", "approvals")
+
+
+def _preset_state(keys: tuple) -> dict:
+    return {"features": [{"key": k, "label": plans.META[k]["label"], "tier": plans.META[k]["tier"],
+                          "above_membership": plans.rank(plans.META[k]["tier"]) > plans.rank("lite")} for k in keys],
+            "applied": all(plans.rank(plans.META[k]["tier"]) <= plans.rank("lite") for k in keys)}
+
+
+@router.get("/presets/membership-v22")
+async def membership_v22_state():
+    return _preset_state(MEMBERSHIP_V22)
+
+
+@router.post("/presets/membership-v22")
+async def apply_membership_v22(admin: dict = Depends(require_admin)):
+    """Moves every v2.2 Membership feature that sits in a higher plan into Membership. Ones already there are left alone."""
+    feats = await _overrides("features")
+    moved = []
+    for key in MEMBERSHIP_V22:
+        if plans.rank(plans.META[key]["tier"]) <= plans.rank("lite"):
+            continue
+        before = dict(feats.get(key) or {})
+        after = _clean(key, {**before, "tier": "lite"})
+        feats[key] = after
+        moved.append((key, before, after))
+    if moved:
+        await _save("features", feats)
+        for key, before, after in moved:
+            await _log(admin, "feature", key, before, after, "v2.2 Membership features")
+        await track("preset_membership_v22", admin["_id"], moved=[k for k, *_ in moved])
+    return {"moved": [k for k, *_ in moved], **await membership_v22_state()}
+
+
 @router.put("/menu")
 async def save_menu(body: MenuIn, admin: dict = Depends(require_admin)):
     """After a drag in the menu editor: every page's group and position."""

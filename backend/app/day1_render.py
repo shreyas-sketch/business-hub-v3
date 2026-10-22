@@ -12,6 +12,7 @@ bundled in app/fonts (SIL Open Font License).
 """
 import io
 import re
+import threading
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -50,6 +51,10 @@ class PilMeasure:
 
 
 _registered = False
+# ReportLab keeps each registered font's subset state on the shared TTFont object, so two PDFs drawn at the same moment in
+# different threads (reports and invoices are drawn with asyncio.to_thread) can corrupt each other ("list index out of
+# range" in makeSubset). Every PDF that uses these fonts is drawn under this lock; one takes a few milliseconds.
+PDF_LOCK = threading.RLock()
 
 
 def _register_pdf_fonts() -> None:
@@ -58,9 +63,12 @@ def _register_pdf_fonts() -> None:
         return
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
-    for key, file in FONTS.items():
-        pdfmetrics.registerFont(TTFont(f"day1-{key}", str(FONT_DIR / file)))
-    _registered = True
+    with PDF_LOCK:
+        if _registered:
+            return
+        for key, file in FONTS.items():
+            pdfmetrics.registerFont(TTFont(f"day1-{key}", str(FONT_DIR / file)))
+        _registered = True
 
 
 class PdfMeasure:
@@ -315,6 +323,11 @@ def png(report: dict) -> bytes:
 
 
 def pdf(report: dict, title: str = "Your report") -> bytes:
+    with PDF_LOCK:
+        return _pdf(report, title)
+
+
+def _pdf(report: dict, title: str) -> bytes:
     from reportlab.lib.colors import HexColor
     from reportlab.lib.pagesizes import A4
     from reportlab.pdfgen import canvas

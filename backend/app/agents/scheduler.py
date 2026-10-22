@@ -14,7 +14,7 @@ from ..config import settings
 from ..db import db, now
 from . import runners  # noqa: F401  (attaches the built-in runners to the catalog)
 from .catalog import AGENTS, Spec, due_slot
-from .jobs import claim, execute, finish, is_on, job_claim_key, retry_later
+from .jobs import claim, execute, finish, is_on_for, job_claim_key, retry_later
 
 log = logging.getLogger("agents")
 PAID = [t for t in plans.TIERS if t != "free"]
@@ -52,7 +52,7 @@ async def run_job(job: dict, at: datetime) -> bool:
               else "The account is paused." if not owner or owner.get("disabled")
               else f"{plans.label_of(spec.feature)} isn't part of the current plan." if not plans.has(owner, spec.feature)
               else None)
-    if reason is None and not await is_on(job["ws"], spec.key):
+    if reason is None and not await is_on_for(owner, spec.key):
         reason = "The agent was switched off."
     if reason:
         await finish(job, "skipped", reason, at)
@@ -139,12 +139,13 @@ async def _safe(coro, what: str):
 async def tick(at: datetime | None = None) -> dict:
     """One pass of the clock. `at` (UTC) lets tests drive time; it defaults to now."""
     at = at or now()
-    from .. import campaigns
+    from .. import campaigns, google_retention
     from . import office
     await plans.load()
     return {"jobs": await run_due_jobs(at), "scheduled": await run_recurring(at),
             "office_resumed": await _safe(office.resume_stale(at), "office resume") or 0,
-            "campaign_messages": await _safe(campaigns.tick(at), "campaigns") or 0}
+            "campaign_messages": await _safe(campaigns.tick(at), "campaigns") or 0,
+            "google_forgotten": await _safe(google_retention.sweep(at), "Google content sweep") or 0}
 
 
 async def loop() -> None:

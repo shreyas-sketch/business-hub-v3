@@ -12,9 +12,11 @@ asgi-lifespan>=2.1          # seed_demo.py (SEED_DEMO=true on a test deployment)
 cryptography>=42,<47        # owners' API keys encrypted at rest (CONNECTIONS_KEY)
 beautifulsoup4>=4.12,<5     # reading an owner's website during onboarding
 python-docx>=1.1,<2         # Company Brain: Word uploads
-pypdf>=4,<7                 # Company Brain: PDF uploads
+pypdf>=4,<6                 # Company Brain and bank statement PDFs (v2.2 tested on 5.x)
 openpyxl>=3.1,<4            # customer import from Excel
 tzdata>=2024.1              # India time (zoneinfo) on slim images without system tz data
 Pillow>=10.4,<13            # logo and image checks
 reportlab>=4.2,<6           # invoice and quotation PDFs
 qrcode>=7.4,<9              # website and event QR codes
+pdfplumber>=0.11,<0.12      # bank statement reader: PDF tables
+xlrd>=2.0,<3                # bank statement reader: old .xls files

@@ -878,6 +878,11 @@ async def apply(run: dict, user: dict, email: str, name: str, late: bool = False
         except DuplicateKeyError:  # the email was taken between the check and the save
             user_patch.pop("email", None)
             await db().users.update_one({"_id": ws}, {"$set": user_patch})
+    # Day 2 of the event shows the follow-ups the room's own inquiries got, so an event account starts with them switched on
+    # (unless the owner has already chosen). They are drafts in the Send list; nothing goes out without the owner's tap.
+    from .agents import jobs as agent_jobs
+    if not await db().agent_settings.find_one({"_id": f"{ws}:followup"}, {"_id": 1}):
+        await agent_jobs.save_settings(ws, "followup", {"on": True, "opted_in": True, "opted_in_by": "event"})
     await db().event_runs.update_one({"_id": run["_id"]}, {"$set": {"applied": out, "applied_at": now()}})
     await track("event_saved", ws, cohort=run["cohort"])
     if out.get("trial"):
@@ -930,7 +935,10 @@ async def live(code: str) -> dict:
                        "SOPs written": await owners("sop_maps", {"processes.status": "written"}, "_id")},
         "conversion": {"Sent themselves an inquiry": await owners("leads", {"source": "whatsapp"}),
                        "Got a website inquiry": await owners("leads", {"source": "website"}),
-                       "Quotation from an inquiry": await owners("quotes", {"lead_id": {"$ne": None}}, "ws")},
+                       "Quotation from an inquiry": await owners("quotes", {"lead_id": {"$ne": None}}, "ws"),
+                       "Found their biggest leak": await owners("leaks", {"result.biggest_leak": {"$ne": None}}, "_id"),
+                       "Follow-ups ready": await owners("approvals", {"kind": "followup"}, "ws"),
+                       "Follow-ups sent": await owners("approvals", {"kind": "followup", "status": "sent"}, "ws")},
         "data": {"Cash flow ready": await owners("businesses", {"money.bank_balance": {"$exists": True}}),
                  "Target set": await owners("businesses", {"targets.monthly_revenue": {"$gt": 0}}),
                  "Took the score": sum(1 for n in scores.values() if n >= 1), "Re-took the score": sum(1 for n in scores.values() if n >= 2),

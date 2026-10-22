@@ -2,7 +2,8 @@
 The agents' bookkeeping: per-owner settings, the activity log, run claims and scheduled jobs.
 
 Collections
-- agent_settings {_id: "<ws>:<key>", ws, key, on, autonomy "ask"|"act", last_run_at, last_status, last_note}
+- agent_settings {_id: "<ws>:<key>", ws, key, on, opted_in (the owner switched it on themselves), autonomy "ask"|"act",
+                  last_run_at, last_status, last_note}
 - agent_jobs     {_id, ws, agent, run_at, payload, status scheduled|done|skipped|failed|cancelled, note, attempts, created_at, finished_at}
 - agent_log      {_id, ws, agent, text, status, at, ref}
 - job_claims     {_id, at} — a run claims itself by inserting a deterministic _id; a duplicate means another worker has it.
@@ -53,6 +54,28 @@ async def all_settings(ws: str) -> dict[str, dict]:
 
 async def is_on(ws: str, key: str) -> bool:
     return bool((await get_settings(ws, key)).get("on", True))
+
+
+# Agents that are on by default from their usual plan up, but wait for the owner's own switch on a lower plan that only
+# has them because the admin moved them there (v2.2: follow-ups in the ₹1,999 Membership). Each run is an AI run, so a
+# Membership owner chooses it. agent key -> feature (its tier in the code is the "usual plan").
+OPT_IN = {"followup": "follow_up_agent"}
+
+
+def needs_opt_in(owner: dict, key: str) -> bool:
+    f = OPT_IN.get(key)
+    return bool(f) and plans.rank(plans.effective_plan(owner)) < plans.rank(plans.DEFAULT_FEATURES[f]["tier"])
+
+
+def on_for(owner: dict, key: str, st: dict) -> bool:
+    """Whether this agent runs for this owner: switched on, and — where the owner must opt in — switched on by the owner."""
+    if not st.get("on", True):
+        return False
+    return bool(st.get("opted_in")) if needs_opt_in(owner, key) else True
+
+
+async def is_on_for(owner: dict, key: str) -> bool:
+    return on_for(owner, key, await get_settings(owner["_id"], key))
 
 
 async def save_settings(ws: str, key: str, patch: dict) -> None:

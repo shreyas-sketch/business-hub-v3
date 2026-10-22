@@ -17,6 +17,8 @@ GROWTH = ["setup", "dashboard", "staff", "chats", "connections", "company-brain"
           "competence", "meetings", "tasks", "reviews"]
 OFFICE = ["workforce", "office"]
 V21 = ["dashboard", "knowledge", "compliance", "cash-flow", "brand-kit"]          # v2.1 pages (plus magic, levers, sops, calendar, money, agents)
+V22 = ["expenses", "bank-statement", "gst", "customer-risk", "getting-paid", "competitors", "reputation", "leaks", "inquiries"]  # v2.2 (Membership)
+V22_UP = ["win-back", "research", "lead-response"]                              # v2.2, Action Program and Growth
 ALL = FREE + MEMBER + PROGRAM + RUNNING + GROWTH + OFFICE + V21[1:]
 problems = []
 
@@ -72,9 +74,11 @@ with sync_playwright() as p:
     sweep(b, "staff", "9820000012", ["home", "leads", "tasks", "sops", "meetings", "pipeline", "chats", "gym", "tools", "roles", "outputs"], 1366, 900)
     sweep(b, "manager", "9820000011", ["home", "approvals", "money", "quotes", "dashboard", "week", "office", "outputs"], 1366, 900)
     # v2.1: the AI Advantage launch account, every v2.1 page
-    launch = V21 + ["magic", "levers", "sops", "calendar", "money", "agents", "tools", "inquiries", "website", "lead-magnet", "quotes", "connections"]
+    launch = V21 + V22 + ["magic", "levers", "sops", "calendar", "money", "agents", "tools", "website", "lead-magnet", "quotes", "connections"]
     sweep(b, "launch", "9820000007", launch, 1366, 900)
     sweep(b, "launchm", "9820000007", launch, 390, 844)
+    sweep(b, "v22growth", "9820000006", V22 + V22_UP, 1366, 900)
+    sweep(b, "v22growthm", "9820000006", V22 + V22_UP, 390, 844)
     sweep(b, "freedash", "9820000004", ["dashboard"], 390, 844)
     sweep(b, "admin", "9999900000", ["admin", "admin/features", "admin/event", "admin/day1", "admin/calls", "admin/recordings", "admin/compliance", "admin/email"], 1366, 900)
     sweep(b, "adminm", "9999900000", ["admin", "admin/features", "admin/event", "admin/day1", "admin/calls", "admin/compliance", "admin/email"], 390, 844)

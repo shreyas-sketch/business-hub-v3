@@ -54,10 +54,10 @@ async def _view(ctx: Ctx, spec: catalog.Spec, s: dict) -> dict:
     return {"key": spec.key, "name": spec.name, "what": spec.what, "when": spec.when, "feature": spec.feature, "trigger": spec.trigger,
             "customer_facing": spec.customer_facing, "approvals": spec.approvals, "info_only": spec.info_only,
             "tier": tier, "tier_name": plans.PLANS[tier]["name"], "available": available,
-            "on": bool(s.get("on", True)), "autonomy": s.get("autonomy", "ask") if can_act and spec.approvals else "ask",
+            "on": jobs.on_for(owner, spec.key, s), "opt_in": jobs.needs_opt_in(owner, spec.key), "autonomy": s.get("autonomy", "ask") if can_act and spec.approvals else "ask",
             "last_run_at": last.isoformat() if hasattr(last, "isoformat") else None, "last_status": s.get("last_status"),
             "last_note": s.get("last_note"),
-            "next_run_at": await _next_run(ctx.ws, spec) if available and s.get("on", True) else None}
+            "next_run_at": await _next_run(ctx.ws, spec) if available and jobs.on_for(owner, spec.key, s) else None}
 
 
 @router.get("/agents")
@@ -91,6 +91,7 @@ async def update_agent(key: str, body: AgentPatch, ctx: Ctx = Depends(owner_ctx)
     patch: dict = {}
     if body.on is not None:
         patch["on"] = body.on
+        patch["opted_in"] = body.on        # the owner's own choice (some agents wait for it, see jobs.OPT_IN)
     if body.autonomy is not None:
         if not spec.approvals:
             raise HTTPException(400, f"The {spec.name} doesn't wait for approval, so there is nothing to change.")

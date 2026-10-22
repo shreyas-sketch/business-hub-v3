@@ -29,6 +29,10 @@ During the webinar each attendee opens `/report?c=<webinar code>`, types their W
 
 P1 adds the Inquiries inbox with automatic proposals (email in through Amazon SES), Razorpay → automatic GST invoices and credit notes, direct invoices, website edit by prompt and uploaded lead magnets. P0: the Knowledge Hub (Business Brain with identity, money and targets), the Smart Dashboard (the owner's landing page), the compliance calendar, a 30-day cash-flow forecast, "Am I on target?", automatic payment follow-ups by email (approve once), the brand kit with designs, the whole-business SOP set, Mark as posted and ways to get more leads. Decisions and scope: `docs/V2_PLAN.md` (v2.1 section). Email needs Amazon SES (see `backend/.env.example`). Demo login for the launch: 9820000007.
 
+## v2.2 — Conversion, Data and five AI agents
+
+In the ₹1,999 Membership: the funnel leak finder and follow-ups on day 1, 3 and 7 (moved in by the admin's one-click preset), the expense tracker, the bank statement reader, GST set-aside, customer risk and getting paid (fed by a Tally/Excel sales upload), Competitor Watch and Reviews & reputation. Win-Back and Content & company research are in the Action Program; Lead Response is in Growth Mentorship. What was decided and why, what was tested and what needs a decision (Google reviews): `docs/V22_HANDOFF.md`. Deploying: `docs/DEPLOY_CHECKLIST.md` (section 0.5). The demo bank statement (invented): `docs/demo/kaveri-bank-statement.csv`.
+
 ## What's inside
 
 ```

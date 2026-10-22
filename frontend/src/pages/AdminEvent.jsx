@@ -14,18 +14,18 @@ const STATUS = { queued: ["Waiting", "off"], rules: ["Reading", "warn"], ai_queu
 
 function Preset() {
   const { toast } = useHub();
-  const [s, reload] = useLoad("/admin/config/presets/guide-membership");
+  const [s, reload] = useLoad("/admin/config/presets/membership-v22");
   if (!s) return null;
   return (
     <div className={`panel ${s.applied ? "" : "active"}`}>
       <div className="row between">
         <div className="stack" style={{ gap: 4 }}>
           <span className="label">Before the event · features in Membership</span>
-          <span className="small">{s.applied ? "Done. Members get every feature in the guide." : "The guide promises these to members; today they sit in higher plans:"}</span>
-          {!s.applied && <span className="small muted">{s.features.filter((f) => f.tier !== "lite").map((f) => f.label).join(", ")}</span>}
+          <span className="small">{s.applied ? "Done. Members get every feature in the guide, the funnel leak finder and the follow-ups." : "The ₹1,999 Membership promises these; today they sit in higher plans:"}</span>
+          {!s.applied && <span className="small muted">{s.features.filter((f) => f.above_membership).map((f) => f.label).join(", ")}</span>}
         </div>
         {s.applied ? <Pill kind="on">Applied</Pill> : (
-          <Busy className="btn primary" run={async () => { const r = await api("/admin/config/presets/guide-membership", { method: "POST" }); toast(`Moved ${r.moved.length} into Membership`); reload(); }}>
+          <Busy className="btn primary" run={async () => { const r = await api("/admin/config/presets/membership-v22", { method: "POST" }); toast(`Moved ${r.moved.length} into Membership`); reload(); }}>
             Move them into Membership
           </Busy>
         )}

@@ -20,6 +20,7 @@ from app.main import app  # noqa: E402
 # instead, so the whole top-plan suite runs through the path admin numbers take ("everything unlocked").
 ADMIN_MODE = os.getenv("HUB_ADMIN_MODE") == "1"
 _REAL_HANDLE = httpx.ASGITransport.handle_async_request
+_MADE_ADMIN: set[str] = set()   # numbers this mode turned into admin numbers, in the current test
 
 
 async def _admin_mode_handle(self, request):
@@ -29,13 +30,17 @@ async def _admin_mode_handle(self, request):
     m = _re.fullmatch(r"/api/admin/users/([^/]+)", request.url.path)
     if request.method == "PATCH" and m:
         body = _json.loads(request.content or b"{}")
-        if body.get("plan") == "office":
-            u = await db().users.find_one({"_id": m.group(1)}, {"phone": 1})
-            if u:
-                object.__setattr__(_settings, "admin_phones", tuple(_settings.admin_phones) + (u["phone"],))
-                body.pop("plan")
-                request = httpx.Request(request.method, request.url, headers={k: v for k, v in request.headers.items() if k.lower() != "content-length"},
-                                        content=_json.dumps(body).encode())
+        u = await db().users.find_one({"_id": m.group(1)}, {"phone": 1}) if "plan" in body else None
+        if u and body["plan"] == "office":
+            object.__setattr__(_settings, "admin_phones", tuple(_settings.admin_phones) + (u["phone"],))
+            _MADE_ADMIN.add(u["phone"])
+            body.pop("plan")
+            request = httpx.Request(request.method, request.url, headers={k: v for k, v in request.headers.items() if k.lower() != "content-length"},
+                                    content=_json.dumps(body).encode())
+        elif u and u["phone"] in _MADE_ADMIN:
+            # moved off the top plan: the admin number this mode gave them goes too, so the new plan is what applies
+            object.__setattr__(_settings, "admin_phones", tuple(p for p in _settings.admin_phones if p != u["phone"]))
+            _MADE_ADMIN.discard(u["phone"])
     return await _REAL_HANDLE(self, request)
 
 
@@ -49,6 +54,7 @@ def _reset_admin_numbers():
     before = _settings.admin_phones
     yield
     object.__setattr__(_settings, "admin_phones", before)
+    _MADE_ADMIN.clear()
 
 
 @pytest.fixture

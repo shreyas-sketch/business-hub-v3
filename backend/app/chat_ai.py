@@ -94,8 +94,19 @@ async def reply(owner: dict, conn: dict, thread_id: str) -> dict:
         from .company_brain import context as brain
         context = await brain(ws, last_in)
     lead = await _lead_for(ws, t)
-    result = await run_ai(owner, "wa_reply", chat_tasks.reply(b, history, context, lead), f"WhatsApp reply to {t.get('name') or t['phone']}",
-                          save_output=False, check=chat_tasks.shape)
+    # Lead Response (v2.2) with prices going to a person: booking only — no price, quote or discount; the chat is handed over
+    booking = None
+    if plans.has(owner, "lead_response"):
+        from .routers.leadresponse import booking_rule
+        booking = await booking_rule(owner)
+    if booking is None:
+        job, check = chat_tasks.reply(b, history, context, lead), chat_tasks.shape
+    else:
+        job = chat_tasks.reply(b, history, context, lead, booking_only=True, booking_line=booking)
+
+        def check(raw):
+            return chat_tasks.booking_guard(chat_tasks.shape(raw), history, b, booking)
+    result = await run_ai(owner, "wa_reply", job, f"WhatsApp reply to {t.get('name') or t['phone']}", save_output=False, check=check)
     text = result["reply"]
     who = "Customer Care Executive" if result["intent"] == "support" else "Sales Executive"
     sent = await integrations.wa_text(ws, conn, t["phone"], text)

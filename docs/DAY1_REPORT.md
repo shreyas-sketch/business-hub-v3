@@ -31,7 +31,7 @@ What was built from "Program hubs — Day-1 tool and report: change spec" (14 Oc
 Create one template in AiSensy:
 
 - **Header:** image. To send the PDF instead, use a document header and set `AISENSY_REPORT_MEDIA=pdf`.
-- **Body:** `{{1}}, your Business AI report is ready. {{2}}`
+- **Body:** `Hi {{1}}, your Business AI report is ready.` / `{{2}}` / `Tap the button below to see the full report.` (Meta rejects a body that starts or ends with a variable; the full text is in `docs/AISENSY_TEMPLATES.md`.)
   - `{{1}}` is the first name.
   - `{{2}}` is a line such as "Your Business AI Score is 41/100. At your numbers, about ₹20,40,000 a year goes cold." The wording is in Admin → Library → "WhatsApp message — line 2".
 - **Button:** URL "See the full report" → `https://<your hub>/r/{{1}}`. The button's `{{1}}` is the report's token.

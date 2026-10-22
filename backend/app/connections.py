@@ -34,6 +34,7 @@ SPECS: dict[str, dict] = {
         ("access_token", "Meta access token", "secret", "Meta only: a permanent system-user token"),
         ("app_secret", "Meta app secret", "secret", "Meta only: checks that incoming messages really come from Meta"),
         ("tpl_instant", "Template: instant reply to a new inquiry", "text", "{{1}} customer name, {{2}} business"),
+        ("tpl_lead_response", "Template: first reply with a booking", "text", "{{1}} customer name, {{2}} business, {{3}} the booking line"),
         ("tpl_followup", "Template: follow-up", "text", "{{1}} name, {{2}} business, {{3}} message"),
         ("tpl_reminder", "Template: payment reminder", "text", "{{1}} name, {{2}} business, {{3}} amount, {{4}} due date, {{5}} how to pay"),
         ("tpl_review", "Template: review request", "text", "{{1}} name, {{2}} business, {{3}} review link"),
