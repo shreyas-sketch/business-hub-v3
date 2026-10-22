@@ -153,7 +153,7 @@ function Reply({ r, reload }) {
   const changed = text.trim() !== (r.reply_draft || "").trim();
   const save = () => api(`/reputation/reviews/${r.id}`, { method: "PATCH", body: { reply_draft: text } });
   const draft = (
-    <Busy className="btn sm ghost" onError={setErr} run={async () => {
+    <Busy className="btn sm ghost ai" onError={setErr} run={async () => {
       const x = await api(`/reputation/reviews/${r.id}/draft`, { method: "POST" });
       setText(x.reply_draft); reload();
     }}>{r.reply_draft ? "Draft again" : "Draft a reply"}</Busy>
@@ -190,7 +190,7 @@ function Reply({ r, reload }) {
     return (
       <div className="stack">
         <div className="row">
-          <Busy className="btn sm primary" onError={setErr} run={async () => {
+          <Busy className="btn sm primary ai" onError={setErr} run={async () => {
             const x = await api(`/reputation/reviews/${r.id}/draft`, { method: "POST" });
             setText(x.reply_draft); reload();
           }}>Draft a reply</Busy>

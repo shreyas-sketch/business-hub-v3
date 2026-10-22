@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../api.js";
-import { Busy, Field, FormError, useHub } from "../ui.jsx";
+import { Busy, Field, FormError, Logo, useHub } from "../ui.jsx";
 import { VoiceInput } from "./Writer.jsx";
 import "./free.css";
 
@@ -102,7 +102,7 @@ export default function Onboarding() {
   return (
     <div className="public" style={{ maxWidth: 760 }}>
       <header>
-        <div className="mark"><b>Business AI Action Hub</b><span>Set up · {inForm ? `${step + 1} of ${STEPS.length}` : "Start"}</span></div>
+        <div className="mark"><Logo h={40} /><span>Set up · {inForm ? `${step + 1} of ${STEPS.length}` : "Start"}</span></div>
         <div className="row">
           <span className="steps-glyphs" aria-hidden="true">{STEPS.map((_, i) => <i key={i} className={inForm && i < step ? "done" : inForm && i === step ? "now" : ""} />)}</span>
           {me.progress.profile && <button className="btn sm ghost" onClick={() => nav("/home")}>Close</button>}
@@ -127,7 +127,7 @@ export default function Onboarding() {
               <Field label="Your website address" hint="We read the home, about, services and contact pages. Uses one AI run.">
                 <input className="input" inputMode="url" autoComplete="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="www.yourbusiness.in" autoFocus /></Field>
               <FormError msg={err} />
-              <div><Busy className="btn primary" disabled={url.trim().length < 4} onError={setErr} run={readWebsite}>Read my website</Busy></div>
+              <div><Busy className="btn primary ai" disabled={url.trim().length < 4} onError={setErr} run={readWebsite}>Read my website</Busy></div>
             </div>
           )}
 
@@ -139,7 +139,7 @@ export default function Onboarding() {
               {words && <Field label="What we heard" hint="Correct anything we misheard. Filling your Business Brain uses one more AI run.">
                 <textarea className="textarea" maxLength={8000} value={words} onChange={(e) => setWords(e.target.value)} /></Field>}
               <FormError msg={err} />
-              {words && <div><Busy className="btn primary" disabled={words.trim().length < 20} onError={setErr} run={readWords}>Fill my Business Brain</Busy></div>}
+              {words && <div><Busy className="btn primary ai" disabled={words.trim().length < 20} onError={setErr} run={readWords}>Fill my Business Brain</Busy></div>}
             </div>
           )}
 
@@ -149,7 +149,7 @@ export default function Onboarding() {
                 <textarea className="textarea" style={{ minHeight: 140 }} maxLength={8000} value={words} onChange={(e) => setWords(e.target.value)} autoFocus
                   placeholder="We are Shree Ganesh Interiors in Thane. We make modular kitchens and wardrobes with our own carpenters, from ₹1,500 per sq ft. Most customers are families who just got a new flat. They choose us for fixed timelines and a clear quotation." /></Field>
               <FormError msg={err} />
-              <div><Busy className="btn primary" disabled={words.trim().length < 20} onError={setErr} run={readWords}>Fill my Business Brain</Busy></div>
+              <div><Busy className="btn primary ai" disabled={words.trim().length < 20} onError={setErr} run={readWords}>Fill my Business Brain</Busy></div>
             </div>
           )}
 

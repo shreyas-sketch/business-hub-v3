@@ -1,5 +1,5 @@
 /* Customer risk, Getting paid and the sales upload (v2.2) */
-.mi-line { font: 400 22px/1.3 var(--head); color: var(--paper); margin: 0; overflow-wrap: anywhere; }
+.mi-line { font: 700 22px/1.3 var(--head); color: var(--paper); margin: 0; overflow-wrap: anywhere; }
 .mi-line.warn { color: var(--amber); }
 .mi-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: baseline; justify-content: space-between; }
 
@@ -19,14 +19,14 @@
 .mi-list > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 16px; padding: 14px 0; border-bottom: 1px solid var(--ink-line); align-items: start; }
 .mi-list > div:last-child { border-bottom: 0; }
 .mi-list .who { min-width: 0; overflow-wrap: anywhere; display: grid; gap: 4px; }
-.mi-list .amt { font: 400 19px/1.1 var(--head); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.mi-list .amt { font: 700 19px/1.1 var(--head); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
 .mi-list .amt small { display: block; font: 400 11px/1.4 var(--body); color: var(--grey); letter-spacing: .04em; margin-top: 4px; }
 .mi-list .acts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 
 /* money still owed, by how late */
 .mi-age { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
-.mi-age > div { border: 1px solid var(--ink-line); background: var(--ink-raised); padding: 12px; display: grid; gap: 4px; min-width: 0; }
-.mi-age b { font: 400 18px/1.15 var(--head); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.mi-age > div { border: 1px solid var(--ink-line); background: var(--ink-raised); padding: 12px; display: grid; gap: 4px; min-width: 0; border-radius: 12px; }
+.mi-age b { font: 700 18px/1.15 var(--head); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .mi-age .late b { color: var(--amber); }
 .mi-age .zero b { color: var(--grey); }
 

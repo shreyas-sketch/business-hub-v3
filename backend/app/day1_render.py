@@ -337,7 +337,7 @@ def _pdf(report: dict, title: str) -> bytes:
     c = canvas.Canvas(buf, pagesize=A4, pageCompression=1, initialFontName="day1-body", initialFontSize=10)
     c.setTitle(title)
     c.setAuthor(report.get("footer", {}).get("credits", ""))
-    c.setCreator("Business AI Action Hub")
+    c.setCreator("OwnerDesk")
     for op in ops:
         if op["t"] == "bg":
             c.setFillColor(HexColor(op["fill"]))

@@ -45,7 +45,7 @@ function openRazorpay(Razorpay, co) {
       description: co.description,
       prefill: co.prefill || {},
       notes: co.notes || {},
-      theme: { color: "#3FD6C9" },
+      theme: { color: "#C9A84C" },
       handler: (resp) => resolve(resp),
       modal: { ondismiss: () => resolve(null) },
     };

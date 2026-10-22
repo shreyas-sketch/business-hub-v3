@@ -35,7 +35,7 @@ export default function Leads() {
               <td><select className="select" style={{ minWidth: 130 }} aria-label="Status" value={l.status} onChange={(e) => setStatus(l.id, e.target.value)}>
                 {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></td>
               <td className="small muted hide-sm">{ago(l.created_at)}</td>
-              <td><Busy className="btn sm" run={async () => { setDraft({ lead: l, ...(await api(`/leads/${l.id}/reply`, { method: "POST" })) }); refresh(); }}>Draft reply</Busy></td>
+              <td><Busy className="btn sm ai" run={async () => { setDraft({ lead: l, ...(await api(`/leads/${l.id}/reply`, { method: "POST" })) }); refresh(); }}>Draft reply</Busy></td>
             </tr>))}
           </tbody>
         </table>

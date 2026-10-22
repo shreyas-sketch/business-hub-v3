@@ -110,7 +110,7 @@ function LeadIdeas() {
       )}
       <FormError msg={err} />
       <div className="row">
-        <Busy className={`btn ${cur ? "ghost" : "primary"}`} onError={setErr} run={suggest}>{cur ? "Suggest again" : "Suggest ideas"}</Busy>
+        <Busy className={`btn ai ${cur ? "ghost" : "primary"}`} onError={setErr} run={suggest}>{cur ? "Suggest again" : "Suggest ideas"}</Busy>
         <span className="small muted">Uses 1 AI run. Written from your Knowledge Hub{cur ? "; ideas you ticked are kept" : ""}.</span>
       </div>
       {d.past?.length > 0 && (

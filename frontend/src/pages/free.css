@@ -3,10 +3,10 @@
 /* Three ways to fill the Business Brain */
 .fr-ways { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .fr-way { text-align: left; background: var(--ink); border: 1px solid var(--ink-line); color: var(--paper); padding: 18px; cursor: pointer;
-  display: grid; gap: 8px; align-content: start; font: inherit; }
+  display: grid; gap: 8px; align-content: start; font: inherit; border-radius: 12px; }
 .fr-way:hover { border-color: var(--slate); }
 .fr-way.on { border-color: var(--aqua-deep); box-shadow: inset 0 2px 0 var(--aqua); }
-.fr-way b { font: 500 18px/1.2 var(--head); }
+.fr-way b { font: 700 18px/1.2 var(--head); }
 
 /* Website checks: a small pass / not yet list */
 .fr-checks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; }
@@ -14,11 +14,11 @@
 .fr-checks .ok { color: var(--aqua); }
 .fr-checks .no { color: var(--grey); }
 .fr-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.fr-logo { width: 40px; height: 40px; object-fit: contain; background: #fff; border: 1px solid var(--ink-line); }
-.fr-swatch { width: 24px; height: 24px; border: 1px solid var(--ink-line); display: inline-block; }
+.fr-logo { width: 40px; height: 40px; object-fit: contain; background: #fff; border: 1px solid var(--ink-line); border-radius: 12px; }
+.fr-swatch { width: 24px; height: 24px; border: 1px solid var(--ink-line); display: inline-block; border-radius: 12px; }
 
 /* Voice recorder */
-.fr-voice { border: 1px dashed var(--ink-line); padding: 14px 16px; display: grid; gap: 10px; }
+.fr-voice { border: 1px dashed var(--ink-line); padding: 14px 16px; display: grid; gap: 10px; border-radius: 12px; }
 .fr-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--aqua); display: inline-block; animation: fr-pulse 1.2s ease-in-out infinite; }
 @keyframes fr-pulse { 50% { opacity: .25; } }
 .fr-pick { position: relative; overflow: hidden; }
@@ -39,23 +39,23 @@
 
 /* Score */
 .fr-score { display: flex; align-items: baseline; gap: 6px; }
-.fr-score .of { color: var(--grey); font: 400 20px/1 var(--head); }
+.fr-score .of { color: var(--grey); font: 700 20px/1 var(--head); }
 .fr-fix { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; padding: 12px 0; border-top: 1px solid var(--ink-line); }
 .fr-fix:first-child { border-top: 0; }
-.fr-fix .n { font: 300 28px/1 var(--head); color: var(--aqua-deep); grid-row: span 2; }
+.fr-fix .n { font: 800 28px/1 var(--head); color: var(--aqua-deep); grid-row: span 2; }
 
 /* Launch kit */
 .fr-kit { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 20px; align-items: start; }
-.fr-poster { width: 100%; max-width: 300px; aspect-ratio: 9 / 16; height: auto; border: 1px solid var(--ink-line); display: block; background: var(--ink-raised); }
-.fr-card-frame { width: 100%; max-width: 400px; height: 600px; border: 1px solid var(--ink-line); background: #fff; display: block; }
+.fr-poster { width: 100%; max-width: 300px; aspect-ratio: 9 / 16; height: auto; border: 1px solid var(--ink-line); display: block; background: var(--ink-raised); border-radius: 12px; }
+.fr-card-frame { width: 100%; max-width: 400px; height: 600px; border: 1px solid var(--ink-line); background: #fff; display: block; border-radius: 12px; }
 
 /* The A5 QR stand: sized in em, so the same markup is a small preview on screen and 148 × 210 mm on paper */
-.fr-stand { font-size: clamp(14px, 4.6vw, 20px); width: 14.8em; height: 21em; background: #fff; color: #0A1826; display: flex; flex-direction: column;
+.fr-stand { font-size: clamp(14px, 4.6vw, 20px); width: 14.8em; height: 21em; background: #fff; color: var(--bg); display: flex; flex-direction: column;
   align-items: center; text-align: center; padding: 1.2em 1em 0; gap: .45em; overflow: hidden; border: 1px solid var(--ink-line);
-  -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: var(--body); }
-.fr-stand .nm { font: 500 1.05em/1.15 var(--head); }
+  -webkit-print-color-adjust: exact; print-color-adjust: exact; font-family: var(--body); border-radius: 12px; }
+.fr-stand .nm { font: 800 1.05em/1.15 var(--head); }
 .fr-stand .msg { font-size: .5em; line-height: 1.35; color: #324251; max-width: 26em; }
-.fr-stand .scan { font: 500 .95em/1.1 var(--head); margin-top: .2em; }
+.fr-stand .scan { font: 800 .95em/1.1 var(--head); margin-top: .2em; }
 .fr-stand img { width: 8.6em; height: 8.6em; image-rendering: pixelated; }
 .fr-stand .wa { font-size: .55em; line-height: 1.4; }
 .fr-stand .url { font-size: .5em; letter-spacing: .04em; color: #324251; }

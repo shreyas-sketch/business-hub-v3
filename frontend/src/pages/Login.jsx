@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api, attribution } from "../api.js";
-import { useHub } from "../ui.jsx";
+import { Logo, useHub } from "../ui.jsx";
 
 export default function Login() {
   const { refresh, toast, nav } = useHub();
@@ -30,7 +30,7 @@ export default function Login() {
 
   return (
     <div className="public" style={{ maxWidth: 560 }}>
-      <header><Link to="/" className="mark"><b>Business AI Action Hub</b><span>Back</span></Link></header>
+      <header><Link to="/" className="mark"><Logo h={40} /><span>Back</span></Link></header>
       <section className="title-sheet">
         <span className="kicker">{sent ? "Step 2 of 2" : "Step 1 of 2"}</span>
         <h1 style={{ fontSize: 38 }}>{sent ? <>Enter the <em>code</em>.</> : <>Log in with your <em>mobile</em>.</>}</h1>

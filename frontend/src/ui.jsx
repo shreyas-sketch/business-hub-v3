@@ -3,6 +3,11 @@ import { Link } from "react-router-dom";
 import { api } from "./api.js";
 
 export const HubCtx = createContext(null);
+
+/** The OwnerDesk logo (logo kit: Horizontal Dark Flat; the monogram alone with mark). Flat files, because it shows under 64px. */
+export const Logo = ({ h = 36, mark = false, className = "" }) => (
+  <img className={`logo ${mark ? "logo-mark" : ""} ${className}`} src={mark ? "/brand/ownerdesk-mark.svg" : "/brand/ownerdesk-logo.svg"} alt="OwnerDesk" height={h} />
+);
 export const useHub = () => useContext(HubCtx);
 
 export function useLoad(path, deps = []) {
@@ -34,7 +39,7 @@ export function Sheet({ kicker, title, sub, id, pillar, money, actions, children
       </div>
       {children}
       <div className="rail-foot">
-        <span>{me?.program?.speakers || "Akshat Dani · Chirag J."} · {me?.program?.name || "Business AI Action Hub"}{pillar ? ` · ${pillar}` : ""}</span>
+        <span>{me?.program?.speakers || "Akshat Dani · Chirag J."} · {me?.program?.name || "OwnerDesk"}{pillar ? ` · ${pillar}` : ""}</span>
         <span className="steps-glyphs" aria-hidden="true">{[0, 1, 2, 3].map((i) => <i key={i} className={i < step ? "done" : i === step ? "now" : ""} />)}</span>
         <span>{money ? "₹ " : ""}{id}</span>
       </div>
@@ -47,7 +52,7 @@ export function Busy({ run, children, className = "btn", onError, ...p }) {
   const [busy, setBusy] = useState(false);
   const { toast } = useHub();
   return (
-    <button {...p} className={className} disabled={busy || p.disabled}
+    <button {...p} className={busy ? `${className} is-busy` : className} disabled={busy || p.disabled}
       onClick={async () => {
         setBusy(true);
         try { await run(); if (onError) onError(""); }

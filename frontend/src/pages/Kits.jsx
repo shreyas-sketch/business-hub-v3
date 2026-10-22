@@ -195,7 +195,7 @@ function SopSet({ onWritten }) {
         <h3>Map every process in your business</h3>
         <p className="muted">One AI run reads your Knowledge Hub and lists the processes a business like yours runs — sales, marketing, delivery, accounts, HR and customer care. You tick the ones that apply, then the hub writes an SOP for each.</p>
         <FormError msg={err} />
-        {canWrite ? <div className="row"><Busy className="btn primary" run={map} onError={setErr}>Map my processes</Busy><span className="small muted">Uses one AI run.</span></div>
+        {canWrite ? <div className="row"><Busy className="btn primary ai" run={map} onError={setErr}>Map my processes</Busy><span className="small muted">Uses one AI run.</span></div>
           : <p className="small muted">Ask the business owner or a manager to map your processes.</p>}
       </div>
     );
@@ -208,7 +208,7 @@ function SopSet({ onWritten }) {
         {canWrite && !running && (
           <span className="row" style={{ gap: 8 }}>
             <button className="btn sm ghost" onClick={() => setEditing(!editing)}>{editing ? "Done editing" : "Edit the list"}</button>
-            <Busy className="btn sm ghost" run={map}>Map again</Busy>
+            <Busy className="btn sm ghost ai" run={map}>Map again</Busy>
           </span>
         )}
       </div>
@@ -291,7 +291,7 @@ function SopSet({ onWritten }) {
             </span>
           )}
           <div className="row">
-            <Busy className="btn primary" disabled={!toWrite.length || short || running} run={write} onError={setErr}>
+            <Busy className="btn primary ai" disabled={!toWrite.length || short || running} run={write} onError={setErr}>
               {running ? "Writing…" : toWrite.length ? `Write ${toWrite.length} SOP${toWrite.length === 1 ? "" : "s"}` : "Write SOPs"}
             </Busy>
           </div>
@@ -432,7 +432,7 @@ export function Reviews() {
   const canRun = canAct(me, "owner") && me?.features?.monthly_review;
   const sub = !canRun ? about : (
     <>{about}<span style={{ display: "block", marginTop: 14 }}>
-      <Busy className="btn primary" run={async () => {
+      <Busy className="btn primary ai" run={async () => {
         await api("/agents/monthly_review/run", { method: "POST" });
         toast("This month's review is ready");
         refresh();

@@ -100,7 +100,7 @@ function InviteInner() {
   const [e, reloadEarnings] = useLoad("/earnings");
   if (!r) return null;
   const { percent, months, hold_days: hold } = e?.rules || { percent: 30, months: 12, hold_days: 7 };
-  const msg = encodeURIComponent(`I put my business website live with the Business AI Action Hub — free, took 10 minutes, and inquiries come straight to WhatsApp. Set yours up here: ${r.link}`);
+  const msg = encodeURIComponent(`I put my business website live with OwnerDesk — free, took 10 minutes, and inquiries come straight to WhatsApp. Set yours up here: ${r.link}`);
   return (
     <Sheet kicker="Grow · Invite & earn" id="U-02" pillar="Grow" money title={<>Bring owners in. Earn <em>{percent}%</em>.</>}
       sub={`Invite business owners you know. They start with a month of Membership features. You're rewarded when their website goes live, and you earn ${percent}% of what they pay in their first ${months} months, paid after a ${hold}-day refund window once approved.`}>

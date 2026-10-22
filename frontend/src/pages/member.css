@@ -2,7 +2,7 @@
    Blueprint rules: aqua = what the system does, amber only for rupees, hairline grey for structure. */
 
 /* ── Today and the streak ── */
-.m-today { font: 400 clamp(22px, 3vw, 30px)/1.25 var(--head); color: var(--paper); overflow-wrap: anywhere; }
+.m-today { font: 700 clamp(22px, 3vw, 30px)/1.25 var(--head); color: var(--paper); overflow-wrap: anywhere; }
 .m-big { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .m-big .bigscore { line-height: .9; }
 .m-done { display: inline-flex; align-items: center; gap: 8px; color: var(--aqua); font: 500 12px/1 var(--body); letter-spacing: .12em; text-transform: uppercase; }
@@ -10,7 +10,7 @@
 
 /* ── Posts ── */
 .m-post { display: grid; gap: 10px; align-content: start; min-width: 0; }
-.m-hook { font: 500 16px/1.35 var(--head); color: var(--paper); overflow-wrap: anywhere; }
+.m-hook { font: 700 16px/1.35 var(--head); color: var(--paper); overflow-wrap: anywhere; }
 .m-caption { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.55; }
 .m-caption.clamp { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
 .m-tags { color: var(--grey); font-size: 13px; overflow-wrap: anywhere; }
@@ -34,14 +34,14 @@
 .m-barrow.dim .bar > i { background: var(--aqua-deep); }
 
 /* ── Meter with an even-pace marker ── */
-.m-pace { position: relative; height: 10px; background: var(--ink); border: 1px solid var(--ink-line); }
+.m-pace { position: relative; height: 10px; background: var(--ink); border: 1px solid var(--ink-line); border-radius: 12px; }
 .m-pace > i { display: block; height: 100%; max-width: 100%; background: var(--aqua); }
 .m-pace > b { position: absolute; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; background: var(--paper); }
 .m-key { display: inline-flex; align-items: center; gap: 6px; }
 .m-key i { display: inline-block; width: 2px; height: 12px; background: var(--paper); }
 
 /* ── Hairline tiles (Magic Number chain, silent killers) ── */
-.m-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--ink-line); border: 1px solid var(--ink-line); }
+.m-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--ink-line); border: 1px solid var(--ink-line); border-radius: 12px; }
 .m-tiles > div { background: var(--ink-raised); padding: 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
 .m-tiles .num { font-size: 24px; line-height: 1.15; overflow-wrap: anywhere; }
 .m-tiles .m-step { font: 500 10px/1 var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--aqua); }
@@ -53,8 +53,8 @@
 button.m-cell { cursor: pointer; }
 button.m-cell:hover { background: var(--ink-raised); }
 .m-cell.on { background: var(--ink-raised); box-shadow: inset 0 0 0 1px var(--aqua-deep); }
-.m-cell.blank { background: rgba(5, 12, 19, .35); }
-.m-cell .d { display: flex; justify-content: space-between; align-items: center; gap: 4px; font: 500 12px/1 var(--head); color: var(--grey); }
+.m-cell.blank { background: rgba(10, 10, 12, .35); }
+.m-cell .d { display: flex; justify-content: space-between; align-items: center; gap: 4px; font: 700 12px/1 var(--head); color: var(--grey); }
 .m-cell.today .d { color: var(--aqua); }
 .m-cell .h { font-size: 12px; line-height: 1.35; color: var(--paper); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 .m-cell.posted .h { color: var(--grey); }
@@ -68,15 +68,15 @@ button.m-cell:hover { background: var(--ink-raised); }
 .m-q { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 320px); gap: 10px 24px; align-items: center; padding: 14px 0; border-top: 1px solid var(--ink-line); }
 .m-q:first-of-type { border-top: 0; }
 .m-rate { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
-.m-rate button { min-height: 42px; border: 1px solid var(--ink-line); border-radius: 2px; background: var(--ink); color: var(--grey); font: 500 15px/1 var(--head); cursor: pointer; }
+.m-rate button { min-height: 42px; border: 1px solid var(--ink-line); border-radius: 2px; background: var(--ink); color: var(--grey); font: 700 15px/1 var(--head); cursor: pointer; }
 .m-rate button:hover { border-color: var(--slate); color: var(--paper); }
 .m-rate button[aria-pressed="true"] { border-color: var(--aqua); background: var(--aqua-shadow); color: var(--paper); }
 .m-scale { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--grey); }
 .m-fix { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 4px 14px; }
-.m-fix .n { font: 300 30px/1 var(--head); color: var(--aqua); }
+.m-fix .n { font: 800 30px/1 var(--head); color: var(--aqua); }
 
 /* ── Cohort board ── */
-.t tr.m-me td { background: rgba(63, 214, 201, .06); }
+.t tr.m-me td { background: rgba(201, 168, 76, .06); }
 .t tr.m-me td:first-child { box-shadow: inset 2px 0 0 var(--aqua); }
 .m-score { display: inline-flex; align-items: center; gap: 10px; }
 .m-score .bar { width: 90px; }

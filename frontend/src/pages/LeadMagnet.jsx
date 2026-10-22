@@ -135,7 +135,7 @@ function WriteForm({ first, onDone, onCancel }) {
       </div>
       <FormError msg={err} />
       <div className="row">
-        <Busy className="btn primary" onError={setErr} disabled={problem.trim().length < 5} run={async () => {
+        <Busy className="btn primary ai" onError={setErr} disabled={problem.trim().length < 5} run={async () => {
           if (!first && !window.confirm("Write a new guide? It replaces the one you have now.")) return;
           const d = await api("/lead-magnet/generate", { method: "POST", body: { problem: problem.trim(), format } });
           refresh();

@@ -13,7 +13,7 @@
 .chat-pane { min-width: 0; display: grid; gap: 12px; }
 .chat-msgs { max-height: 58vh; overflow-y: auto; padding: 4px 2px; scrollbar-width: thin; }
 .chat-msgs .bubble { overflow-wrap: anywhere; }
-.ai-tag { color: var(--aqua); font-weight: 600; letter-spacing: .08em; }
+.ai-tag { color: var(--teal); font-weight: 600; letter-spacing: .08em; }
 .chat-back { display: none; justify-self: start; }
 
 /* ── Score bars (Gym) ── */
@@ -25,7 +25,7 @@
 
 /* ── Checkboxes (campaign audience) ── */
 .g-checks { display: flex; flex-wrap: wrap; gap: 8px; }
-.g-check { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--ink-line); padding: 8px 12px; font-size: 13px; color: var(--grey); background: var(--ink); cursor: pointer; }
+.g-check { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--ink-line); padding: 8px 12px; font-size: 13px; color: var(--grey); background: var(--ink); cursor: pointer; border-radius: 12px; }
 .g-check.on { border-color: var(--aqua-deep); color: var(--paper); }
 .g-check input { accent-color: var(--aqua); margin: 0; flex: none; }
 .g-inline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -33,7 +33,7 @@
 
 /* ── Workforce role cards ── */
 .wf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); gap: 14px; }
-.wf-role { border: 1px solid var(--ink-line); background: var(--ink); padding: 16px 18px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.wf-role { border: 1px solid var(--ink-line); background: var(--ink); padding: 16px 18px; display: grid; gap: 10px; align-content: start; min-width: 0; border-radius: 12px; }
 .wf-role.on { border-color: var(--aqua-deep); background: var(--ink-raised); }
 .wf-role.wide { grid-column: 1 / -1; }
 .wf-meta { display: grid; gap: 4px; font-size: 13px; color: var(--grey); }

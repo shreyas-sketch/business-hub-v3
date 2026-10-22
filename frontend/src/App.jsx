@@ -1,7 +1,7 @@
 import React, { Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { api, rupees, setLimitHandler, setLockedHandler, localPhone } from "./api.js";
-import { Copy, Gate, HubCtx, Modal } from "./ui.jsx";
+import { Copy, Gate, HubCtx, Logo, Modal } from "./ui.jsx";
 import Landing from "./pages/Landing.jsx";
 import Login from "./pages/Login.jsx";
 import Onboarding from "./pages/Onboarding.jsx";
@@ -121,12 +121,12 @@ function Shell({ me, children }) {
   return (
     <div className="shell">
       <div className="topbar">
-        <div className="mark"><b>{me.business_name || "Action Hub"}</b><span>{me.workspace.is_team ? me.workspace.role : me.user.plan_name}</span></div>
+        <div className="mark mark-row"><Logo h={34} /><span>{me.business_name || ""}</span></div>
         <button className="btn sm ghost" onClick={() => setOpen(true)}>Menu</button>
       </div>
       <aside className={`rail ${open ? "open" : ""}`}>
         <div className="row between">
-          <div className="mark"><b>{me.business_name || "Your business"}</b><span>{me.workspace.is_team ? `${me.user.name || "Team"} · ${me.workspace.role}` : me.program.name}</span></div>
+          <div className="mark"><Logo h={42} /><b>{me.business_name || "Your business"}</b><span>{me.workspace.is_team ? `${me.user.name || "Team"} · ${me.workspace.role}` : me.user.plan_name}</span></div>
           {open && <button className="btn sm ghost" onClick={() => setOpen(false)}>Close</button>}
         </div>
         <nav className="nav" aria-label="Main">

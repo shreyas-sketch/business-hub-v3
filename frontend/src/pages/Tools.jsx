@@ -87,7 +87,7 @@ function ToolForm({ t }) {
       ))}
       <FormError msg={err} />
       <div className="row">
-        <Busy className="btn primary" disabled={missing.length > 0} run={run} onError={setErr}>Write it for me</Busy>
+        <Busy className="btn primary ai" disabled={missing.length > 0} run={run} onError={setErr}>Write it for me</Busy>
         {hasExample && <button className="btn ghost" onClick={() => setVals({ ...blankFor(t), ...t.example })}>Fill an example</button>}
       </div>
       <span className="small muted">

@@ -87,7 +87,7 @@ function Ask({ empty }) {
       <div className="inline-add">
         <input className="input" maxLength={1000} value={q} onChange={(e) => setQ(e.target.value)} aria-label="Your question"
           placeholder="e.g. What is the price of a 7 ft wardrobe?" disabled={empty} />
-        <Busy className="btn primary" disabled={empty || q.trim().length < 3} onError={setErr} run={async () => {
+        <Busy className="btn primary ai" disabled={empty || q.trim().length < 3} onError={setErr} run={async () => {
           setA(null);
           const r = await api("/brain-docs/ask", { method: "POST", body: { question: q.trim() } });
           setA({ ...r, q: q.trim() });

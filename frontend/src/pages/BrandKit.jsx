@@ -96,7 +96,7 @@ function Messages({ kit, onKit, canEdit }) {
         <p className="muted">One AI run reads your Knowledge Hub and writes your brand message, and its versions for your website, ads, sales and social media, plus your tone of voice.</p>
         <p className="small muted">It uses only what's in your Knowledge Hub. Nothing is invented — change any line after.</p>
         <FormError msg={err} />
-        {canEdit ? <div className="row"><Busy className="btn primary" run={write} onError={setErr}>Write my brand kit</Busy><span className="small muted">Uses one AI run.</span></div>
+        {canEdit ? <div className="row"><Busy className="btn primary ai" run={write} onError={setErr}>Write my brand kit</Busy><span className="small muted">Uses one AI run.</span></div>
           : <p className="small muted">Ask the business owner to write it.</p>}
       </div>
     );
@@ -107,7 +107,7 @@ function Messages({ kit, onKit, canEdit }) {
       {canEdit && (
         <div className="row between bk-bar">
           <span className="small muted">Every AI writer in your hub uses your tone of voice. Lines marked "Your words" stay as you wrote them.</span>
-          <Busy className="btn sm ghost" run={write}>Rewrite from my Knowledge Hub</Busy>
+          <Busy className="btn sm ghost ai" run={write}>Rewrite from my Knowledge Hub</Busy>
         </div>
       )}
       {SECTION_ORDER.map((sec) => (

@@ -1,18 +1,30 @@
 {
-  "name": "Business AI Action Hub",
-  "short_name": "Action Hub",
+  "name": "OwnerDesk",
+  "short_name": "OwnerDesk",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0A1826",
-  "theme_color": "#0A1826",
+  "background_color": "#14151A",
+  "theme_color": "#14151A",
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
   ],
   "share_target": {
     "action": "/inquiries/new",
     "method": "GET",
-    "params": { "title": "title", "text": "text", "url": "url" }
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
   }
 }

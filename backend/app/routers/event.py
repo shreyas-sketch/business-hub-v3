@@ -305,7 +305,7 @@ async def link_qr(code: str):
     q.add_data(f"{settings.app_url}/event?e={c['code']}")
     q.make(fit=True)
     buf = io.BytesIO()
-    q.make_image(fill_color="#0A1826", back_color="#FFFFFF").save(buf, "PNG")
+    q.make_image(fill_color="#14151A", back_color="#FFFFFF").save(buf, "PNG")
     return Response(buf.getvalue(), media_type="image/png", headers={"Cache-Control": "private, max-age=300"})
 
 

@@ -143,7 +143,7 @@ export default function Leaks() {
             </ol>
           )}
           <div className="row">
-            <Busy className={`btn ${fixes ? "" : "primary"}`} disabled={dirty} run={async () => { fill(await api("/leaks/fixes", { method: "POST" })); refresh(); }}>
+            <Busy className={`btn ai ${fixes ? "" : "primary"}`} disabled={dirty} run={async () => { fill(await api("/leaks/fixes", { method: "POST" })); refresh(); }}>
               {fixes ? "Get fresh fixes" : "Get fixes"}
             </Busy>
             <span className="small muted">{dirty ? "Save your numbers first." : "Uses 1 AI run, written for your business and this leak."}</span>

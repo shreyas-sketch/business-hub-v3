@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api, attribution, rememberAttribution } from "../api.js";
+import { Logo } from "../ui.jsx";
 
 const PILLARS = [
   ["01", "Structure", "Your brand message", "AI drafts three one-line messages and a 30-second pitch from what you tell it. You pick and edit."],
@@ -25,7 +26,7 @@ export default function Landing() {
   return (
     <div className="public">
       <header>
-        <div className="mark"><b>Business AI Action Hub</b><span>Akshat Dani · Chirag J.</span></div>
+        <div className="mark"><Logo h={44} /><span>Akshat Dani · Chirag J.</span></div>
         <Link className="btn sm ghost" to="/login">Log in</Link>
       </header>
 
@@ -50,7 +51,7 @@ export default function Landing() {
           <Link className="btn primary" to="/login">Start free with your mobile number</Link>
           <a className="btn ghost" href="#showcase">See what owners built</a>
         </div>
-        <div className="titleblock">Project: a business that runs without you<br />Sheet 01 · Scale 1:1<br />Drawn. Business AI Action Hub</div>
+        <div className="titleblock">Project: a business that runs without you<br />Sheet 01 · Scale 1:1<br />Drawn. OwnerDesk</div>
       </section>
       <div className="pillars">
         {PILLARS.map(([n, pillar, title, text]) => (
@@ -71,7 +72,7 @@ export default function Landing() {
             {showcase.map((s) => (
               <a key={s.slug} href={`/s/${s.slug}`} target="_blank" rel="noopener">
                 <span className="label">{s.city || "India"}</span>
-                <b style={{ fontFamily: "var(--head)", fontWeight: 400, fontSize: 18 }}>{s.name}</b>
+                <b style={{ fontFamily: "var(--head)", fontWeight: 700, fontSize: 18 }}>{s.name}</b>
                 <span className="small muted">{s.headline}</span>
               </a>
             ))}
@@ -86,7 +87,7 @@ export default function Landing() {
         <div><Link className="btn" to="/login">Create my free hub</Link></div>
       </section>
       <div className="rail-foot" style={{ marginTop: 72 }}>
-        <span>Akshat Dani · Chirag J. · Business AI Action Hub</span>
+        <span>Akshat Dani · Chirag J. · OwnerDesk</span>
         <span>AH-00</span>
       </div>
     </div>

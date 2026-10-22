@@ -1,4 +1,6 @@
-# Business AI Action Hub · v2
+# OwnerDesk · v2.3 (formerly Business AI Action Hub)
+
+> v2.3 is the OwnerDesk rename and restyle to the Akshat Dani design system: see `docs/OWNERDESK_RESTYLE.md`.
 
 The hub every owner leaves the 2-day Business AI workshop with. It is free on day one, and the same hub grows with the owner through six plans: from a live website and an AI Writer, to a weekly rhythm, the Action Program's frameworks filled in with their own numbers, sales and cash on a system, 6 AI staff on their own WhatsApp and Employz.ai, and finally a 30-strong AI workforce.
 

@@ -102,7 +102,7 @@ function Standup({ standup, owner, reload }) {
     <div className="panel">
       <div className="row between">
         <span className="label">Morning standup{standup ? ` · ${ago(standup.created_at)}` : ""}</span>
-        {owner && <Busy className="btn sm ghost" run={async () => { await api("/office/standup", { method: "POST" }); reload(); }}>Write today's standup</Busy>}
+        {owner && <Busy className="btn sm ghost ai" run={async () => { await api("/office/standup", { method: "POST" }); reload(); }}>Write today's standup</Busy>}
       </div>
       {!c ? <p className="small muted">Your Chief of Staff writes one every morning at 9:30.</p> : (
         <>
@@ -146,7 +146,7 @@ function OfficeInner() {
           placeholder="e.g. Follow up with every lead that's still waiting, and remind customers who owe us money" aria-label="Instruction" />
         <div className="row" style={{ gap: 6 }}>{EXAMPLES.map((x) => <button key={x} className="btn sm ghost chip" onClick={() => setText(x)}>{x}</button>)}</div>
         <div className="row">
-          <Busy className="btn primary" disabled={text.trim().length < 5} run={async () => { const run = await api("/office/runs", { method: "POST", body: { instruction: text } }); setText(""); follow(run); }}>Give instruction</Busy>
+          <Busy className="btn primary ai" disabled={text.trim().length < 5} run={async () => { const run = await api("/office/runs", { method: "POST", body: { instruction: text } }); setText(""); follow(run); }}>Give instruction</Busy>
           <span className="small muted">Planning uses one AI run; each step that writes something uses one more.</span>
         </div>
       </div>
