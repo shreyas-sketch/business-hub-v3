@@ -50,10 +50,13 @@ with sync_playwright() as p:
     check("Ctrl K opens Go to", ctrl_k)
     def by_meaning():
         pg.click(".appbar .find"); pg.keyboard.type("gst")
-        expect(pg.locator(".finder-item").first).to_contain_text("Compliance calendar")
+        expect(pg.locator(".finder-item").first).to_contain_text("GST set-aside")       # its name starts with "GST"
+        expect(pg.locator(".finder-list")).to_contain_text("Compliance calendar")       # found by what it does
         expect(pg.locator(".finder-list")).to_contain_text("Quotations & invoices")
-        pg.keyboard.press("Enter"); pg.wait_for_url("**/compliance"); expect(pg.locator(".finder")).to_have_count(0)
-    check("typing “gst” finds the compliance calendar; Enter opens it", by_meaning)
+        pg.keyboard.press("Enter"); pg.wait_for_url("**/gst"); expect(pg.locator(".finder")).to_have_count(0)
+        pg.keyboard.press("/"); pg.keyboard.type("passbook")                             # a word the name doesn't say
+        expect(pg.locator(".finder-item").first).to_contain_text("Bank statement reader"); pg.keyboard.press("Escape")
+    check("typing “gst” finds GST set-aside and the compliance calendar; “passbook” finds the bank reader", by_meaning)
     def arrows():
         pg.keyboard.press("/"); pg.keyboard.type("money")
         second = pg.locator(".finder-item").nth(1).locator("b").inner_text()

@@ -571,8 +571,12 @@ async def test_add_from_bank(client):
 # ───────────────────────── two taps at once ─────────────────────────
 def yielding(monkeypatch, *names):
     """Real Motor hands control back to the event loop on every database call; the in-memory double doesn't. This makes
-    the named calls yield first, so two requests at once interleave the way they would in production."""
-    import mongomock_motor
+    the named calls yield first, so two requests at once interleave the way they would in production. On a real MongoDB
+    server (no in-memory double installed) every call already yields, so there's nothing to patch."""
+    try:
+        import mongomock_motor
+    except ImportError:
+        return
     cls = mongomock_motor.AsyncMongoMockCollection
     for name in names:
         original = getattr(cls, name)

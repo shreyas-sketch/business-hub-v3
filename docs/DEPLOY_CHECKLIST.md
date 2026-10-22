@@ -113,7 +113,9 @@ API campaign on each one and put its name in the variable:
 **v2.2 — Lead Response, on each Growth owner's own number** (not the hub's): the owner (or you, in Admin → the owner's
 Connections → WhatsApp) gets this template approved on their own WhatsApp Business number and puts its name in
 **Template: first reply with a booking** (`tpl_lead_response`):
-- text: `Hello {{1}}, thank you for contacting {{2}}. {{3}}` — `{{1}}` first name, `{{2}}` business, `{{3}}` the booking line;
+- text: `Hello {{1}}, thank you for contacting {{2}}. {{3}} We look forward to speaking with you.` — `{{1}}` first name,
+  `{{2}}` business, `{{3}}` the booking line (Meta refuses a template that ends with a variable, hence the last line; see
+  `docs/AISENSY_TEMPLATES.md`, B7);
 - Meta decides the category when it reviews it.
 
 Until it's set, Lead Response can't be switched on, and the owner's page says why. If the template is removed later, the plain

@@ -46,7 +46,9 @@ SOURCES = ("website", "guide", "lead_magnet", "email")
 WHAT = ("a quick call", "a site visit", "a showroom visit")
 DEFAULTS = {"on": False, "booking": "times", "booking_link": "", "what": "a quick call", "hours": "10-19", "prices_to_person": True}
 TESTS_PER_DAY = 5
-TEMPLATE_HINT = "Hello {{1}}, thank you for contacting {{2}}. {{3}}"
+# Meta refuses a template that ends (or starts) with a variable, so the wording closes with a fixed line
+TEMPLATE_CLOSE = "We look forward to speaking with you."
+TEMPLATE_HINT = "Hello {{1}}, thank you for contacting {{2}}. {{3}} " + TEMPLATE_CLOSE
 
 catalog.register("lead_response", {
     "name": "Lead Response", "feature": "lead_response", "trigger": "lead", "customer_facing": True, "info_only": True, "group": "own_page",
@@ -231,7 +233,7 @@ async def overview(ctx: Ctx = Depends(feature("lead_response", "manager"))):
     doc = await db().lead_response_settings.find_one({"_id": ctx.ws}, {"note": 1}) or {}
     return {"settings": st, "can_edit": ctx.role == "owner", "connected": conn["ready"], "connection": conn, "note": doc.get("note") or "",
             "preview": {"line": line, "params": ["(the customer's first name)", biz, line], "template_hint": TEMPLATE_HINT,
-                        "text": f"Hello (first name), thank you for contacting {biz}. {line}", "wording": wording(st),
+                        "text": f"Hello (first name), thank you for contacting {biz}. {line} {TEMPLATE_CLOSE}", "wording": wording(st),
                         "key": sample_key(st, b.get("name") or "")},
             "stats": await stats(ctx.ws), "channels": _channels(chat_on, conn["number"]), "what_options": list(WHAT),
             "instant_reply_on": await jobs.is_on(ctx.ws, "instant_reply")}

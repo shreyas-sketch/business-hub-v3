@@ -97,7 +97,7 @@ Only needed for the ₹99 webinar report (`/report`). See `docs/DAY1_REPORT.md`.
 
 ## B. An owner's own number (Growth Mentorship and up)
 
-Each owner creates these in **their own** AiSensy account and types each template's name in the hub: Connections →
+Each owner creates these (B7 only for Lead Response) in **their own** AiSensy account and types each template's name in the hub: Connections →
 WhatsApp — your own number. They're sent from the owner's number, so the customer sees the owner's business.
 
 For 2, 5 and 6, the hub writes the whole message, starting "Hello <name>,", and sends it as `{{3}}`. So those templates
@@ -181,12 +181,27 @@ The monthly campaign (old-customer revival, festival offer, referral drive). A c
   ```
 - **Samples:** `{{1}}` Neha · `{{2}}` Shree Ganesh Interiors · `{{3}}` Hello Neha, this Diwali we're giving a free chimney with any kitchen booked this month. Shall we send you a quote?
 
+### 7. First reply with a booking (Lead Response): "Template: first reply with a booking"
+New in v2.2, for Growth Mentorship owners who switch on Lead Response. Lead Response can't be switched on until this name
+is set; if it's removed later, the plain instant reply (B1) answers instead.
+
+- **Name:** `lead_response_v1`
+- **Category:** Utility (Meta decides when it reviews it)
+- **Body:**
+  ```
+  Hello {{1}}, thank you for contacting {{2}}. {{3}} We look forward to speaking with you.
+  ```
+  - `{{3}}` is the booking line the hub writes, for example "Would tomorrow at 10 am or Thursday at 4 pm suit you for a
+    free site visit? Just reply with the time." or "Pick a time for a free site visit here: <the owner's link>".
+- **Samples:** `{{1}}` Neha · `{{2}}` Sharma Modular Kitchens · `{{3}}` Would tomorrow at 10 am or Thursday at 4 pm suit you for a free site visit? Just reply with the time.
+- Test it from the hub: Lead Response → **Send it to my WhatsApp**, then **Switch Lead Response on**.
+
 ---
 
 ## After approval
 1. In AiSensy, create one **API campaign** per template, choosing that template.
 2. Put the hub's five campaign names in Railway (section A), then redeploy.
-3. Owners type their six campaign names in Connections (section B), then press **Test the connection**.
+3. Owners type their campaign names in Connections (section B), then press **Test the connection**.
 4. Test: log in with a real number (the code arrives), then send yourself an inquiry from a test owner's website (the
    alert arrives).
 5. If a message doesn't arrive, Admin → Logs shows AiSensy's own reason: wrong campaign name, template not approved, or a
