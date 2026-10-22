@@ -1,19 +1,19 @@
 /* Expenses (v2.2). Blueprint tokens only: amber is money, aqua is what the system does. */
 .ex-top { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; }
 .ex-month { display: flex; align-items: center; gap: 6px; }
-.ex-month b { font: 400 22px/1 var(--head); min-width: 112px; text-align: center; font-variant-numeric: tabular-nums; }
+.ex-month b { font: 700 22px/1 var(--head); min-width: 112px; text-align: center; font-variant-numeric: tabular-nums; }
 .ex-month .btn.sm { min-width: 42px; font-size: 18px; letter-spacing: 0; }
 
 .ex-head { font-size: 20px !important; line-height: 1.2 !important; }
 
-.ex-form .ex-big { font: 400 24px/1.1 var(--head); font-variant-numeric: tabular-nums; }
+.ex-form .ex-big { font: 700 24px/1.1 var(--head); font-variant-numeric: tabular-nums; }
 .ex-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .ex-chip { min-height: 38px; padding: 0 16px; border: 1px solid var(--ink-line); background: var(--ink); color: var(--grey); border-radius: 999px;
   font: 500 12px/1 var(--body); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; white-space: nowrap; }
 .ex-chip:hover { color: var(--paper); border-color: var(--slate); }
 .ex-chip[aria-pressed="true"] { border-color: var(--aqua); color: var(--aqua); background: var(--aqua-shadow); }
 .ex-chip:disabled { opacity: .45; cursor: default; }
-.ex-gst { border: 1px solid var(--ink-line); padding: 14px 16px; display: grid; gap: 14px; }
+.ex-gst { border: 1px solid var(--ink-line); padding: 14px 16px; display: grid; gap: 14px; border-radius: 12px; }
 .ex-more summary { cursor: pointer; color: var(--aqua); font-size: 13px; padding: 4px 0; }
 .ex-more[open] summary { margin-bottom: 12px; }
 
@@ -28,26 +28,26 @@
 .ex-row.editing { display: block; padding: 16px 0; }
 .ex-row .who { min-width: 0; overflow-wrap: anywhere; }
 .ex-row .amt { display: grid; justify-items: end; gap: 4px; text-align: right; }
-.ex-row .amt .money { font: 400 20px/1 var(--head); }
+.ex-row .amt .money { font: 700 20px/1 var(--head); }
 .ex-row .acts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .ex-row .acts a.btn { gap: 6px; }
 .ex-note { margin-top: 2px; }
 .ex-nobill { padding: 0 4px; }
 .ex-warn { margin-top: 8px; border-left: 2px solid var(--amber); padding: 4px 0 4px 10px; color: var(--paper); }
 
-.ex-bank { display: flex; justify-content: space-between; align-items: center; gap: 12px; border: 1px solid var(--aqua-deep); padding: 14px 18px; color: var(--paper); }
+.ex-bank { display: flex; justify-content: space-between; align-items: center; gap: 12px; border: 1px solid var(--aqua-deep); padding: 14px 18px; color: var(--paper); border-radius: 12px; }
 .ex-bank:hover { text-decoration: none; background: var(--ink-raised); }
 .ex-bank > span:first-child { display: grid; gap: 4px; }
 .ex-bank > span:last-child { color: var(--aqua); font-size: 20px; }
 
-.ex-jumps { border: 1px solid #5a4320; background: rgba(242,169,59,.06); padding: 14px 18px; display: grid; gap: 8px; }
+.ex-jumps { border: 1px solid var(--gold-deep); background: rgba(201, 168, 76,.06); padding: 14px 18px; display: grid; gap: 8px; border-radius: 12px; }
 .ex-jumps b { color: var(--amber); font-weight: 500; }
 
 .ex-cats { display: grid; gap: 16px; }
 .ex-cat { display: grid; gap: 6px; }
 .ex-cat .top { display: flex; justify-content: space-between; gap: 12px; }
 .ex-cat .top .money { font-variant-numeric: tabular-nums; }
-.ex-track { position: relative; height: 10px; background: var(--ink); border: 1px solid var(--ink-line); }
+.ex-track { position: relative; height: 10px; background: var(--ink); border: 1px solid var(--ink-line); border-radius: 12px; }
 .ex-track i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--aqua-deep); }
 .ex-track i.over { background: var(--amber); }
 .ex-track b { position: absolute; top: -4px; bottom: -4px; width: 0; }
@@ -73,4 +73,4 @@
   .ex-filters .select, .ex-filters .input { flex: 1 1 100%; }
   .ex-budget { grid-template-columns: minmax(0, 1fr) 120px; }
 }
-.ex-cap { border: 1px dashed var(--ink-line); padding: 10px 14px; display: grid; gap: 6px; color: var(--grey); }
+.ex-cap { border: 1px dashed var(--ink-line); padding: 10px 14px; display: grid; gap: 6px; color: var(--grey); border-radius: 12px; }

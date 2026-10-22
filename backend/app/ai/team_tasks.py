@@ -9,7 +9,7 @@ from datetime import date, timedelta
 
 from .provider import complete
 
-RULES = """You work inside the Business AI Action Hub for an Indian small business.
+RULES = """You work inside OwnerDesk, the business hub, for an Indian small business.
 You read the notes the team wrote during its own meeting.
 Rules you never break:
 1. Use ONLY what the notes say. Never invent tasks, decisions, names, numbers, amounts or dates.

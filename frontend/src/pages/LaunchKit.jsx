@@ -9,9 +9,9 @@ import "./free.css";
 
 const W = 1080;
 const H = 1920;
-const HEAD = '"Space Grotesk", system-ui, sans-serif';
-const BODY = 'Inter, system-ui, sans-serif';
-const INK = "#0A1826";
+const HEAD = '"Manrope", system-ui, sans-serif';
+const BODY = '"Manrope", system-ui, sans-serif';
+const INK = "#14151A";
 const LAYOUTS = [["bold", "Bold"], ["light", "Light"], ["dark", "Dark"]];
 const bare = (u) => String(u || "").replace(/^https?:\/\//, "").replace(/\/$/, "");
 

@@ -243,7 +243,7 @@ function Save() {
               <div className="stack">
                 <a className="btn primary" href={full.png_url} download>Download the image</a>
                 <a className="btn" href={full.pdf_url} target="_blank" rel="noopener">Open the PDF</a>
-                <p className="small muted">It's saved in your free Business AI Action Hub. Set up your Business Brain next — the hub reads your website and builds you a page that catches enquiries.</p>
+                <p className="small muted">It's saved in your free OwnerDesk. Set up your Business Brain next — the hub reads your website and builds you a page that catches enquiries.</p>
                 <Link className="btn money" to="/start">Open my free hub</Link>
               </div>
             </div>

@@ -113,9 +113,9 @@ export function VoiceInput({ purpose, onText, label = "Or say it", hint }) {
       </div>
       <div className="row">
         {state === "recording"
-          ? <button type="button" className="btn primary" onClick={stop}>Stop and use this</button>
-          : <button type="button" className="btn" disabled={busy} onClick={start}>Record a voice note</button>}
-        <label className={`btn ghost fr-pick ${busy ? "off" : ""}`}>
+          ? <button type="button" className="btn primary ai" onClick={stop}>Stop and use this</button>
+          : <button type="button" className="btn ai" disabled={busy} onClick={start}>Record a voice note</button>}
+        <label className={`btn ghost fr-pick ai ${busy ? "off" : ""}`}>
           or upload one
           <input type="file" accept="audio/*,video/webm,.opus,.m4a" disabled={busy} onChange={pick} aria-label="Upload a voice note" />
         </label>
@@ -196,7 +196,7 @@ export default function Writer() {
           <Field label="Anything to focus on this week? (optional)" hint="e.g. a festival offer, a new service, a question customers often ask">
             <input className="input" value={focus} maxLength={120} onChange={(e) => setFocus(e.target.value)} /></Field>
           <div className="row">
-            <Busy className="btn primary" run={() => run("posts", "/studio/posts", { focus })}>Write this week's posts</Busy>
+            <Busy className="btn primary ai" run={() => run("posts", "/studio/posts", { focus })}>Write this week's posts</Busy>
             <Example onClick={() => setFocus(EXAMPLES.posts)} />
           </div>
           {result.posts && (
@@ -226,7 +226,7 @@ export default function Writer() {
           <Field label="What the customer wrote">
             <textarea className="textarea" maxLength={2000} value={msg.message} onChange={(e) => setMsg({ ...msg, message: e.target.value })} placeholder="Paste their WhatsApp message" /></Field>
           <div className="row">
-            <Busy className="btn primary" disabled={msg.message.trim().length < 2}
+            <Busy className="btn primary ai" disabled={msg.message.trim().length < 2}
               run={() => run("reply", "/studio/reply", { message: msg.message, customer_name: msg.customer_name })}>Draft my reply</Busy>
             <Example onClick={() => setMsg(EXAMPLES.reply)} />
           </div>
@@ -248,7 +248,7 @@ export default function Writer() {
           <Field label="Your question" hint="Answered for your business, from your Business Brain.">
             <textarea className="textarea" maxLength={1500} value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="What should I fix first to get more inquiries?" /></Field>
           <div className="row">
-            <Busy className="btn primary" disabled={question.trim().length < 5} run={() => run("ask", "/studio/ask", { question })}>Get my answer</Busy>
+            <Busy className="btn primary ai" disabled={question.trim().length < 5} run={() => run("ask", "/studio/ask", { question })}>Get my answer</Busy>
             <Example onClick={() => setQuestion(EXAMPLES.ask)} />
           </div>
           {result.ask && (
@@ -280,7 +280,7 @@ export default function Writer() {
                 onText={(t) => setPol((p) => ({ ...p, text: p.text ? `${p.text}\n${t}` : t }))} />
             : <Locked feature="polish_voice" what="Emails, letters, a firm or formal tone, and voice notes" />}
           <div className="row">
-            <Busy className="btn primary" disabled={pol.text.trim().length < 3} run={() => run("polish", "/studio/polish", pol, { kind: pol.kind })}>Polish my English</Busy>
+            <Busy className="btn primary ai" disabled={pol.text.trim().length < 3} run={() => run("polish", "/studio/polish", pol, { kind: pol.kind })}>Polish my English</Busy>
             <Example onClick={() => setPol({ ...pol, text: EXAMPLES.polish })} />
           </div>
           {polished && (

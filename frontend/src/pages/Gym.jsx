@@ -80,12 +80,12 @@ function Practice({ session, onUpdate, onClose }) {
           <div className="gym-voice"><VoiceNote purpose="gym" onText={(t) => setText((x) => (x.trim() ? `${x.trim()} ` : "") + t)} /></div>
           <FormError msg={err} />
           <div className="row">
-            <Busy className="btn primary" disabled={!text.trim()} onError={setErr} run={async () => {
+            <Busy className="btn primary ai" disabled={!text.trim()} onError={setErr} run={async () => {
               onUpdate(await api(`/gym/sessions/${session.id}/say`, { method: "POST", body: { text: text.trim() } }));
               setText("");
               refresh();
             }}>Say it</Busy>
-            <Busy className="btn" disabled={!said} onError={setErr} run={async () => {
+            <Busy className="btn ai" disabled={!said} onError={setErr} run={async () => {
               onUpdate(await api(`/gym/sessions/${session.id}/finish`, { method: "POST" }));
               refresh();
             }}>Finish and score</Busy>
@@ -110,7 +110,7 @@ function ScoreCall({ onScored }) {
         placeholder={"Customer: Your price is too high. Another shop quoted less.\nMe: I understand. What size is your kitchen, and when do you need it?"} />
       <FormError msg={err} />
       <div className="row">
-        <Busy className="btn primary" disabled={t.trim().length < 10} onError={setErr} run={async () => {
+        <Busy className="btn primary ai" disabled={t.trim().length < 10} onError={setErr} run={async () => {
           onScored(await api("/gym/score-call", { method: "POST", body: { transcript: t } }));
           setT("");
           refresh();
@@ -151,7 +151,7 @@ function AiCalls({ calls, onScored }) {
                 {shown === c.id ? "Hide the score" : `See the score · ${c.score.overall}/10`}
               </button>
             ) : (
-              <Busy className="btn sm" run={async () => { onScored(await api("/gym/score-call", { method: "POST", body: { call_id: c.id } })); refresh(); }}>Score this call</Busy>
+              <Busy className="btn sm ai" run={async () => { onScored(await api("/gym/score-call", { method: "POST", body: { call_id: c.id } })); refresh(); }}>Score this call</Busy>
             )}
           </div>
           {shown === c.id && c.score && <ScoreCard s={c.score} />}
@@ -197,7 +197,7 @@ export default function Gym() {
                 <h3>{s.title}</h3>
                 <p className="small muted">{ABOUT[s.key] || s.brief}</p>
                 <div>
-                  <Busy className="btn sm primary" run={async () => { show(await api("/gym/sessions", { method: "POST", body: { scenario: s.key } })); refresh(); }}>
+                  <Busy className="btn sm primary ai" run={async () => { show(await api("/gym/sessions", { method: "POST", body: { scenario: s.key } })); refresh(); }}>
                     Start the role-play
                   </Busy>
                 </div>

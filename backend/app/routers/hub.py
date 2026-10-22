@@ -427,7 +427,7 @@ async def site_qr(ctx: Ctx = Depends(get_ctx)):
     q.add_data(site_url(site["slug"]))
     q.make(fit=True)
     buf = io.BytesIO()
-    q.make_image(fill_color="#0A1826", back_color="#FFFFFF").save(buf, "PNG")
+    q.make_image(fill_color="#14151A", back_color="#FFFFFF").save(buf, "PNG")
     return Response(buf.getvalue(), media_type="image/png", headers={"Cache-Control": "private, max-age=300"})
 
 

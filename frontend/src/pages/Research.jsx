@@ -47,7 +47,7 @@ function ContentPanel({ data, onDone }) {
       </p>
       <FormError msg={err} />
       <div className="row">
-        <Busy className={`btn ${latest ? "" : "primary"}`} onError={setErr} run={async () => {
+        <Busy className={`btn ai ${latest ? "" : "primary"}`} onError={setErr} run={async () => {
           await api("/research/content", { method: "POST" });
           onDone();
           refresh();
@@ -144,7 +144,7 @@ function CompaniesPanel({ data, onDone }) {
       </Field>
       <FormError msg={err} />
       <div className="row">
-        <Busy className={`btn ${latest ? "" : "primary"}`} disabled={f.who.trim().length < 3} onError={setErr} run={async () => {
+        <Busy className={`btn ai ${latest ? "" : "primary"}`} disabled={f.who.trim().length < 3} onError={setErr} run={async () => {
           await api("/research/companies", { method: "POST", body: { who: f.who.trim(), city: f.city.trim(), extra: f.extra.trim() } });
           onDone();
           refresh();

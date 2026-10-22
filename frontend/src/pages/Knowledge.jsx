@@ -46,7 +46,7 @@ function UpdateHub({ updates, onChange }) {
         <p className="small muted">Updating uses {plan.runs} AI {plan.runs === 1 ? "run" : "runs"} — you have {plan.runs_left} left this month. Anything you edited yourself is kept.</p>
       </div>
       <div className="row">
-        <Busy className="btn primary" disabled={short} run={async () => {
+        <Busy className="btn primary ai" disabled={short} run={async () => {
           const r = await api("/knowledge/update", { method: "POST" });
           onChange(r.updates); setPlan(r.plan); refresh();
           const done = Object.values(r.result).filter((v) => v.startsWith("refreshed")).length;
@@ -80,7 +80,7 @@ function Updates({ updates, onChange }) {
             <div className="stack" style={{ gap: 8 }}>
               <span className="small">{u.reason === "edited" ? "This replaces your own edits with a fresh version from the Knowledge Hub. It may use 1 AI run." : "This tries the refresh again. It may use 1 AI run."}</span>
               <div className="row">
-                <Busy className="btn sm primary" run={async () => { onChange(await api(`/knowledge/updates/${u.key}/refresh`, { method: "POST" })); setConfirm(null); toast(`${u.label} refreshed`); }}>
+                <Busy className="btn sm primary ai" run={async () => { onChange(await api(`/knowledge/updates/${u.key}/refresh`, { method: "POST" })); setConfirm(null); toast(`${u.label} refreshed`); }}>
                   {u.reason === "edited" ? "Yes, replace my edits" : "Try again"}
                 </Busy>
                 <button className="btn sm ghost" onClick={() => setConfirm(null)}>Cancel</button>

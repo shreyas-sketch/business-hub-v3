@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Route, Routes, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
-import { FormError } from "../ui.jsx";
+import { FormError, Logo } from "../ui.jsx";
 import "./free.css";
 import "./day1.css";
 import "./event.css";
@@ -12,7 +12,7 @@ import "./event.css";
 function Frame({ children, wide }) {
   return (
     <div className={`public d1 ev${wide ? " ev-wide" : ""}`}>
-      <header><span className="mark"><b>Business AI</b><span>Action Hub</span></span></header>
+      <header><span className="mark"><Logo h={40} /></span></header>
       {children}
       <p className="small muted d1-foot">No login until you choose to save. Nothing is sent to anyone from this page.</p>
     </div>

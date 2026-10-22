@@ -1,7 +1,7 @@
 import React, { Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { api, rupees, setLimitHandler, setLockedHandler, localPhone } from "./api.js";
-import { Copy, Gate, HubCtx, Modal } from "./ui.jsx";
+import { Copy, Gate, HubCtx, Logo, Modal } from "./ui.jsx";
 import { Finder, Icon, allPages, findPage, rememberPage } from "./shell.jsx";
 import Landing from "./pages/Landing.jsx";
 import Login from "./pages/Login.jsx";
@@ -201,7 +201,7 @@ function Shell({ me, children }) {
     return () => { document.removeEventListener("mousedown", click); window.removeEventListener("keydown", esc); };
   }, [account]);
   const logout = async () => { await api("/auth/logout", { method: "POST" }); window.location.href = "/"; };
-  const who = me.workspace.is_team ? `${me.user.name || "Team"} · ${me.workspace.role}` : me.program.name;
+  const who = me.workspace.is_team ? `${me.user.name || "Team"} · ${me.workspace.role}` : me.user.plan_name;
   const name = me.business_name || "Your business";
   const initials = (me.user.name || name).trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "AH";
   const runsPct = Math.min(100, (me.runs.left / Math.max(me.runs.allowance + me.runs.bonus, 1)) * 100);
@@ -211,12 +211,12 @@ function Shell({ me, children }) {
   return (
     <div className="shell">
       <div className="topbar">
-        <div className="mark"><b>{me.business_name || "Action Hub"}</b><span>{me.workspace.is_team ? me.workspace.role : me.user.plan_name}</span></div>
+        <div className="mark mark-row"><Logo h={34} /><span>{me.business_name || ""}</span></div>
         <button className="btn sm ghost" onClick={() => setOpen(true)}>Menu</button>
       </div>
       <aside className={`rail ${open ? "open" : ""}`} aria-label="Menu">
         <div className="row between" style={{ flexWrap: "nowrap" }}>
-          <div className="mark"><span className="seal" aria-hidden="true">{name.trim()[0]?.toUpperCase() || "A"}</span><b>{name}</b><span>{who}</span></div>
+          <div className="mark"><Logo h={42} /><b>{name}</b><span>{who}</span></div>
           {open && <button className="btn sm ghost" onClick={() => setOpen(false)}>Close</button>}
         </div>
         <button type="button" className="find-btn" onClick={() => { setOpen(false); setFinding(true); }}><Icon name="search" />Go to…<kbd>/</kbd></button>

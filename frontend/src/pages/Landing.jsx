@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api, attribution, rememberAttribution } from "../api.js";
+import { Logo } from "../ui.jsx";
 
 const PILLARS = [
   ["01", "Structure", "Your brand message", "AI drafts three one-line messages and a 30-second pitch from what you tell it. You pick and edit."],
@@ -27,7 +28,7 @@ export default function Landing() {
   return (
     <div className="public">
       <header>
-        <div className="mark"><b>Business AI Action Hub</b><span>Akshat Dani · Chirag J.</span></div>
+        <div className="mark"><Logo h={44} /><span>Akshat Dani · Chirag J.</span></div>
         <Link className="btn sm ghost" to="/login">Log in</Link>
       </header>
 
@@ -80,7 +81,7 @@ export default function Landing() {
             {showcase.map((s) => (
               <a key={s.slug} href={`/s/${s.slug}`} target="_blank" rel="noopener">
                 <span className="label">{s.city || "India"}</span>
-                <b style={{ fontFamily: "var(--head)", fontWeight: 400, fontSize: 18 }}>{s.name}</b>
+                <b style={{ fontFamily: "var(--head)", fontWeight: 700, fontSize: 18 }}>{s.name}</b>
                 <span className="small muted">{s.headline}</span>
               </a>
             ))}
@@ -118,7 +119,7 @@ export default function Landing() {
         <div><Link className="btn" to="/login">Create my free hub</Link></div>
       </section>
       <footer className="public-foot">
-        <span>Business AI Action Hub, with Akshat Dani and Chirag J.</span>
+        <span>OwnerDesk, with Akshat Dani and Chirag J.</span>
         <Link to="/login">Log in</Link>
       </footer>
     </div>

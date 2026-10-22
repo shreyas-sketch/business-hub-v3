@@ -20,9 +20,9 @@ section.panel { scroll-margin-top: 16px; }
 .kh-check input { width: 18px; height: 18px; accent-color: var(--aqua); margin: 0; flex: none; }
 
 .kh-cost { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr) 80px minmax(0, 1.2fr) auto; gap: 10px; align-items: end;
-  padding: 10px; border: 1px solid var(--ink-line); background: var(--ink); }
+  padding: 10px; border: 1px solid var(--ink-line); background: var(--ink); border-radius: 12px; }
 .kh-remove { align-self: end; }
-.kh-note { margin: 0; padding: 8px 10px; border: 1px solid #5a4320; color: var(--amber); font-size: 13px; }
+.kh-note { margin: 0; padding: 8px 10px; border: 1px solid var(--gold-deep); color: var(--amber); font-size: 13px; border-radius: 12px; }
 
 @media (max-width: 760px) {
   .kh-update { grid-template-columns: minmax(0, 1fr); }

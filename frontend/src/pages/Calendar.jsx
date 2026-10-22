@@ -83,7 +83,7 @@ function WriteForm({ label, slots, exists, month, onDone }) {
         <input className="input" maxLength={160} placeholder="e.g. Diwali home makeover offer" value={focus} onChange={(e) => setFocus(e.target.value)} />
       </Field>
       <FormError msg={err} />
-      <div className="row"><Busy className="btn primary" run={write} onError={setErr}>{exists ? `Rewrite ${label}'s posts` : `Write ${label}'s posts`}</Busy></div>
+      <div className="row"><Busy className="btn primary ai" run={write} onError={setErr}>{exists ? `Rewrite ${label}'s posts` : `Write ${label}'s posts`}</Busy></div>
     </div>
   );
 }

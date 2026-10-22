@@ -177,7 +177,7 @@ function GoalCard({ g, onChange, onEdit }) {
         </div>
       )}
       <div className="row">
-        <Busy className="btn sm" run={async () => { onChange(await api(`/goals/${g.id}/coach`, { method: "POST" })); refresh(); }}>
+        <Busy className="btn sm ai" run={async () => { onChange(await api(`/goals/${g.id}/coach`, { method: "POST" })); refresh(); }}>
           {g.coach ? "Fresh actions" : "3 actions to hit this"}
         </Busy>
         <button className="btn sm ghost" onClick={onEdit}>Edit</button>

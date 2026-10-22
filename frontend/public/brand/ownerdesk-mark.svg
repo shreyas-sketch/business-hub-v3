@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 248.00 172.00" width="248.00" height="172.00"><defs><linearGradient id="dmDark_Flat" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D6B65F"/><stop offset="1" stop-color="#B8963E"/></linearGradient>
+<linearGradient id="kmDark_Flat" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E4E0D6"/></linearGradient>
+<clipPath id="cmDark_Flat"><path d="M62,0 L138,0 A62,62 0 0 1 138,124 L62,124 A62,62 0 0 0 62,0 Z"/></clipPath>
+<mask id="xmDark_Flat" maskUnits="userSpaceOnUse" x="-60" y="-60" width="340" height="260"><rect x="-60" y="-60" width="340" height="260" fill="white"/><circle cx="62" cy="62" r="62" fill="black"/></mask></defs><g transform="translate(24,24)"><g mask="url(#xmDark_Flat)"><path d="M62,0 L138,0 A62,62 0 0 1 138,124 L62,124 A62,62 0 0 0 62,0 Z" fill="url(#dmDark_Flat)"/></g>
+<path d="M62,0 L138,0 A62,62 0 0 1 138,124 L62,124" fill="none" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="3" clip-path="url(#cmDark_Flat)"/>
+<circle cx="62" cy="62" r="58" fill="url(#kmDark_Flat)"/></g></svg>

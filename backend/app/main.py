@@ -1,4 +1,4 @@
-"""Business AI Action Hub — FastAPI entry point. Serves the API, member websites and the built React app."""
+"""OwnerDesk — FastAPI entry point. Serves the API, member websites and the built React app."""
 import asyncio
 import logging
 from contextlib import asynccontextmanager
