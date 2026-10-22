@@ -8,7 +8,53 @@
 .desk { padding: 30px var(--desk-gutter) 56px; flex: 1; display: flex; flex-direction: column; }
 .sheet { max-width: 1240px; }
 
-.rail .mark b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+/* ── The menu, read like a ledger's index: each section has a spine, and the page you're on carries a gold ribbon on it.
+   Sentence case throughout, so a long name reads in one glance; the ribbon is the only loud thing in the rail. ── */
+.rail { padding: 24px 16px 18px; gap: 18px; background: var(--bg); }
+.rail .mark { gap: 8px; padding: 0 6px; min-width: 0; }
+.rail .mark b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; font: 700 15px/1.25 var(--head); letter-spacing: -.005em; }
+.rail .mark .plan-chip { font: 700 11px/1 var(--body); letter-spacing: .01em; text-transform: none; color: var(--gold); border: 1px solid var(--gold-deep);
+  border-radius: 99px; padding: 4px 9px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.rail .nav { gap: 4px; margin: 0 -6px; padding: 6px 6px 28px;
+  -webkit-mask-image: linear-gradient(transparent, #000 10px, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(transparent, #000 10px, #000 calc(100% - 28px), transparent);
+  scrollbar-width: thin; scrollbar-color: transparent transparent; }
+.rail .nav:hover { scrollbar-color: var(--hairline) transparent; }
+.rail .nav::-webkit-scrollbar { width: 6px; }
+.rail .nav::-webkit-scrollbar-thumb { background: transparent; border-radius: 99px; }
+.rail .nav:hover::-webkit-scrollbar-thumb { background: var(--hairline); }
+.nav-group + .nav-group { margin-top: 8px; }
+
+.nav .group { margin: 0; width: 100%; padding: 8px 8px; border-radius: 8px; font: 700 13px/1.2 var(--body); letter-spacing: 0; text-transform: none; color: var(--ivory-70); }
+.nav .group:hover:not(:disabled), .nav-group.open .group { color: var(--ivory); }
+.nav .group:hover:not(:disabled) { background: rgba(242,238,230,.04); }
+.nav .group .n { font: 700 11px/1 var(--body); color: var(--ivory-70); background: none; border: 1px solid var(--hairline); padding: 3px 7px; }
+.nav .chev { color: var(--ivory-35); }
+
+.nav .items { gap: 1px; margin: 2px 0 4px 15px; padding-left: 10px; }
+.nav .items a { position: relative; padding: 7px 10px; border-radius: 8px; font: 500 14px/1.3 var(--body); letter-spacing: 0; text-transform: none; color: var(--ivory-70); }
+.nav .items a:hover { background: rgba(242,238,230,.04); color: var(--ivory); }
+.nav .items a.on { color: var(--gold); font-weight: 700; background: var(--gold-wash); box-shadow: none; }
+.nav .items a.on::before { content: ""; position: absolute; left: -11.5px; top: 5px; bottom: 5px; width: 2px; border-radius: 2px; background: var(--gold); }
+.nav .items a.locked { color: var(--ivory-35); }
+.nav .items a.locked:hover { color: var(--ivory-70); }
+.nav a .tier { font: 700 10px/1 var(--body); letter-spacing: .02em; padding: 3px 7px; }
+.nav .more { padding: 7px 10px; color: var(--ivory-70); font: 500 13px/1.3 var(--body); border-radius: 8px; }
+.nav .more:hover { color: var(--gold); }
+.nav-rule { margin: 12px 8px 4px; border-top-color: var(--hairline); }
+
+/* The foot: what's left of this month's AI runs (teal, because it is the AI), and a quiet way out */
+.rail .foot { gap: 6px; padding: 14px 6px 0; border-top: 1px solid var(--hairline); }
+.rail .runs { display: grid; grid-template-columns: 1fr auto; gap: 8px 10px; align-items: baseline; font: 500 12px/1.2 var(--body); color: var(--ivory-70); }
+.rail .runs b { font-weight: 700; color: var(--ivory); font-variant-numeric: tabular-nums; }
+.rail .runs .meter { grid-column: 1 / -1; }
+.meter.ai-meter i { background: var(--teal); box-shadow: none; }
+.rail .logout { display: flex; align-items: center; gap: 10px; margin: 6px -8px 0; padding: 8px; border: 0; border-radius: 8px; background: none;
+  color: var(--ivory-70); font: 500 13px/1 var(--body); cursor: pointer; text-align: left; }
+.rail .logout svg { width: 16px; height: 16px; flex: none; }
+.rail .logout:hover { color: var(--ivory); background: rgba(242,238,230,.04); }
+.rail :is(a, button):focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
 .rail .find-btn { display: none; align-items: center; gap: 10px; width: 100%; padding: 10px 14px; border-radius: var(--radius-input);
   border: 1px solid var(--hairline); background: var(--panel); color: var(--ivory-70); cursor: pointer; font: 500 14px/1 var(--body); text-align: left; }
 .rail .find-btn:hover { color: var(--ivory); border-color: var(--gold-deep); }
@@ -17,7 +63,7 @@
 .nav .group > span:first-child { display: inline-flex; align-items: center; gap: 10px; }
 .nav .group svg { width: 15px; height: 15px; flex: none; color: var(--gold-deep); }
 .nav .group:hover svg, .nav-group.open .group svg { color: var(--gold); }
-.nav .items { padding-left: 14px; margin-left: 7px; border-left: 1px solid var(--hairline); }
+.nav .items { border-left: 1px solid var(--hairline); }
 .nav a .nav-sub { display: block; margin-top: 3px; font: 400 10px/1.2 var(--body); letter-spacing: .02em; text-transform: none; color: var(--ivory-35); }
 
 /* The top bar: where you are, Go to, what's waiting, you */

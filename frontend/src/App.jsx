@@ -162,7 +162,7 @@ function Nav({ me, pathname }) {
                 {open_.map(link)}
                 {locked.length > 0 && (open_.length === 0 || showLocked || locked.some((it) => isOn(it.path))
                   ? <>{locked.map(link)}{open_.length > 0 && <button type="button" className="more" onClick={() => toggle(`${group}:locked`, false)}>Hide locked</button>}</>
-                  : <button type="button" className="more" onClick={() => toggle(`${group}:locked`, true)}>+ {locked.length} more on bigger plans</button>)}
+                  : <button type="button" className="more" onClick={() => toggle(`${group}:locked`, true)} title="Pages that unlock on a bigger plan">Show {locked.length} locked</button>)}
               </div>
             )}
             {gi === admin.length - 1 && admin.length > 0 && <hr className="nav-rule" />}
@@ -216,18 +216,17 @@ function Shell({ me, children }) {
       </div>
       <aside className={`rail ${open ? "open" : ""}`} aria-label="Menu">
         <div className="row between" style={{ flexWrap: "nowrap" }}>
-          <div className="mark"><Logo h={42} /><b>{name}</b><span>{who}</span></div>
+          <div className="mark"><Logo h={42} /><b title={name}>{name}</b><span className="plan-chip">{who}</span></div>
           {open && <button className="btn sm ghost" onClick={() => setOpen(false)}>Close</button>}
         </div>
         <button type="button" className="find-btn" onClick={() => { setOpen(false); setFinding(true); }}><Icon name="search" />Go to…<kbd>/</kbd></button>
         <Nav me={me} pathname={loc.pathname} />
         <div className="foot">
-          <div className="stack" style={{ gap: 6 }}>
-            <span className="label">AI runs this month</span>
-            <div className="meter"><i style={{ width: `${runsPct}%` }} /></div>
-            <span className="small muted">{me.runs.left} left · {me.user.plan_name}</span>
+          <div className="runs">
+            <span>AI runs this month</span><b>{me.runs.left.toLocaleString("en-IN")} left</b>
+            <div className="meter ai-meter" role="meter" aria-label="AI runs left this month" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(runsPct)}><i style={{ width: `${runsPct}%` }} /></div>
           </div>
-          <button className="btn sm ghost" onClick={logout}>Log out</button>
+          <button type="button" className="logout" onClick={logout}><Icon name="logout" />Log out</button>
         </div>
       </aside>
       <main className="main">
@@ -245,7 +244,7 @@ function Shell({ me, children }) {
               <div className="who"><b>{me.user.name || name}</b><span className="small muted">{me.user.plan_name}{me.workspace.is_team ? ` · ${me.workspace.role}` : ""}</span></div>
               <div className="stack" style={{ gap: 6 }}>
                 <span className="small muted">AI runs this month: {me.runs.left} left</span>
-                <div className="meter"><i style={{ width: `${runsPct}%` }} /></div>
+                <div className="meter ai-meter"><i style={{ width: `${runsPct}%` }} /></div>
               </div>
               <div>
                 {me.workspace.role === "owner" && <NavLink to="/plans" role="menuitem">Plans & billing</NavLink>}
