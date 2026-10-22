@@ -3,7 +3,9 @@
 
   scan the QR → type website + GST → watch the pack build → save it with the WhatsApp code → then the speaker's demos, the
   whole room on the same demo within a minute: website live, send yourself an inquiry, swap with your neighbour, inquiry to
-  quotation, brand kit, cash flow + what-if, daily number, score twice, Dashboard.
+  quotation, the funnel leak finder, brand kit, cash flow + what-if, daily number, score twice, Dashboard — then "the next
+  morning": the follow-ups for Day 1's inquiries are written (the hub's own scheduler, driven forward a day) and the room
+  sends them from the Inquiries page.
 
 Every person, number, GST number and website here is made up. Usage:
   python attendees.py --base http://127.0.0.1:8830 --n 200 --arrive 90 --typing 20,45 --out results.json
@@ -223,6 +225,19 @@ async def attendee(i: int, a, room: Room, code: str):
                     "customer": {"name": "Test customer", "phone": phone, "gstin": "", "address": ""}, "items": lines, "gst_mode": "intra",
                     "notes": "", "terms": "", "valid_days": 15, "lead_id": (room_q.get(i) or {}).get("id")})
 
+        async def leak():
+            nums = {"visitors": 0, "inquiries": rng.randint(15, 80), "meetings": rng.randint(4, 14), "proposals": rng.randint(3, 10), "won": rng.randint(1, 4)}
+            await call(c, "PUT leaks (funnel leak finder)", "PUT", "/api/leaks", json={"numbers": nums, "targets": {}, "avg_sale": rng.choice([15000, 36000, 120000])})
+
+        async def followups():
+            r = await call(c, "GET inquiries (next morning)", "GET", "/api/inquiries")
+            ready = [x["followups"]["ready"] for x in (r.json()["items"] if r and r.status_code == 200 else []) if (x.get("followups") or {}).get("ready")]
+            S.notes["attendees with a follow-up ready"] += bool(ready)
+            for f in ready:
+                r = await call(c, "POST follow-up send (tap)", "POST", f"/api/approvals/{f['id']}/own")
+                if r and r.status_code == 200 and r.json()["link"].startswith("https://wa.me/"):
+                    S.notes["follow-ups sent"] += 1
+
         async def brand():
             await call(c, "POST brand-kit/generate (AI, waits)", "POST", "/api/brand-kit/generate")
 
@@ -247,16 +262,38 @@ async def attendee(i: int, a, room: Room, code: str):
             await call(c, "POST score", "POST", "/api/score", json={"answers": ans})
             await call(c, "POST score (re-take)", "POST", "/api/score", json={"answers": {**ans, "reply": "yes"}})
 
-        for stage, fn in DEMOS(publish, swap, own_customer, quotation, brand, cash, target, score):
+        for stage, fn in DEMOS(publish, swap, own_customer, quotation, leak, brand, cash, target, score, followups):
             await demo(stage, fn)
 
 
-def DEMOS(publish, swap, own_customer, quotation, brand, cash, target, score):
-    return [("publish", publish), ("swap", swap), ("own_customer", own_customer), ("quotation", quotation), ("brand", brand),
-            ("cash", cash), ("target", target), ("score", score)]
+def DEMOS(publish, swap, own_customer, quotation, leak, brand, cash, target, score, followups):
+    return [("publish", publish), ("swap", swap), ("own_customer", own_customer), ("quotation", quotation), ("leak", leak), ("brand", brand),
+            ("cash", cash), ("target", target), ("score", score), ("followups", followups)]
 
 
-STAGES = ["saved", "publish", "swap", "own_customer", "quotation", "brand", "cash", "target", "score"]
+STAGES = ["saved", "publish", "swap", "own_customer", "quotation", "leak", "brand", "cash", "target", "score", "followups"]
+NEXT_MORNING: dict = {}
+
+
+async def next_morning(a):
+    """Day 2: the hub's scheduler, driven to the time each Day-1 follow-up falls due (and on, half an hour at a time, for any
+    the AI engine was too busy to write), until none is left. Measures how long the hub takes, in real time, to write them."""
+    async with httpx.AsyncClient(base_url=a.base, timeout=1800) as c:
+        st = (await c.get("/__lt/followups")).json()
+        if not st["first_due"]:
+            NEXT_MORNING.update(note="no follow-ups were scheduled")
+            return
+        at = st["last_first_due"]
+        t0, ticks = time.monotonic(), []
+        for _ in range(8):
+            t = time.monotonic()
+            r = (await c.post("/__lt/tick", params={"at": at})).json()
+            ticks.append({"at": at, "jobs_run": r["jobs"], "seconds": round(time.monotonic() - t, 1)})
+            st = (await c.get("/__lt/followups", params={"at": at})).json()
+            if not st["due_now"] and not st["retrying"]:
+                break
+            at = st["next_retry"] or at
+        NEXT_MORNING.update(seconds=round(time.monotonic() - t0, 1), ticks=ticks, followups=st["by_status"], approvals=st["approvals"])
 
 
 async def speaker(room: Room, a):
@@ -268,6 +305,8 @@ async def speaker(room: Room, a):
     marks["saved"] = time.monotonic()
     for prev, nxt in zip(order, order[1:]):
         await room.go_when(prev, share=a.share, limit=a.stage_limit)
+        if nxt == "followups":
+            await next_morning(a)
         room.events[nxt + ":next"].set()
         marks[prev] = time.monotonic()
 
@@ -305,7 +344,7 @@ async def setup(a, code):
         r = await admin.put(f"/api/admin/event/{code}", json={"open": True, "ai": True, "pack_cap": 2000, "ai_cap": 2000,
                                                              "trial_until": (date.today() + timedelta(days=3)).isoformat()})
         assert r.status_code == 200, r.text
-        await admin.post("/api/admin/config/presets/guide-membership")
+        await admin.post("/api/admin/config/presets/membership-v22")   # the ₹1,999 Membership: incl. leak finder and follow-ups
         return dict(admin.cookies)
 
 
@@ -347,10 +386,10 @@ async def main():
     peak = max((r["machine_cpu"] for r in cpu), default=None)
     avg = round(statistics.mean(r["machine_cpu"] for r in cpu), 1) if cpu else None
     res = {"config": {**{k: v for k, v in vars(a).items()}, "cores": psutil.cpu_count()}, "seconds": round(took), "calls": calls, "journey": marks,
-           "notes": dict(S.notes), "ai_limiter": lim, "speaker_screen": live, "machine_cpu": {"avg": avg, "peak": peak},
+           "notes": dict(S.notes), "next_morning": NEXT_MORNING, "ai_limiter": lim, "speaker_screen": live, "machine_cpu": {"avg": avg, "peak": peak},
            "cpu_samples": cpu}
     json.dump(res, open(a.out, "w"), indent=1, default=str)
-    print(json.dumps({k: res[k] for k in ("seconds", "journey", "notes", "machine_cpu")}, indent=1))
+    print(json.dumps({k: res[k] for k in ("seconds", "journey", "notes", "next_morning", "machine_cpu")}, indent=1))
     print(json.dumps({k: (v["p50"], v["p95"], v["max"], v["errors"]) for k, v in calls.items()}, indent=0))
     print(json.dumps({k: lim[k] for k in ("calls", "ok", "busy", "peak_inflight", "lat_p50", "lat_p95", "out_tokens")}))
 

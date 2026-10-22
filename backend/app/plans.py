@@ -97,6 +97,15 @@ DEFAULT_FEATURES: dict[str, dict] = {
     "compliance_calendar": F("lite", "Systems", "Compliance calendar", "Every filing, licence, renewal and document expiry in one calendar, with reminders", "/compliance", "manager"),
     "brand_kit":       F("lite", "Structure", "Brand kit", "Your brand message in every version, your design system and ready designs", "/brand-kit", "owner"),
     "cash_flow":       F("lite", "Structure", "Cash flow", "The next 30 days of money in and out, day by day — see a shortfall before it comes", "/cash-flow", "manager"),
+    # v2.2 — the Data area of the Membership
+    "expenses":        F("lite", "Structure", "Expenses", "Every company expense in one place: the bill, the GST you can claim back, and where the money went each month", "/expenses", "staff"),
+    "bank_reader":     F("lite", "Structure", "Bank statement reader", "Upload a bank statement: money in and out, where it went, and the payments that repeat — into Expenses in one tap", "/bank-statement", "owner"),
+    "gst_setaside":    F("lite", "Structure", "GST set-aside", "GST on your sales minus GST on your bills: about what to keep aside for the next GST payment", "/gst", "manager"),
+    "customer_risk":   F("lite", "Structure", "Customer risk", "Who your sales depend on, and regular customers who have gone quiet — with the money at risk", "/customer-risk", "manager"),
+    "getting_paid":    F("lite", "Structure", "Getting paid", "How long each customer really takes to pay, and the money stuck by how old it is", "/getting-paid", "manager"),
+    # v2.2 agents in the Membership
+    "competitor_watch": F("lite", "Scale", "Competitor Watch", "Every Monday: what changed on your competitors' websites and Google ratings, and what it means for you", "/competitors", "manager"),
+    "reputation":      F("lite", "Scale", "Reviews & reputation", "Every review answered: replies drafted for you to approve, happy reviewers asked for a referral, happy customers asked for a review", "/reputation", "manager"),
     # ───────── Action Program ─────────
     "approvals":       F("program", "Start", "Send list", "Messages your automations wrote, ready to send from your WhatsApp with one tap", "/approvals", "manager"),
     "automations":     F("program", "AI team", "Automations", "What runs for you on its own, with a switch for each", "/agents", "manager"),
@@ -115,6 +124,8 @@ DEFAULT_FEATURES: dict[str, dict] = {
     "follow_up_agent": F("program", "AI team", "Follow-up automation", "Follow-ups on day 1, 3 and 7 after every inquiry, ready to send with one tap"),
     "review_agent":    F("program", "AI team", "Review requests", "A review request to every won customer, ready to send with one tap"),
     "digest_agent":    F("program", "AI team", "Morning digest", "One WhatsApp line each morning: new leads, replies waiting, money overdue, tasks due"),
+    "win_back":        F("program", "AI team", "Win-Back", "Customers who haven't bought in 60 days or more get a personal message on WhatsApp or email — drafted for you, sent when you tap", "/win-back", "manager"),
+    "market_research": F("program", "Scale", "Content & company research", "Post ideas from your competitor report, and a plan to find companies that fit your ideal customer — with ready search links, no scraping", "/research", "manager"),
     "decision_log":    F("program", "Structure", "Decision log", "List what's on your plate; the AI sorts it into automate, delegate or keep", "/decisions", "owner"),
     "voice_sop":       F("program", "Systems", "SOP from a voice note", "Record how a job is done; get a written SOP"),
     "hiring":          F("program", "Scale", "Hiring kits", "Job post, interview questions and a scorecard for any role", "/hiring", "manager"),
@@ -131,6 +142,7 @@ DEFAULT_FEATURES: dict[str, dict] = {
     "control_room":    F("growth", "Start", "Control Room", "Target vs actual, pipeline, chats, calls and money on one screen; a CEO report every Monday", "/control", "manager"),
     "ai_staff":        F("growth", "AI team", "AI staff", "6 AI staff: Sales Executive, Telecaller, Marketing, Accounts, Customer Care and Chief of Staff", "/staff", "manager"),
     "whatsapp_ai":     F("growth", "Systems", "WhatsApp chats", "Your Sales Executive replies to every inquiry on your own WhatsApp number, 24×7; your team sees every chat", "/chats"),
+    "lead_response":   F("growth", "AI team", "Lead Response", "Every new inquiry gets a first reply within 2 minutes, day or night, from your own WhatsApp number — with a call or visit booked. Prices and quotes come to you.", "/lead-response", "manager"),
     "voice_agent":     F("growth", "AI team", "AI Telecaller", "Calls new leads within minutes and re-calls old ones; every call summarised and scored"),
     # v2.1: from Membership, showing only the connections the plan unlocks (the payment gateway first; WhatsApp, voice… later plans)
     "connections":     F("lite", "Systems", "Connections", "Your own accounts — your payment gateway, and from higher plans your WhatsApp number, CRM and voice agent", "/connections", "owner"),

@@ -1,0 +1,48 @@
+/* Competitor Watch and Content & company research (v2.2). Amber stays for money: prices only. */
+.cw-note { border: 1px dashed var(--ink-line); padding: 10px 14px; color: var(--grey); font-size: 13px; }
+.cw-summary { border-left: 3px solid var(--aqua); background: var(--ink); padding: 14px 16px; display: grid; gap: 8px; }
+.cw-summary p { white-space: pre-wrap; }
+.cw-item { border: 1px solid var(--ink-line); padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.cw-item.is-changed { border-color: var(--aqua-deep); }
+.cw-item-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.cw-item-head h3 { overflow-wrap: anywhere; }
+.cw-err { color: var(--grey); border-left: 2px solid var(--slate); padding-left: 10px; }
+.cw-block { display: grid; gap: 8px; min-width: 0; }
+.cw-price { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; padding: 8px 0; border-bottom: 1px solid var(--ink-line); }
+.cw-price > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.cw-price s { color: var(--grey); }
+.cw-nowrap { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cw-quote { margin: 0; padding: 8px 12px; border-left: 2px solid var(--aqua-deep); overflow-wrap: anywhere; }
+.cw-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
+.cw-lines li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 6px; overflow-wrap: anywhere; }
+.cw-sign { font-family: var(--mono); }
+.cw-sign.add { color: var(--aqua); }
+.cw-sign.del { color: var(--grey); }
+.cw-more summary, .cw-past summary { cursor: pointer; color: var(--grey); font-size: 13px; }
+.cw-past { border-bottom: 1px solid var(--ink-line); padding: 10px 0; }
+.cw-past summary { display: flex; justify-content: space-between; gap: 12px; color: var(--paper); font-size: 14px; list-style: none; }
+.cw-past summary::-webkit-details-marker { display: none; }
+.cw-google { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; }
+.cw-up { color: var(--aqua); }
+.cw-down { color: var(--grey); }
+.cw-ads { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.cw-list { display: grid; }
+.cw-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--ink-line); align-items: center; }
+.cw-row > div:first-child { flex: 1 1 220px; }
+.cw-wrap { overflow-wrap: anywhere; }
+.cw-search { display: flex; gap: 8px; flex-wrap: wrap; }
+.cw-search .input { flex: 1 1 200px; min-width: 0; }
+.cw-match { display: grid; gap: 2px; text-align: left; background: var(--ink); border: 1px solid var(--ink-line); padding: 10px 12px; cursor: pointer; color: inherit; }
+.cw-match:hover, .cw-match:focus-visible { border-color: var(--aqua-deep); }
+.cw-picked { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center; border: 1px solid var(--aqua-deep); padding: 8px 12px; }
+.cw-idea { border: 1px solid var(--ink-line); padding: 14px 16px; display: grid; gap: 8px; min-width: 0; overflow-wrap: anywhere; }
+.cw-filters { display: grid; gap: 8px; }
+.cw-filters > div { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 10px; overflow-wrap: anywhere; }
+.cw-links { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.cw-link { display: grid; gap: 2px; border: 1px solid var(--ink-line); padding: 10px 12px; min-width: 0; overflow-wrap: anywhere; }
+.cw-link:hover { border-color: var(--aqua-deep); text-decoration: none; }
+@media (max-width: 640px) {
+  .cw-item { padding: 12px; }
+  .cw-filters > div { grid-template-columns: 1fr; gap: 2px; }
+  .cw-links { grid-template-columns: 1fr; }
+}

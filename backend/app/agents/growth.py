@@ -12,7 +12,7 @@ from ..services import new_id, notify
 from ..text import greeting_name
 from . import catalog
 from .catalog import Skip
-from .jobs import is_on, record, schedule
+from .jobs import claim, is_on, record, release, schedule
 from .runners import inr, plural
 
 INSTANT_PER_DAY = 200   # instant replies per owner per day: protects the owner's WhatsApp number
@@ -35,14 +35,16 @@ async def instant_reply(owner: dict, business: dict, lead: dict) -> dict:
     if not conn.get("tpl_instant"):
         return {"sent": False, "via": "no-template"}
     to = integrations.digits(lead["phone"])
-    day_ago = now() - timedelta(days=1)
-    if await db().leads.find_one({"owner_id": ws, "phone": lead["phone"], "_id": {"$ne": lead["_id"]}, "instant_reply.sent": True,
-                                  "created_at": {"$gt": day_ago}}, {"_id": 1}):
+    held = await first_reply_held(ws, lead)
+    if held:
+        return {"sent": False, "via": held}
+    key = first_reply_key(ws, to)
+    if not await claim(key):           # a double submit a moment ago is already being answered
         return {"sent": False, "via": "skipped-repeat"}
-    if await db().leads.count_documents({"owner_id": ws, "instant_reply.sent": True, "created_at": {"$gt": day_ago}}) >= INSTANT_PER_DAY:
-        return {"sent": False, "via": "skipped-cap"}
     name = greeting_name(lead.get("name", "")) or "there"
     res = await integrations.wa_template(ws, conn, to, conn["tpl_instant"], [name, business.get("name") or "us"], lead.get("name", ""), "instant")
+    if not res.get("sent"):
+        await release(key)
     if res.get("sent"):
         await record_out(ws, to, lead.get("name", ""), f"[Instant reply] Hello {name}, thank you for contacting {business.get('name') or 'us'}.",
                          "ai", res.get("id"))
@@ -50,6 +52,77 @@ async def instant_reply(owner: dict, business: dict, lead: dict) -> dict:
     else:
         await record(ws, "instant_reply", "failed", f"Couldn't reply to {lead.get('name') or 'a new lead'}: {res.get('error')}", ref=lead["_id"])
     return {"sent": bool(res.get("sent")), "via": res.get("via"), "at": now()}
+
+
+def first_reply_key(ws: str, digits: str) -> str:
+    """One first reply per customer number per India day, claimed BEFORE sending: a lead's own record of the reply is saved only
+    after the hook returns, so two quick submits from the same number would otherwise both get one."""
+    return f"first-reply:{ws}:{digits}:{now().astimezone(IST).strftime('%Y-%m-%d')}"
+
+
+async def first_reply_held(ws: str, lead: dict) -> str | None:
+    """The rules for any first reply from the owner's number (the instant reply and Lead Response's): once a day per customer
+    number, and a daily ceiling per owner. Lead Response's sent replies are kept on lead.instant_reply too, so both count."""
+    day_ago = now() - timedelta(days=1)
+    if await db().leads.find_one({"owner_id": ws, "phone": lead["phone"], "_id": {"$ne": lead["_id"]}, "instant_reply.sent": True,
+                                  "created_at": {"$gt": day_ago}}, {"_id": 1}):
+        return "skipped-repeat"
+    if await db().leads.count_documents({"owner_id": ws, "instant_reply.sent": True, "created_at": {"$gt": day_ago}}) >= INSTANT_PER_DAY:
+        return "skipped-cap"
+    return None
+
+
+# ───────────────────────── Lead Response (v2.2): the first reply with a booking ─────────────────────────
+LR_REASONS = {"not-connected": "your WhatsApp number isn't connected", "no-template": "the “first reply with a booking” template isn't set",
+              "no-phone": "the inquiry has no mobile number", "email-not-verified": "the email's sender couldn't be confirmed",
+              "skipped-repeat": "this number already got a first reply today", "skipped-cap": "today's limit of first replies was reached",
+              "owner-whatsapp": "WhatsApp didn't accept it"}
+
+
+async def lead_response_reply(owner: dict, business: dict, lead: dict, st: dict) -> dict:
+    """Lead Response's first reply to a new inquiry, from the owner's own number with the booking line — instead of the plain
+    instant reply. If it can't go (not connected, no template…), the reason is logged and nothing else is sent: never from the
+    hub's own number. Returns fields to save on the lead."""
+    from ..routers import leadresponse as lr
+    from .approvals import owner_whatsapp, record_out
+    ws = owner["_id"]
+    conn = await owner_whatsapp(ws, owner)
+    why = ("not-connected" if not conn else "no-template" if not conn.get("tpl_lead_response") else "no-phone" if not lead.get("phone")
+           else "email-not-verified" if lead.get("source") == "email" and not lead.get("sender_verified") else None)
+    why = why or await first_reply_held(ws, lead)
+    to = integrations.digits(lead.get("phone", ""))
+    key = first_reply_key(ws, to)
+    if not why and not await claim(key):      # a double submit a moment ago is already being answered
+        why = "skipped-repeat"
+    who = lead.get("name") or "a new lead"
+    if why:
+        res = {"sent": False, "via": why, "at": now()}
+        await lr.log(ws, lead, res, st)
+        await record(ws, "lead_response", "skipped", f"No first reply to {who}: {LR_REASONS.get(why, why)}.", ref=lead["_id"])
+        if why in ("not-connected", "no-template"):
+            await lr.tell_owner(ws, f"Lead Response couldn't reply to {who}: {LR_REASONS[why]}. Fix it on the Lead Response page.")
+        return {"lead_response": res}
+    line = lr.booking_line(st, now())
+    name = greeting_name(lead.get("name", "")) or "there"
+    biz = business.get("name") or "us"
+    sent = await integrations.wa_template(ws, conn, to, conn["tpl_lead_response"], [name, biz, line], lead.get("name", ""), "lead_response")
+    if not sent.get("sent"):
+        await release(key)
+    at = now()
+    res = {"sent": bool(sent.get("sent")), "via": sent.get("via"), "at": at, "booking": st.get("booking"), "line": line}
+    if sent.get("sent"):
+        res["seconds"] = lr.seconds_since(lead.get("created_at"), at)
+        await record_out(ws, to, lead.get("name", ""), f"[First reply] Hello {name}, thank you for contacting {biz}. {line}", "ai", sent.get("id"))
+        await record(ws, "lead_response", "done", f"First reply to {who} on your WhatsApp number, with a booking line.", ref=lead["_id"])
+    else:
+        res["error"] = sent.get("error")
+        await record(ws, "lead_response", "failed", f"Couldn't reply to {who}: {sent.get('error')}", ref=lead["_id"])
+        await lr.tell_owner(ws, f"Lead Response couldn't reply to {who}: {sent.get('error')}")
+    await lr.log(ws, lead, res, st)
+    out = {"lead_response": res}
+    if res["sent"]:   # the first reply went: the instant-reply rules (once a day per number, the daily cap) and AI results count it
+        out["instant_reply"] = {"sent": True, "via": res["via"], "at": at, "by": "lead_response"}
+    return out
 
 
 # ───────────────────────── the AI Telecaller ─────────────────────────

@@ -38,10 +38,42 @@ async def live(c, profile, pick=0):
     return (await c.get("/api/site")).json()
 
 
+SENDING_KEYS = ("AISENSY_API_KEY", "MSG91_AUTH_KEY", "RAZORPAY_KEY_SECRET")
+
+
+async def safe_to_wipe(d) -> list[str]:
+    """This script empties the whole database before it fills it, so it refuses unless that can only hit demo data:
+    the hub must be in local development (codes on screen, messages logged, not sent), no key that sends real WhatsApp,
+    SMS, e-mail or payments may be set, and the database must be empty or one this script made (its marker), unless
+    SEED_DEMO_WIPE names this database on purpose."""
+    from app.config import settings
+    problems = []
+    if not settings.local_dev:
+        problems.append("Run it with APP_ENV=development and a localhost APP_URL (it empties the database it's pointed at).")
+    for k in SENDING_KEYS:
+        if os.getenv(k):
+            problems.append(f"{k} is set — the demo must not send real messages or payments. Run it with {k} empty.")
+    from app import mailer
+    if mailer.configured():
+        problems.append("E-mail is set up to really send (EMAIL_PROVIDER=ses with AWS keys) — run it with EMAIL_PROVIDER empty.")
+    names = [n for n in await d.list_collection_names() if not n.startswith("system.")]
+    if names and not await d.demo_meta.find_one({"_id": "seed_demo"}) and os.getenv("SEED_DEMO_WIPE", "") != settings.db_name:
+        if await d.users.estimated_document_count() or await d.businesses.estimated_document_count():
+            problems.append(f"The database '{settings.db_name}' has accounts in it that this script didn't make. Use a separate "
+                            f"DB_NAME for the demo — or, if it really is an old demo database, run with SEED_DEMO_WIPE={settings.db_name}.")
+    return problems
+
+
 async def main():
     d = connect()
+    problems = await safe_to_wipe(d)
+    if problems:
+        print("seed_demo.py did not run:\n- " + "\n- ".join(problems))
+        raise SystemExit(2)
     for n in await d.list_collection_names():
-        await d[n].delete_many({})
+        if not n.startswith("system."):
+            await d[n].delete_many({})
+    await d.demo_meta.insert_one({"_id": "seed_demo", "at": now()})
     async with LifespanManager(app):
         admin = await owner("+919999900000")
         await admin.post("/api/admin/cohorts", json={"code": "BAI-OCT-11", "name": "Business AI workshop · 11 Oct", "workshop_date": "2026-10-11"})
@@ -172,12 +204,14 @@ async def main():
             await rakesh.post(f"/api/recordings/item/{rec['id']}/watched", json={"watched": True})
 
         extra = await v2_demo(d, admin, rakesh, uid, site, kapoor, arora, mehta, today)
-        extra.append(await v21_demo(d, admin, today))
+        kav = await v21_demo(d, admin, today)
+        await v22_demo(d, admin, kav, today)
+        extra.append(kav)
         for c in (admin, rakesh, kapoor, arora, mehta, *team.values(), *extra):
             await c.aclose()
     print("Demo ready. LegacyWorkforce: 9820000001 (team: 9820000011 manager, 9820000012 staff) · Growth Mentorship: 9820000006 · "
           "Running the Business: 9820000005 · Action Program: 9820000003 · Membership: 9820000002 · Free: 9820000004 · "
-          "AI Advantage launch demo (all v2.1 features): 9820000007 · "
+          "AI Advantage launch demo (all v2.1 and v2.2 features): 9820000007 · "
           "Admin: 9999900000 · Website: /s/" + site["slug"])
 
 async def wait_for(check, tries=40):
@@ -265,7 +299,12 @@ async def v2_demo(d, admin, rakesh, uid, site, kapoor, arora, mehta, today):
     await admin.patch(f"/api/admin/users/{suid}", json={"plan": "growth"})
     await admin.put(f"/api/admin/owners/{suid}/connections/whatsapp", json={"values": {
         "provider": "demo", "number": "98200 00006", "tpl_instant": "instant_reply_v1", "tpl_followup": "followup_v1", "tpl_review": "review_v1",
-        "tpl_reminder": "payment_reminder_v1", "tpl_customer": "customer_v1", "tpl_campaign": "campaign_v1"}})
+        "tpl_reminder": "payment_reminder_v1", "tpl_customer": "customer_v1", "tpl_campaign": "campaign_v1", "tpl_lead_response": "lead_response_v1"}})
+    lr = {"booking": "times", "what": "a free site visit", "hours": "10-19", "prices_to_person": True}
+    assert (await sharma.put("/api/lead-response/settings", json=lr)).status_code == 200
+    key = (await sharma.get("/api/lead-response")).json()["preview"]["key"]       # switched on with the wording on screen
+    r = await sharma.put("/api/lead-response/settings", json={"on": True, "sample_key": key})
+    assert r.status_code == 200, r.text
     await d.connections.update_one({"_id": suid}, {"$set": {"voice": {"provider": "demo", "hours": "10-19", "webhook_token": "demo-voice-token-0001",
                                                                       "webhook_secret": connections.seal("demo-secret"), "status": "ok"}}})
     for step in ("m1_employz", "m1_whatsapp", "m1_brain", "m2_sales"):
@@ -354,7 +393,7 @@ async def v21_demo(d, admin, today):
     """The AI Advantage Membership launch account (v2.1, 4.6): every v2.1 demo filled in on one login, so the launch demos
     run from it. Kaveri Home Appliances is an invented business; every customer, phone number and email here is invented."""
     from app import followups, knowledge
-    from app.routers import sopset
+    from app.routers import desk as quote_desk, sopset
     from app.services import new_id
     # D5: the Membership plan is called AI Advantage Membership (an admin setting, not code)
     await admin.patch("/api/admin/config/plans/lite", json={"name": "AI Advantage Membership"})
@@ -367,7 +406,7 @@ async def v21_demo(d, admin, today):
                    {"name": "Bulk orders for builders", "price": "", "unit": ""}],
         "ideal_customer": "Families setting up a new kitchen, and builders handing over flats", "why_us": "Same-day installation in Pune\nGenuine brands with bills\nService visit within 48 hours",
         "proof": "Authorised dealer for 4 brands", "whatsapp": "98200 00007", "email": "hello@kaveri-appliances.example", "language": "English",
-        "payment_note": "Pay by UPI to kaveri@okaxis or bank transfer", "_accent": "#1F4E79"})
+        "payment_note": "Pay by UPI to kaveri@okzz or bank transfer", "_accent": "#1F4E79"})
     # the launch demo account gets every demo feature, as the admin would grant it (D1 moves these for everyone only when management confirms)
     for f in ("pipeline", "revenue_levers", "quotations", "money_owed", "lead_magnet", "automations", "approvals", "reminder_agent", "customers"):
         await admin.post("/api/admin/config/grants", json={"user_id": uid, "feature": f, "days": 365, "note": "AI Advantage launch demo"})
@@ -413,9 +452,9 @@ async def v21_demo(d, admin, today):
         total = [48000, 36500, 112000, 22000, 64000, 18500, 91000, 27000, 54000, 40500][i]
         created = now() - timedelta(days=min(elapsed - 1, i * 2))
         gateway = i < 3
+        items = [{"name": "Appliances and installation", "qty": 1, "unit": "nos", "rate": round(total / 1.18, 2), "gst": 18}]   # 18% GST on top
         await d.quotes.insert_one({"_id": new_id(), "ws": uid, "kind": "invoice", "number": f"KHA-{1101 + i}", "customer": {"name": names[10 + i]},
-                                   "items": [{"name": "Appliances and installation", "qty": 1, "unit": "nos", "rate": total, "gst": 0, "amount": total}],
-                                   "totals": {"subtotal": total, "gst": 0, "total": total}, "gst_mode": "intra",
+                                   "items": items, "totals": quote_desk.totals(items, "intra"), "gst_mode": "intra",
                                    "status": "paid" if gateway or i == 5 else "due", "paid_at": created if gateway else None, "due_id": None,
                                    **({"source": "gateway", "gateway_payment_id": f"pay_demo{i:04d}"} if gateway else {}), "created_at": created, "updated_at": created})
     habits = [("Desai Builders", -40, 82000, 12), ("Sharma Interiors", -25, 46000, 2)]   # paid before, late and on time
@@ -502,6 +541,118 @@ async def v21_demo(d, admin, today):
         await inquiries.on_new_inquiry(await d.users.find_one({"_id": uid}), b, lead)
     await inquiries.settle()
     await knowledge.settle()
+    return kav
+
+
+def kaveri_sales_sheet(today) -> bytes:
+    """Twelve months of sales up to the end of last month, as a Tally-style sales register (CSV) with GST, due and paid dates.
+    Invented: one builder carries a third of the business, a regular builder and a caterer have gone quiet, families buy once."""
+    import random
+    rng = random.Random(22)
+    end = today.replace(day=1) - timedelta(days=1)
+    start = (end.replace(day=1) - timedelta(days=330)).replace(day=1)
+    #           name, phone, every (days), amount range (₹), days late, quiet for (days)
+    regulars = [("Sai Developers", "98200 41001", 30, (380000, 620000), 40, None), ("Patil Residency LLP", "98200 41002", 60, (200000, 320000), 25, None),
+                ("Hotel Panchavati", "98200 41003", 90, (240000, 360000), 30, None), ("Gokhale Clinic", "98200 41004", 90, (38000, 62000), 5, None),
+                ("Desai Builders", "98200 41005", 30, (180000, 290000), 35, 150), ("Joshi Caterers", "98200 41006", 30, (55000, 90000), 10, 100),
+                ("Anand Kitchen Studio", "98200 41007", 45, (100000, 180000), 20, None)]
+    first = ["Meera", "Rohan", "Sneha", "Amit", "Pallavi", "Nikhil", "Anjali", "Sameer", "Kirti", "Manoj", "Rutuja", "Vivek", "Tushar", "Gauri"]
+    last = ["Apte", "Kulkarni", "Patil", "Joshi", "Deshpande", "Bhosale", "Gokhale", "Kale", "Jadhav", "Pawar", "Shinde", "Sathe", "More", "Chavan"]
+    families = [f"{f} {l}" for f in first for l in last]
+    rng.shuffle(families)
+    rows, n = [], 0
+    for name, phone, every, (lo, hi), late, quiet_for in regulars:
+        day_ = start + timedelta(days=rng.randint(0, 20))
+        stop = end - timedelta(days=quiet_for) if quiet_for else end
+        while day_ <= stop:
+            total = round(rng.uniform(lo, hi), -2)
+            n += 1
+            due = day_ + timedelta(days=15)
+            paid = due + timedelta(days=max(0, late + rng.randint(-10, 15)))
+            rows.append((day_, name, phone, f"KHA/{n:04d}", total, due, paid if paid <= end else None))
+            day_ += timedelta(days=every + rng.randint(-5, 6))
+    for i in range(150):
+        day_ = start + timedelta(days=rng.randint(0, (end - start).days))
+        total = round(rng.uniform(16000, 65000), -2)
+        n += 1
+        rows.append((day_, families[i] if i % 5 else "Cash", "", f"KHA/{n:04d}", total, day_, day_))
+    rows.sort(key=lambda r: r[0])
+    lines = ["Kaveri Home Appliances Pvt Ltd", "Sales Register", f"{start:%d-%b-%Y} to {end:%d-%b-%Y}", "",
+             "Date,Particulars,Phone,Voucher Type,Voucher No.,Gross Total,GST,Due Date,Paid On"]
+    for day_, name, phone, no, total, due, paid in rows:
+        gst = round(total - total / 1.18, 2)
+        lines.append(f"{day_:%d-%b-%Y},{name},{phone},Sales,{no},{total:.2f},{gst:.2f},{due:%d-%b-%Y},{paid:%d-%b-%Y}" if paid
+                     else f"{day_:%d-%b-%Y},{name},{phone},Sales,{no},{total:.2f},{gst:.2f},{due:%d-%b-%Y},")
+    lines.append(f",Grand Total,,,,{sum(r[4] for r in rows):.2f},,,")
+    return ("\n".join(lines) + "\n").encode()
+
+
+async def v22_demo(d, admin, kav, today):
+    """v2.2 on the launch demo account: the funnel leak finder and follow-ups (Conversion); a year of sales for Customer risk
+    and Getting paid, three months of expenses with GST bills and budgets, and the GST set-aside (Data). The bank statement
+    reader is shown live with docs/demo/kaveri-bank-statement.csv. Everything here is invented."""
+    from app.agents import hooks, scheduler
+    uid = (await kav.get("/api/me")).json()["user"]["id"]
+    for f in ("funnel_leaks", "follow_up_agent"):
+        await admin.post("/api/admin/config/grants", json={"user_id": uid, "feature": f, "days": 365, "note": "AI Advantage launch demo (v2.2)"})
+    # Conversion: the owner switches follow-ups on (on the Membership they wait for the owner's own switch), last month's
+    # funnel, and a follow-up waiting for the pasted WhatsApp inquiry
+    r = await kav.patch("/api/agents/followup", json={"on": True})
+    assert r.status_code == 200 and r.json()["on"], r.text
+    await kav.put("/api/leaks", json={"numbers": {"visitors": 0, "inquiries": 42, "meetings": 11, "proposals": 9, "won": 4}, "targets": {}, "avg_sale": 36000})
+    lead = await d.leads.find_one({"owner_id": uid, "source": "whatsapp", "name": "Varsha Kulkarni"})
+    if lead:
+        for job in await hooks.schedule_followups(uid, {**lead, "created_at": now() - timedelta(days=1)}):
+            if job["payload"]["n"] == 1:
+                await scheduler.run_job(await d.agent_jobs.find_one({"_id": job["_id"]}), now())
+        await d.leads.update_one({"_id": lead["_id"]}, {"$set": {"followups": True}})
+    # Data: a year of sales from Tally (Customer risk, Getting paid, last month's GST)
+    r = await kav.post("/api/sales-upload", files={"file": ("kaveri-sales-register.csv", kaveri_sales_sheet(today), "text/csv")})
+    if r.status_code != 200:
+        raise SystemExit(f"Couldn't upload the demo sales sheet: {r.text[:300]}")
+    # three months of expenses, with GST bills, budgets, and the showroom rent counted in Cash flow
+    await kav.put("/api/expenses/settings", json={"kind": "trading", "budgets": {"purchases": 320000, "marketing": 25000, "fuel": 9000, "freight": 10000}})
+    month0 = today.replace(day=1)
+    months = [month0, (month0 - timedelta(days=1)).replace(day=1), ((month0 - timedelta(days=1)).replace(day=1) - timedelta(days=1)).replace(day=1)]
+    plan = [  # day, category, vendor, amount (₹, incl. GST), GST %, claimable, paid by, recurring
+        (1, "salaries", "Staff salaries", 420000, 0, False, "bank", True),
+        (5, "rent", "Shree Estates", 85000, 18, True, "bank", True),
+        (6, "purchases", "Whirlwind Appliances Distributors", 236000, 18, True, "bank", False),
+        (7, "electricity", "MSEDCL", 18400, 0, False, "bank", False),
+        (8, "fuel", "HPCL fuel station", 7200, 0, False, "upi", False),
+        (10, "loan_emi", "Delivery van EMI", 18500, 0, False, "bank", True),
+        (11, "phone_internet", "Airtel broadband", 2359, 18, True, "upi", True),
+        (14, "purchases", "Pune Electricals Traders", 28000, 18, True, "bank", False),
+        (15, "marketing", "Google Ads", 18500, 18, True, "card", False),
+        (18, "freight", "Bluezz Courier Services", 7800, 18, True, "upi", False),
+        (22, "godown", "Baner godown rent", 22000, 18, True, "bank", True),
+        (24, "packing", "ZZ Packaging Works", 11200, 12, True, "upi", False),
+    ]
+    for back, m in enumerate(months):
+        for day_, cat, vendor, amount, rate, claim, paid_by, rec in plan:
+            when = m.replace(day=min(day_, 28))
+            if when > today:
+                continue
+            amt = round(amount * (1 + (0.32 if back == 0 and cat == "fuel" else 0)), 0)
+            await kav.post("/api/expenses", json={"date": when.isoformat(), "amount": amt, "gst": round(amt * rate / (100 + rate), 2), "gst_claimable": claim,
+                                                  "category": cat, "vendor": vendor, "paid_by": paid_by, "recurring": rec})
+    rent = await d.expenses.find_one({"ws": uid, "vendor": "Shree Estates"}, sort=[("date", -1)])
+    if rent:
+        await kav.post(f"/api/expenses/{rent['_id']}/to-cash-flow")
+
+    # the v2.2 agents: Competitor Watch and Reviews (Membership); Win-Back and Content & company research (Action Program, granted
+    # to this demo account as the admin would). Competitors have no website here: a real check reads real sites, so the demo
+    # shows the list and the Ad Library links, and "Check now" is tried live on stage with a real competitor's site.
+    for f in ("win_back", "market_research"):
+        await admin.post("/api/admin/config/grants", json={"user_id": uid, "feature": f, "days": 365, "note": "AI Advantage launch demo (v2.2 agents)"})
+    for name, fb in (("Sai Kitchen World", "Sai Kitchen World"), ("Pune Appliance Hub", "Pune Appliance Hub"), ("HomeChef Studio", "")):
+        await kav.post("/api/competitors", json={"name": name, "facebook_name": fb, "notes": "Invented competitor for the demo"})
+    for platform, author, rating, text in (
+            ("Google", "Test Reviewer One", 5, "Chimney installed the same day, neat work and the team explained everything. Highly recommend Kaveri."),
+            ("Google", "Test Reviewer Two", 2, "Delivery was two days late and nobody called back when I asked."),
+            ("Justdial", "Test Reviewer Three", 4, "Good prices on water purifiers and genuine bills. Service visit was on time.")):
+        await kav.post("/api/reputation/reviews", json={"platform": platform, "author": author, "rating": rating, "text": text})
+    await kav.put("/api/win-back/settings", json={"days": 60, "min_purchases": 2, "per_week": 10, "channels": {"whatsapp": True, "email": True}})
     return kav
 
 

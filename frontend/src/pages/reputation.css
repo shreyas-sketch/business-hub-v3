@@ -1,0 +1,32 @@
+/* v2.2 Reviews & reputation */
+.rep-stars { color: var(--amber); letter-spacing: 2px; font-size: 16px; line-height: 1; }
+.rep-stars i { font-style: normal; color: var(--slate); }
+.rep-stars.low { color: var(--amber); }
+.rep-google { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+.rep-big { font: 600 44px/1 var(--head); color: var(--paper); }
+.rep-big small { font-size: 26px; color: var(--amber); margin-left: 2px; }
+.rep-place { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 0; border-top: 1px solid var(--ink-line); }
+.rep-place > div { min-width: 0; overflow-wrap: anywhere; }
+.rep-item.todo { border-color: var(--aqua-deep); }
+.rep-item .row.between { align-items: flex-start; flex-wrap: wrap; gap: 8px; }
+.rep-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--paper); }
+.rep-more { margin-left: 6px; padding: 2px 8px; }
+.rep-reply { width: 100%; resize: vertical; min-height: 110px; }
+.rep-item .prompt { overflow-wrap: anywhere; }
+.rep-ref { border-top: 1px dashed var(--ink-line); padding-top: 10px; }
+.rep-posted summary { cursor: pointer; }
+.rep-posted .prompt { margin-top: 8px; }
+.rep-note { border-left: 3px solid var(--amber); }
+.rep-warn { margin: 0; padding: 10px 12px; border: 1px solid var(--amber); color: var(--paper); }
+.rep-pick { gap: 6px; }
+.rep-people { display: grid; gap: 0; }
+.rep-person { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--ink-line); }
+.rep-person > div { min-width: 0; overflow-wrap: anywhere; }
+.rep-other summary { cursor: pointer; margin-bottom: 10px; }
+.rep-other .btn { margin-top: 10px; }
+.ok-text { color: var(--aqua); font-weight: 500; }
+@media (max-width: 640px) {
+  .rep-grid { grid-template-columns: 1fr; }
+  .rep-person { flex-wrap: wrap; }
+  .rep-big { font-size: 38px; }
+}

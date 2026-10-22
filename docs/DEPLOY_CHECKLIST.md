@@ -1,19 +1,21 @@
-# Deployment checklist — Action Hub v2.1 + the live event link
+# Deployment checklist — Action Hub v2.2 (with v2.1 and the live event link)
 
-Railway (Singapore) · MongoDB Atlas M10 · wildcard `*.employz.ai` · AiSensy · MSG91 · Razorpay · Amazon SES (sending and inbound).
+Railway (Singapore) · MongoDB Atlas M10 · wildcard `*.employz.ai` · AiSensy · MSG91 · Razorpay · Amazon SES (sending and inbound)
+· Google Places API (New), optional.
 
 Nothing here has been deployed. Every step is for your team to do, in this order. Each variable named here is in
 `backend/.env.example`, with a one-line note.
 
-Facts about outside services were checked on 20 Oct 2026 against their own docs (links at the end). Prices and plan limits
-change, so recheck before you buy.
+Facts about outside services were checked on 20 Oct 2026 (v2.1) and 21 Oct 2026 (v2.2) against their own docs (links at the
+end). Prices and plan limits change, so recheck before you buy. **New in v2.2: section 0.5, step 2.5, the end of section 4, steps 9.4, 10.7 and 10.8.**
 
 ---
 
 ## 0. Before you start
 
 1. Decide D1 (the Membership feature placement). It's one button — Admin → Live event → **Move them into Membership** — and it
-   can be undone feature by feature. Until it's pressed, Membership members can connect Razorpay (Connections) and their gateway
+   can be undone feature by feature. In v2.2 it also moves the **funnel leak finder**, the **follow-ups** and the Send list
+   into the Membership. Until it's pressed, Membership members can connect Razorpay (Connections) and their gateway
    invoices are made, but they can't open the list, because **Quotations & invoices** is a Running the Business page.
 2. The CA review of the compliance rules: Admin → Compliance rules → stamp "reviewed". Until then every date shows "not
    reviewed by a CA yet".
@@ -22,6 +24,26 @@ change, so recheck before you buy.
    - `CONNECTIONS_KEY`: `python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
      — never change it later (owners' stored keys become unreadable).
    - `EMAIL_EVENTS_SECRET`, `EMAIL_INBOUND_SECRET`, `DAY1_STATUS_WEBHOOK_SECRET`: 40+ random characters each.
+
+## 0.5 New in v2.2 — read before you deploy
+
+1. **No new outside service is required.** Everything new runs inside the same two server processes: expenses, the bank
+   statement reader, GST set-aside, customer risk, getting paid, the funnel leak finder, follow-ups, Competitor Watch,
+   Reviews & reputation, Win-Back, Content & company research and Lead Response.
+2. **New Python packages** (`openpyxl`, `pypdf`, `pdfplumber`, `xlrd`) are in `backend/requirements.txt`; the Dockerfile
+   installs them. Nothing to do but rebuild.
+3. **Memory.** The bank statement reader opens each file in a separate, limited process (768 MB at most, 60 seconds at most,
+   2 at a time per server process). With `WEB_CONCURRENCY=2`, that's up to about 3 GB on top of the hub at the worst moment.
+   Give the Railway service at least **4 GB** of memory; 8 GB if you expect many owners uploading statements at once.
+   (Estimated from the limits in the code, not measured on Railway.)
+4. **Google key: your decision (optional).** Reviews & reputation and Competitor Watch can read Google ratings and reviews
+   on their own with `GOOGLE_PLACES_API_KEY` (step 9.4). Blank = off: owners paste reviews and Competitor Watch reads websites
+   only. Read "Google reviews" in `docs/V22_HANDOFF.md` before you set it: Google's service terms expressly allow caching
+   only place IDs (and latitude/longitude for 30 days); the hub keeps review words, stars and ratings for up to 30 days.
+5. **Lead Response (Growth Mentorship)** needs a WhatsApp template on each owner's own number (end of section 4).
+6. **The demo seed** (`seed_demo.py`) empties the database it points at. It now refuses to run unless the hub is in local
+   development, no sending key is set, and the database is empty or one it made (or `SEED_DEMO_WIPE` names it on purpose). Run it
+   only against a separate demo database.
 
 ## 1. MongoDB Atlas M10
 
@@ -50,6 +72,8 @@ change, so recheck before you buy.
    - `RUN_SCHEDULER=true`.
 4. Settings → Networking → **Enable Static IPs**. You get 3 IPv4 addresses. Add all 3 to Atlas (step 1.4) **before** you deploy.
    If you ever move the service to another region, the IPs change.
+5. v2.2: memory at least 4 GB on the service (section 0.5.3). Keep `RUN_SCHEDULER=true` on the service: the follow-ups, the
+   Monday Competitor Watch, the 9:30 review check, the Tuesday Win-Back and the hourly Google clean-up all run from it.
 
 ## 3. Domains: `hub.employz.ai` and `*.employz.ai`
 
@@ -85,6 +109,15 @@ API campaign on each one and put its name in the variable:
 - 200 attendees getting codes and alerts, plus your existing members, can come close to 250 in one day.
 - Before the event, check the portfolio's current tier in AiSensy / Meta Business Manager. You want 2,000 or more.
 - (Secondary source, see the end; check Meta's own page before you rely on it.)
+
+**v2.2 — Lead Response, on each Growth owner's own number** (not the hub's): the owner (or you, in Admin → the owner's
+Connections → WhatsApp) gets this template approved on their own WhatsApp Business number and puts its name in
+**Template: first reply with a booking** (`tpl_lead_response`):
+- text: `Hello {{1}}, thank you for contacting {{2}}. {{3}}` — `{{1}}` first name, `{{2}}` business, `{{3}}` the booking line;
+- Meta decides the category when it reviews it.
+
+Until it's set, Lead Response can't be switched on, and the owner's page says why. If the template is removed later, the plain
+instant reply answers new inquiries instead, and the owner is told.
 
 ## 5. MSG91 — SMS when WhatsApp can't deliver the login code
 
@@ -175,6 +208,14 @@ would bounce. This build reads each email from S3 instead.
 
    See the event run sheet and `qa/loadtest/`. These are estimates until you run it with the real engine.
 3. `AI_CONCURRENCY=32`, `AI_RETRIES=2`, `EVENT_AI_CONCURRENCY=24`: the tested defaults.
+4. **v2.2 — Google Places API (New), only if you decided to (section 0.5.4):**
+   - Google Cloud project → enable **Places API (New)** → billing on.
+   - API key restricted to **Places API (New)**, with an IP-address restriction to Railway's 3 static IPs.
+   - `GOOGLE_PLACES_API_KEY` = that key. `GOOGLE_PLACES_API_BASE` stays as in `.env.example`.
+   - What it's billed for: a Text Search when an owner looks for their listing or a competitor's (capped per business per day);
+     when a review listing is connected, a first look (at most 3 a day); then one Place Details a day per connected listing
+     (rating, count, reviews); and for each competitor with a Google match, one at the Monday check and one at each Check now
+     (at most one a day). Check Google's price for each on its pricing page before you switch it on.
 
 ## 10. After the deploy (smoke test, about 30 minutes)
 
@@ -195,25 +236,39 @@ would bounce. This build reads each email from S3 instead.
    MONGO_URL='mongodb+srv://<test-user>:<password>@<cluster>/' python -m pytest -q
    ```
 
-   Expected: everything passes except `test_agents.py::test_monthly_review_on_the_first_with_last_months_data`.
+   Expected: everything passes except `test_agents.py::test_monthly_review_on_the_first_with_last_months_data`
+   (v2.2: 713 other tests passed here on the in-memory database; the 368 new v2.2 tests also passed on a real MongoDB 3.6).
    - That test inserts two Business Scores without a share token, and the `scores.token` unique index refuses the second.
    - It fails the same way on a real MongoDB server here (3.6), so expect it on Atlas too (not run on Atlas yet). It's in the
      test's own data, not in the hub.
    - The tests make their own database (`action_hub_test_<random>`), so a throwaway cluster user is enough.
    - Fixing it means adding tokens to that test's data. I haven't changed it, because existing tests stay as they are until you
      say so.
+7. v2.2, as a test owner on the Membership (after D1):
+   - Expenses: add a bill with a photo; Download for your CA (CSV).
+   - Bank statement: upload `docs/demo/kaveri-bank-statement.csv` (invented); check Where it went; press Delete it now.
+   - Upload a sales sheet (Tally/Excel export); open Customer risk, Getting paid and GST set-aside.
+   - Inquiries: switch follow-ups on; send an inquiry from the test website; the next day, follow-up 1 of 3 is waiting.
+   - Funnel leak finder: type numbers with visitors at 0.
+   - Competitor Watch: add a real website, Check now. Reviews: paste a review, approve the draft.
+8. v2.2, Growth test owner with a connected number and the approved template: Lead Response → Send it to my WhatsApp, then
+   switch it on and fill the website form from another phone.
 
 ## 11. If something goes wrong
 
 - Roll back: Railway → Deployments → redeploy the previous one. The database needs no rollback; nothing in this build changes
-  existing data.
+  existing data. (v2.2 only adds collections — expenses, bank_imports, bank_rules, sales_rows, competitors, reviews, winback_*,
+  lead_response_* and others — and a few new fields, which older code ignores.)
 - The event link: Admin → Live event → switch **Link open** off. Packs already built stay.
 
 ---
 
-Sources checked on 20 Oct 2026:
+Sources checked on 20 Oct 2026 (and the last three on 21 Oct 2026):
 - [Amazon SES endpoints and quotas — email receiving regions](https://docs.aws.amazon.com/general/latest/gr/ses.html)
 - [Railway — working with domains (wildcards)](https://docs.railway.com/networking/domains/working-with-domains)
 - [Railway — deployment regions](https://docs.railway.com/reference/deployment-regions)
 - [Railway — static outbound IPs](https://docs.railway.com/networking/static-outbound-ips)
 - [AiSensy — WhatsApp message limits in 2026 (secondary source)](https://m.aisensy.com/blog/whatsapp-message-limits-guide/)
+- [Google Maps Platform service specific terms — Places API caching (14.3) and Google ID caching (A.3)](https://cloud.google.com/maps-platform/terms/maps-service-terms)
+- [Places API policies — place IDs may be stored](https://developers.google.com/maps/documentation/places/web-service/policies)
+- [Meta Ad Library API — which ads it returns (secondary source)](https://admanage.ai/blog/facebook-ads-library-api)

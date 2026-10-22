@@ -31,7 +31,7 @@ from pydantic import BaseModel, Field
 from pymongo.errors import DuplicateKeyError
 
 from .. import company_brain, dashboard_cache, files, inbound, mailer, plans
-from ..agents import catalog
+from ..agents import catalog, jobs
 from ..agents.approvals import create_approval, link_hosts
 from ..ai import proposal_tasks
 from ..ai.tasks import profile_text
@@ -247,6 +247,8 @@ async def list_inquiries(channel: str = "", status: str = "", ctx: Ctx = Depends
     leads = [x async for x in db().leads.find(q).sort("created_at", -1).limit(300)]
     ids = [(x.get("proposal") or {}).get("approval_id") for x in leads if (x.get("proposal") or {}).get("approval_id")]
     appr = {a["_id"]: a["status"] async for a in db().approvals.find({"_id": {"$in": ids}}, {"status": 1})}
+    running = ctx.has("follow_up_agent") and await jobs.is_on_for(ctx.owner, "followup")
+    follow = await _followups(ctx.ws, [x["_id"] for x in leads], running)
     items = []
     for x in leads:
         st = _status(x, appr)
@@ -262,9 +264,33 @@ async def list_inquiries(channel: str = "", status: str = "", ctx: Ctx = Depends
                       "channel_label": CHANNELS.get(x.get("source", "website"), (x.get("source") or "").title()), "message": x.get("message", ""),
                       "created_at": x["created_at"].isoformat(), "status": st, "stage": x.get("stage", "identification"), "proposal": p or None,
                       "replies": [{"at": r["at"].isoformat(), "from": r.get("from", ""), "text": r.get("text", "")} for r in (x.get("replies") or [])[-3:]],
-                      "verified": x.get("sender_verified"), "attachments": x.get("attachments") or []})
+                      "verified": x.get("sender_verified"), "attachments": x.get("attachments") or [], "followups": follow.get(x["_id"])})
     counts = {k: sum(1 for i in items if i["status"] == k) for k in ("new", "proposal_sent", "in_pipeline")}
     return {"items": items[:200], "counts": counts, "channels": CHANNELS}
+
+
+async def _followups(ws: str, lead_ids: list[str], running: bool) -> dict:
+    """For each inquiry: the follow-up waiting to be sent (written by the follow-up automation), the next one due, and how
+    many went out — so the owner can send them from here, not only from the Send list. The next one due is shown only while
+    the follow-ups are `running` (in the plan and switched on): a job that will be skipped isn't "next"."""
+    out: dict[str, dict] = {}
+    if not lead_ids:
+        return out
+    async for a in db().approvals.find({"ws": ws, "agent": "followup", "kind": "followup", "lead_id": {"$in": lead_ids}},
+                                       {"lead_id": 1, "status": 1, "text": 1, "n": 1, "created_at": 1}).limit(3000):
+        f = out.setdefault(a["lead_id"], {"ready": None, "sent": 0, "next_at": None, "next_n": None})
+        if a["status"] == "pending":
+            f["ready"] = {"id": a["_id"], "n": a.get("n"), "of": len(settings.followup_days), "text": a.get("text", ""), "at": a["created_at"].isoformat()}
+        elif a["status"] == "sent":
+            f["sent"] += 1
+    if not running:
+        return out
+    async for j in db().agent_jobs.find({"ws": ws, "agent": "followup", "status": "scheduled", "payload.lead_id": {"$in": lead_ids}},
+                                        {"payload": 1, "run_at": 1}).sort("run_at", 1).limit(3000):
+        f = out.setdefault(j["payload"]["lead_id"], {"ready": None, "sent": 0, "next_at": None, "next_n": None})
+        if not f["next_at"]:
+            f["next_at"], f["next_n"] = j["run_at"].isoformat(), (j.get("payload") or {}).get("n")
+    return out
 
 
 @router.get("/inquiries/{lead_id}/files/{file_id}")
@@ -288,7 +314,10 @@ async def get_settings(ctx: Ctx = Depends(feature("inquiry_desk", "manager"))):
     handle = await handle_for(ctx.ws)
     return {"address": address(handle), "handle": handle, "inbound_ready": bool(settings.inbound_email_domain),
             "auto_email": bool(st.get("auto_email")), "auto_web": bool(st.get("auto_web")), "email_ready": mailer.configured() or settings.local_dev, "reply_to": b.get("email") or None,
-            "daily_limit": settings.proposals_per_owner_per_day, "sent_today": await _sent_today(ctx.ws)}
+            "daily_limit": settings.proposals_per_owner_per_day, "sent_today": await _sent_today(ctx.ws),
+            "followups": {"available": ctx.has("follow_up_agent"), "on": await jobs.is_on_for(ctx.owner, "followup"),
+                          "opt_in": jobs.needs_opt_in(ctx.owner, "followup"),
+                          "days": list(settings.followup_days), "send_list": ctx.has("approvals")}}
 
 
 class SettingsIn(BaseModel):

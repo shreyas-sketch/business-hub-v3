@@ -1,0 +1,50 @@
+/* Customer risk, Getting paid and the sales upload (v2.2) */
+.mi-line { font: 400 22px/1.3 var(--head); color: var(--paper); margin: 0; overflow-wrap: anywhere; }
+.mi-line.warn { color: var(--amber); }
+.mi-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: baseline; justify-content: space-between; }
+
+/* shares of sales: plain bars, width = share of all sales */
+.mi-bars { display: grid; gap: 12px; }
+.mi-bar { display: grid; gap: 6px; min-width: 0; }
+.mi-bar .top { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; font-size: 14px; }
+.mi-bar .top b { min-width: 0; overflow-wrap: anywhere; font-weight: 500; }
+.mi-bar .top span { white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--grey); }
+.mi-bar .track { height: 10px; background: var(--ink-line); position: relative; }
+.mi-bar .fill { position: absolute; inset: 0 auto 0 0; background: var(--aqua-deep); min-width: 2px; }
+.mi-bar.big .fill { background: var(--amber); }
+.mi-bar.est .fill { background: repeating-linear-gradient(135deg, var(--aqua-deep) 0 6px, var(--aqua-shadow) 6px 10px); }
+
+/* lists of customers / amounts */
+.mi-list { display: grid; }
+.mi-list > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 16px; padding: 14px 0; border-bottom: 1px solid var(--ink-line); align-items: start; }
+.mi-list > div:last-child { border-bottom: 0; }
+.mi-list .who { min-width: 0; overflow-wrap: anywhere; display: grid; gap: 4px; }
+.mi-list .amt { font: 400 19px/1.1 var(--head); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.mi-list .amt small { display: block; font: 400 11px/1.4 var(--body); color: var(--grey); letter-spacing: .04em; margin-top: 4px; }
+.mi-list .acts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* money still owed, by how late */
+.mi-age { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.mi-age > div { border: 1px solid var(--ink-line); background: var(--ink-raised); padding: 12px; display: grid; gap: 4px; min-width: 0; }
+.mi-age b { font: 400 18px/1.15 var(--head); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.mi-age .late b { color: var(--amber); }
+.mi-age .zero b { color: var(--grey); }
+
+/* the upload */
+.mi-file { position: relative; overflow: hidden; }
+.mi-file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.mi-file:focus-within { outline: 1px solid var(--aqua); outline-offset: 2px; }
+.mi-file.off { opacity: .45; pointer-events: none; }
+.mi-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.mi-cols li { display: grid; gap: 2px; font-size: 13px; }
+.mi-result { border-left: 3px solid var(--aqua); background: var(--ink-raised); padding: 14px 16px; display: grid; gap: 6px; font-size: 14px; }
+.mi-result p { margin: 0; }
+.mi-ways { margin: 0; padding-left: 20px; display: grid; gap: 10px; }
+.mi-ways li::marker { color: var(--aqua); }
+
+@media (max-width: 640px) {
+  .mi-line { font-size: 19px; }
+  .mi-age { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mi-age > div:last-child { grid-column: 1 / -1; }
+  .mi-list .amt { font-size: 17px; }
+}

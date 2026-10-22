@@ -1,0 +1,4986 @@
+{
+ "config": {
+  "base": "http://127.0.0.1:8830",
+  "web": "http://127.0.0.1:8850",
+  "n": 200,
+  "arrive": 90.0,
+  "typing": [
+   20.0,
+   45.0
+  ],
+  "reading": [
+   10.0,
+   30.0
+  ],
+  "share": 0.95,
+  "stage_limit": 240,
+  "code": "LT-83547",
+  "out": "/home/claude/action-hub/qa/loadtest/results/v22_realistic.json",
+  "cores": 2
+ },
+ "seconds": 1148,
+ "calls": {
+  "GET /api/me": {
+   "n": 400,
+   "p50": 0.02,
+   "p95": 0.04,
+   "max": 0.2,
+   "errors": {}
+  },
+  "GET cash-flow": {
+   "n": 200,
+   "p50": 0.02,
+   "p95": 0.03,
+   "max": 0.1,
+   "errors": {}
+  },
+  "GET cash-flow what-if": {
+   "n": 200,
+   "p50": 0.02,
+   "p95": 0.03,
+   "max": 0.1,
+   "errors": {}
+  },
+  "GET dashboard": {
+   "n": 200,
+   "p50": 0.03,
+   "p95": 0.13,
+   "max": 0.21,
+   "errors": {}
+  },
+  "GET form": {
+   "n": 200,
+   "p50": 0.01,
+   "p95": 0.05,
+   "max": 0.24,
+   "errors": {}
+  },
+  "GET inquiries (next morning)": {
+   "n": 200,
+   "p50": 0.01,
+   "p95": 0.02,
+   "max": 0.03,
+   "errors": {}
+  },
+  "GET inquiries (poll)": {
+   "n": 678,
+   "p50": 0.01,
+   "p95": 0.02,
+   "max": 0.04,
+   "errors": {}
+  },
+  "GET pack (poll every 2 s)": {
+   "n": 6294,
+   "p50": 0.03,
+   "p95": 0.13,
+   "max": 0.43,
+   "errors": {}
+  },
+  "GET post png": {
+   "n": 200,
+   "p50": 0.13,
+   "p95": 0.35,
+   "max": 0.55,
+   "errors": {}
+  },
+  "GET poster png": {
+   "n": 298,
+   "p50": 0.14,
+   "p95": 0.38,
+   "max": 0.57,
+   "errors": {}
+  },
+  "GET site": {
+   "n": 200,
+   "p50": 0.01,
+   "p95": 0.01,
+   "max": 0.01,
+   "errors": {}
+  },
+  "GET site qr": {
+   "n": 200,
+   "p50": 0.02,
+   "p95": 0.02,
+   "max": 0.05,
+   "errors": {}
+  },
+  "GET target": {
+   "n": 200,
+   "p50": 0.01,
+   "p95": 0.03,
+   "max": 0.04,
+   "errors": {}
+  },
+  "POST about (site unreadable)": {
+   "n": 26,
+   "p50": 0.02,
+   "p95": 0.06,
+   "max": 0.2,
+   "errors": {}
+  },
+  "POST brand pick": {
+   "n": 98,
+   "p50": 0.01,
+   "p95": 0.06,
+   "max": 0.14,
+   "errors": {}
+  },
+  "POST brand-kit/generate (AI, waits)": {
+   "n": 200,
+   "p50": 7.78,
+   "p95": 18.2,
+   "max": 26.48,
+   "errors": {}
+  },
+  "POST code (WhatsApp OTP)": {
+   "n": 200,
+   "p50": 0.91,
+   "p95": 1.48,
+   "max": 1.52,
+   "errors": {}
+  },
+  "POST follow-up send (tap)": {
+   "n": 400,
+   "p50": 0.01,
+   "p95": 0.02,
+   "max": 0.03,
+   "errors": {}
+  },
+  "POST gstin": {
+   "n": 172,
+   "p50": 0.01,
+   "p95": 0.09,
+   "max": 0.19,
+   "errors": {}
+  },
+  "POST inquiry (WhatsApp paste)": {
+   "n": 200,
+   "p50": 0.03,
+   "p95": 0.04,
+   "max": 0.06,
+   "errors": {}
+  },
+  "POST money (a due)": {
+   "n": 200,
+   "p50": 0.01,
+   "p95": 0.01,
+   "max": 0.02,
+   "errors": {}
+  },
+  "POST neighbour's website form": {
+   "n": 200,
+   "p50": 0.03,
+   "p95": 0.04,
+   "max": 0.14,
+   "errors": {}
+  },
+  "POST quotes (save)": {
+   "n": 200,
+   "p50": 0.01,
+   "p95": 0.02,
+   "max": 0.04,
+   "errors": {}
+  },
+  "POST quotes/draft (AI, waits)": {
+   "n": 200,
+   "p50": 8.07,
+   "p95": 17.52,
+   "max": 20.69,
+   "errors": {}
+  },
+  "POST runs (build my pack)": {
+   "n": 200,
+   "p50": 0.03,
+   "p95": 0.19,
+   "max": 0.46,
+   "errors": {}
+  },
+  "POST score": {
+   "n": 200,
+   "p50": 0.01,
+   "p95": 0.02,
+   "max": 0.03,
+   "errors": {}
+  },
+  "POST score (re-take)": {
+   "n": 200,
+   "p50": 0.01,
+   "p95": 0.02,
+   "max": 0.03,
+   "errors": {}
+  },
+  "POST site publish": {
+   "n": 200,
+   "p50": 0.01,
+   "p95": 0.02,
+   "max": 0.08,
+   "errors": {}
+  },
+  "POST verify (account + pack inside)": {
+   "n": 200,
+   "p50": 0.11,
+   "p95": 0.45,
+   "max": 0.58,
+   "errors": {}
+  },
+  "PUT knowledge money": {
+   "n": 200,
+   "p50": 0.02,
+   "p95": 0.03,
+   "max": 0.1,
+   "errors": {}
+  },
+  "PUT knowledge targets": {
+   "n": 200,
+   "p50": 0.02,
+   "p95": 0.03,
+   "max": 0.04,
+   "errors": {}
+  },
+  "PUT leaks (funnel leak finder)": {
+   "n": 200,
+   "p50": 0.02,
+   "p95": 0.02,
+   "max": 0.06,
+   "errors": {}
+  },
+  "page /": {
+   "n": 200,
+   "p50": 0.01,
+   "p95": 0.03,
+   "max": 0.2,
+   "errors": {}
+  },
+  "page /event": {
+   "n": 200,
+   "p50": 0.01,
+   "p95": 0.13,
+   "max": 0.3,
+   "errors": {}
+  }
+ },
+ "journey": {
+  "first things on screen (s after Build)": {
+   "n": 200,
+   "p50": 6.15,
+   "p95": 12.4,
+   "max": 14.6
+  },
+  "whole pack ready (s after Build)": {
+   "n": 200,
+   "p50": 69.36,
+   "p95": 101.27,
+   "max": 118.34
+  },
+  "code asked \u2192 in the hub (s)": {
+   "n": 200,
+   "p50": 6.62,
+   "p95": 9.06,
+   "max": 9.67
+  },
+  "scan \u2192 saved in the hub (s)": {
+   "n": 200,
+   "p50": 126.54,
+   "p95": 162.55,
+   "max": 184.99
+  },
+  "inquiry \u2192 reply written (s)": {
+   "n": 200,
+   "p50": 9.05,
+   "p95": 21.09,
+   "max": 30.17
+  }
+ },
+ "notes": {
+  "website unreadable \u2192 typed a line": 26,
+  "step site: done": 136,
+  "step compliance: done": 200,
+  "step check: done": 136,
+  "step brand: done": 200,
+  "step knowledge: done": 200,
+  "step brand_message: done": 200,
+  "step lead_ideas: done": 200,
+  "step website: done": 200,
+  "step site: skipped": 38,
+  "step check: skipped": 38,
+  "step site: failed": 26,
+  "step check: failed": 26,
+  "attendees with a follow-up ready": 200,
+  "follow-ups sent": 400
+ },
+ "next_morning": {
+  "seconds": 450.9,
+  "ticks": [
+   {
+    "at": "2026-10-22T11:59:30.850000+00:00",
+    "jobs_run": 300,
+    "seconds": 337.5
+   },
+   {
+    "at": "2026-10-22T11:59:30.850000+00:00",
+    "jobs_run": 100,
+    "seconds": 113.4
+   }
+  ],
+  "followups": {
+   "done": 400
+  },
+  "approvals": 400
+ },
+ "ai_limiter": {
+  "inflight": 0,
+  "calls": 1800,
+  "ok": 1800,
+  "busy": 0,
+  "out_tokens": 1605600,
+  "started": 1792583579.2850192,
+  "peak_inflight": 49,
+  "otpm": 400000,
+  "inflight_cap": 200,
+  "lat_p50": 7.918048232712186,
+  "lat_p95": 16.639195507854776
+ },
+ "speaker_screen": {
+  "code": "LT-83547",
+  "runs": {
+   "started": 200,
+   "waiting": 0,
+   "writing": 0,
+   "ready": 200,
+   "failed": 0,
+   "saved": 200
+  },
+  "accounts": 200,
+  "members_paid": 0,
+  "ai_cost_inr": 393.8,
+  "seconds": {
+   "first_things": 4.7,
+   "everything_median": 68.2,
+   "everything_slowest": 117.6
+  },
+  "counters": {
+   "packs": 200,
+   "ai": 200
+  },
+  "demos": {
+   "lead": {
+    "Website live": 200,
+    "Lead ideas ready": 200
+   },
+   "sales": {
+    "Quotations made": 200,
+    "Payment dues added": 200
+   },
+   "brand": {
+    "Brand kit written": 200
+   },
+   "operations": {
+    "Compliance calendars": 200,
+    "SOPs written": 0
+   },
+   "conversion": {
+    "Sent themselves an inquiry": 200,
+    "Got a website inquiry": 200,
+    "Quotation from an inquiry": 200,
+    "Found their biggest leak": 200,
+    "Follow-ups ready": 200,
+    "Follow-ups sent": 200
+   },
+   "data": {
+    "Cash flow ready": 200,
+    "Target set": 200,
+    "Took the score": 200,
+    "Re-took the score": 200,
+    "Dashboard open (60%+)": 200
+   }
+  },
+  "open": true,
+  "ai": true,
+  "pack_cap": 2000,
+  "ai_cap": 2000,
+  "trial_until": "2026-10-24",
+  "name": "Load test event"
+ },
+ "machine_cpu": {
+  "avg": 21.3,
+  "peak": 90.0
+ },
+ "cpu_samples": [
+  {
+   "t": 1792583550.9687285,
+   "machine_cpu": 11.4,
+   "mem_used_mb": 1294,
+   "mongod:5509": 4.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583552.976411,
+   "machine_cpu": 18.0,
+   "mem_used_mb": 1288,
+   "mongod:5509": 3.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583554.9832213,
+   "machine_cpu": 13.4,
+   "mem_used_mb": 1293,
+   "mongod:5509": 3.5,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583556.990344,
+   "machine_cpu": 21.3,
+   "mem_used_mb": 1293,
+   "mongod:5509": 4.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583558.9951313,
+   "machine_cpu": 10.6,
+   "mem_used_mb": 1297,
+   "mongod:5509": 3.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583561.0015166,
+   "machine_cpu": 12.4,
+   "mem_used_mb": 1305,
+   "mongod:5509": 3.5,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583563.0066652,
+   "machine_cpu": 17.0,
+   "mem_used_mb": 1309,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583565.0121484,
+   "machine_cpu": 8.2,
+   "mem_used_mb": 1307,
+   "mongod:5509": 3.5,
+   "python:5623": 3.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583567.0183454,
+   "machine_cpu": 17.3,
+   "mem_used_mb": 1313,
+   "mongod:5509": 7.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583569.0264394,
+   "machine_cpu": 11.2,
+   "mem_used_mb": 1316,
+   "mongod:5509": 3.5,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583571.0334826,
+   "machine_cpu": 18.8,
+   "mem_used_mb": 1321,
+   "mongod:5509": 4.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583573.0436654,
+   "machine_cpu": 11.6,
+   "mem_used_mb": 1326,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583575.0494304,
+   "machine_cpu": 16.0,
+   "mem_used_mb": 1340,
+   "mongod:5509": 3.5,
+   "python:5623": 3.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583577.0566487,
+   "machine_cpu": 11.7,
+   "mem_used_mb": 1341,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583579.0638735,
+   "machine_cpu": 23.4,
+   "mem_used_mb": 1360,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583581.0693753,
+   "machine_cpu": 30.1,
+   "mem_used_mb": 1403,
+   "mongod:5509": 5.5,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583583.0780883,
+   "machine_cpu": 28.7,
+   "mem_used_mb": 1421,
+   "mongod:5509": 5.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583585.0841079,
+   "machine_cpu": 13.1,
+   "mem_used_mb": 1420,
+   "mongod:5509": 4.0,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583587.0897985,
+   "machine_cpu": 33.0,
+   "mem_used_mb": 1425,
+   "mongod:5509": 6.5,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583589.099267,
+   "machine_cpu": 38.5,
+   "mem_used_mb": 1463,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583591.106118,
+   "machine_cpu": 46.8,
+   "mem_used_mb": 1486,
+   "mongod:5509": 8.0,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583593.114787,
+   "machine_cpu": 36.3,
+   "mem_used_mb": 1489,
+   "mongod:5509": 6.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583595.1232722,
+   "machine_cpu": 59.7,
+   "mem_used_mb": 1486,
+   "mongod:5509": 8.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583597.131541,
+   "machine_cpu": 57.0,
+   "mem_used_mb": 1525,
+   "mongod:5509": 8.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583599.1372821,
+   "machine_cpu": 79.9,
+   "mem_used_mb": 1626,
+   "mongod:5509": 9.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583601.155518,
+   "machine_cpu": 57.7,
+   "mem_used_mb": 1652,
+   "mongod:5509": 7.4,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583603.1614282,
+   "machine_cpu": 65.5,
+   "mem_used_mb": 1680,
+   "mongod:5509": 7.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583605.178766,
+   "machine_cpu": 63.3,
+   "mem_used_mb": 1685,
+   "mongod:5509": 8.9,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583607.1887527,
+   "machine_cpu": 53.7,
+   "mem_used_mb": 1689,
+   "mongod:5509": 9.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583609.1943939,
+   "machine_cpu": 52.6,
+   "mem_used_mb": 1698,
+   "mongod:5509": 8.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583611.2032433,
+   "machine_cpu": 66.2,
+   "mem_used_mb": 1704,
+   "mongod:5509": 10.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583613.215724,
+   "machine_cpu": 66.5,
+   "mem_used_mb": 1707,
+   "mongod:5509": 9.4,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583615.2211912,
+   "machine_cpu": 57.6,
+   "mem_used_mb": 1721,
+   "mongod:5509": 9.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583617.236226,
+   "machine_cpu": 63.5,
+   "mem_used_mb": 1717,
+   "mongod:5509": 10.4,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583619.2474494,
+   "machine_cpu": 55.8,
+   "mem_used_mb": 1746,
+   "mongod:5509": 9.4,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583621.253066,
+   "machine_cpu": 60.0,
+   "mem_used_mb": 1749,
+   "mongod:5509": 10.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583623.2602015,
+   "machine_cpu": 80.2,
+   "mem_used_mb": 1667,
+   "mongod:5509": 13.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583625.2663412,
+   "machine_cpu": 61.5,
+   "mem_used_mb": 1660,
+   "mongod:5509": 10.5,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583627.2718904,
+   "machine_cpu": 79.6,
+   "mem_used_mb": 1654,
+   "mongod:5509": 16.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583629.283485,
+   "machine_cpu": 66.8,
+   "mem_used_mb": 1672,
+   "mongod:5509": 10.9,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583631.2917914,
+   "machine_cpu": 77.2,
+   "mem_used_mb": 1667,
+   "mongod:5509": 11.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583633.3031437,
+   "machine_cpu": 60.0,
+   "mem_used_mb": 1680,
+   "mongod:5509": 9.9,
+   "python:5623": 1.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583635.3100867,
+   "machine_cpu": 66.3,
+   "mem_used_mb": 1705,
+   "mongod:5509": 11.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583637.319524,
+   "machine_cpu": 69.0,
+   "mem_used_mb": 1707,
+   "mongod:5509": 10.9,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583639.3353126,
+   "machine_cpu": 69.2,
+   "mem_used_mb": 1708,
+   "mongod:5509": 11.4,
+   "python:5623": 1.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583641.3459432,
+   "machine_cpu": 63.5,
+   "mem_used_mb": 1713,
+   "mongod:5509": 14.9,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583643.358703,
+   "machine_cpu": 64.6,
+   "mem_used_mb": 1721,
+   "mongod:5509": 13.9,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583645.3679807,
+   "machine_cpu": 77.5,
+   "mem_used_mb": 1731,
+   "mongod:5509": 17.4,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583647.3737895,
+   "machine_cpu": 65.7,
+   "mem_used_mb": 1726,
+   "mongod:5509": 12.0,
+   "python:5623": 1.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583649.3800538,
+   "machine_cpu": 53.0,
+   "mem_used_mb": 1726,
+   "mongod:5509": 14.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583651.3863156,
+   "machine_cpu": 59.7,
+   "mem_used_mb": 1738,
+   "mongod:5509": 12.5,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583653.3912141,
+   "machine_cpu": 36.1,
+   "mem_used_mb": 1738,
+   "mongod:5509": 10.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583655.3986678,
+   "machine_cpu": 42.7,
+   "mem_used_mb": 1738,
+   "mongod:5509": 12.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583657.4120684,
+   "machine_cpu": 67.3,
+   "mem_used_mb": 1736,
+   "mongod:5509": 13.4,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583659.4237235,
+   "machine_cpu": 77.7,
+   "mem_used_mb": 1748,
+   "mongod:5509": 16.9,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583661.433491,
+   "machine_cpu": 74.3,
+   "mem_used_mb": 1793,
+   "mongod:5509": 10.9,
+   "python:5623": 1.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583663.4385035,
+   "machine_cpu": 62.5,
+   "mem_used_mb": 1796,
+   "mongod:5509": 10.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583665.449338,
+   "machine_cpu": 90.0,
+   "mem_used_mb": 1757,
+   "mongod:5509": 18.9,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583667.4558132,
+   "machine_cpu": 68.1,
+   "mem_used_mb": 1769,
+   "mongod:5509": 15.9,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583669.4682145,
+   "machine_cpu": 53.5,
+   "mem_used_mb": 1767,
+   "mongod:5509": 10.9,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583671.4739294,
+   "machine_cpu": 78.8,
+   "mem_used_mb": 1818,
+   "mongod:5509": 14.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583673.479376,
+   "machine_cpu": 62.9,
+   "mem_used_mb": 1818,
+   "mongod:5509": 12.0,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583675.4847078,
+   "machine_cpu": 46.9,
+   "mem_used_mb": 1818,
+   "mongod:5509": 12.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583677.4913974,
+   "machine_cpu": 70.6,
+   "mem_used_mb": 1839,
+   "mongod:5509": 13.9,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583679.4993856,
+   "machine_cpu": 46.4,
+   "mem_used_mb": 1839,
+   "mongod:5509": 11.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583681.52945,
+   "machine_cpu": 49.6,
+   "mem_used_mb": 1807,
+   "mongod:5509": 13.3,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583683.550759,
+   "machine_cpu": 57.5,
+   "mem_used_mb": 1788,
+   "mongod:5509": 14.3,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583685.5564833,
+   "machine_cpu": 48.2,
+   "mem_used_mb": 1774,
+   "mongod:5509": 17.0,
+   "python:5623": 1.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583687.5617259,
+   "machine_cpu": 48.6,
+   "mem_used_mb": 1839,
+   "mongod:5509": 20.4,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583689.5716035,
+   "machine_cpu": 42.8,
+   "mem_used_mb": 1796,
+   "mongod:5509": 14.4,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583691.576376,
+   "machine_cpu": 37.6,
+   "mem_used_mb": 1795,
+   "mongod:5509": 13.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583693.586386,
+   "machine_cpu": 41.7,
+   "mem_used_mb": 1795,
+   "mongod:5509": 15.4,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583695.5934472,
+   "machine_cpu": 53.1,
+   "mem_used_mb": 1784,
+   "mongod:5509": 18.9,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583697.6028185,
+   "machine_cpu": 34.8,
+   "mem_used_mb": 1765,
+   "mongod:5509": 10.9,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583699.6104972,
+   "machine_cpu": 42.9,
+   "mem_used_mb": 1814,
+   "mongod:5509": 12.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583701.6223798,
+   "machine_cpu": 49.9,
+   "mem_used_mb": 1814,
+   "mongod:5509": 19.9,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583703.6306295,
+   "machine_cpu": 40.1,
+   "mem_used_mb": 1814,
+   "mongod:5509": 14.4,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583705.6423533,
+   "machine_cpu": 41.3,
+   "mem_used_mb": 1822,
+   "mongod:5509": 13.4,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583707.6501234,
+   "machine_cpu": 58.4,
+   "mem_used_mb": 1878,
+   "mongod:5509": 14.4,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583709.6551163,
+   "machine_cpu": 53.1,
+   "mem_used_mb": 1887,
+   "mongod:5509": 17.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583711.6602879,
+   "machine_cpu": 45.8,
+   "mem_used_mb": 1895,
+   "mongod:5509": 16.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583713.6683862,
+   "machine_cpu": 44.5,
+   "mem_used_mb": 1789,
+   "mongod:5509": 15.9,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583715.6746552,
+   "machine_cpu": 31.7,
+   "mem_used_mb": 1787,
+   "mongod:5509": 9.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583717.6828537,
+   "machine_cpu": 40.1,
+   "mem_used_mb": 1779,
+   "mongod:5509": 12.9,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583719.6954067,
+   "machine_cpu": 27.0,
+   "mem_used_mb": 1778,
+   "mongod:5509": 8.4,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583721.7131233,
+   "machine_cpu": 37.1,
+   "mem_used_mb": 1778,
+   "mongod:5509": 14.4,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583723.719247,
+   "machine_cpu": 23.4,
+   "mem_used_mb": 1778,
+   "mongod:5509": 8.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583725.73052,
+   "machine_cpu": 31.3,
+   "mem_used_mb": 1770,
+   "mongod:5509": 9.4,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583727.7425337,
+   "machine_cpu": 31.3,
+   "mem_used_mb": 1770,
+   "mongod:5509": 12.9,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583729.7487311,
+   "machine_cpu": 40.4,
+   "mem_used_mb": 1834,
+   "mongod:5509": 11.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583731.7540596,
+   "machine_cpu": 33.0,
+   "mem_used_mb": 1873,
+   "mongod:5509": 7.5,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583733.7842755,
+   "machine_cpu": 39.9,
+   "mem_used_mb": 1854,
+   "mongod:5509": 13.8,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583735.7993124,
+   "machine_cpu": 38.6,
+   "mem_used_mb": 1833,
+   "mongod:5509": 13.4,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583737.8135161,
+   "machine_cpu": 34.9,
+   "mem_used_mb": 1804,
+   "mongod:5509": 11.9,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583739.8198943,
+   "machine_cpu": 40.3,
+   "mem_used_mb": 1811,
+   "mongod:5509": 15.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583741.8246586,
+   "machine_cpu": 30.8,
+   "mem_used_mb": 1811,
+   "mongod:5509": 11.5,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583743.8298986,
+   "machine_cpu": 29.5,
+   "mem_used_mb": 1809,
+   "mongod:5509": 13.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583745.8355112,
+   "machine_cpu": 27.3,
+   "mem_used_mb": 1797,
+   "mongod:5509": 9.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583747.8406432,
+   "machine_cpu": 31.9,
+   "mem_used_mb": 1800,
+   "mongod:5509": 15.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583749.8459516,
+   "machine_cpu": 20.0,
+   "mem_used_mb": 1800,
+   "mongod:5509": 8.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583751.8552752,
+   "machine_cpu": 63.3,
+   "mem_used_mb": 1851,
+   "mongod:5509": 11.4,
+   "python:5623": 1.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583753.86264,
+   "machine_cpu": 22.4,
+   "mem_used_mb": 1851,
+   "mongod:5509": 10.5,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583755.8687742,
+   "machine_cpu": 42.8,
+   "mem_used_mb": 1848,
+   "mongod:5509": 18.4,
+   "python:5623": 1.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583757.8773756,
+   "machine_cpu": 29.2,
+   "mem_used_mb": 1904,
+   "mongod:5509": 7.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583759.8841953,
+   "machine_cpu": 36.4,
+   "mem_used_mb": 1905,
+   "mongod:5509": 16.9,
+   "python:5623": 1.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583761.9056313,
+   "machine_cpu": 24.6,
+   "mem_used_mb": 1905,
+   "mongod:5509": 11.4,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583763.9154384,
+   "machine_cpu": 21.1,
+   "mem_used_mb": 1905,
+   "mongod:5509": 9.5,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583765.921184,
+   "machine_cpu": 27.5,
+   "mem_used_mb": 1905,
+   "mongod:5509": 13.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583767.926806,
+   "machine_cpu": 17.0,
+   "mem_used_mb": 1902,
+   "mongod:5509": 8.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583769.9337828,
+   "machine_cpu": 15.5,
+   "mem_used_mb": 1900,
+   "mongod:5509": 7.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583771.9413717,
+   "machine_cpu": 26.1,
+   "mem_used_mb": 1901,
+   "mongod:5509": 11.5,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583773.947179,
+   "machine_cpu": 23.9,
+   "mem_used_mb": 1812,
+   "mongod:5509": 11.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583775.9541671,
+   "machine_cpu": 15.8,
+   "mem_used_mb": 1810,
+   "mongod:5509": 6.5,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583777.9612067,
+   "machine_cpu": 17.5,
+   "mem_used_mb": 1810,
+   "mongod:5509": 7.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583779.9685752,
+   "machine_cpu": 31.5,
+   "mem_used_mb": 1810,
+   "mongod:5509": 12.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583781.973947,
+   "machine_cpu": 21.9,
+   "mem_used_mb": 1804,
+   "mongod:5509": 7.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583783.97916,
+   "machine_cpu": 19.2,
+   "mem_used_mb": 1804,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583785.986436,
+   "machine_cpu": 18.7,
+   "mem_used_mb": 1804,
+   "mongod:5509": 7.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583787.992362,
+   "machine_cpu": 15.1,
+   "mem_used_mb": 1804,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583789.997354,
+   "machine_cpu": 17.5,
+   "mem_used_mb": 1804,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583792.0027368,
+   "machine_cpu": 12.8,
+   "mem_used_mb": 1804,
+   "mongod:5509": 5.0,
+   "python:5623": 3.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583794.0086472,
+   "machine_cpu": 19.3,
+   "mem_used_mb": 1804,
+   "mongod:5509": 6.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583796.0182145,
+   "machine_cpu": 19.5,
+   "mem_used_mb": 1804,
+   "mongod:5509": 8.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583798.0251458,
+   "machine_cpu": 16.5,
+   "mem_used_mb": 1804,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583800.032172,
+   "machine_cpu": 16.8,
+   "mem_used_mb": 1804,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583802.0385072,
+   "machine_cpu": 12.9,
+   "mem_used_mb": 1804,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583804.0434494,
+   "machine_cpu": 20.2,
+   "mem_used_mb": 1804,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583806.0492554,
+   "machine_cpu": 17.7,
+   "mem_used_mb": 1804,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583808.0630305,
+   "machine_cpu": 16.7,
+   "mem_used_mb": 1807,
+   "mongod:5509": 9.4,
+   "python:5623": 3.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583810.0709505,
+   "machine_cpu": 21.1,
+   "mem_used_mb": 1808,
+   "mongod:5509": 5.5,
+   "python:5623": 1.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583812.0766206,
+   "machine_cpu": 21.6,
+   "mem_used_mb": 1806,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583814.0817304,
+   "machine_cpu": 19.1,
+   "mem_used_mb": 1806,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583816.1155276,
+   "machine_cpu": 22.1,
+   "mem_used_mb": 1810,
+   "mongod:5509": 5.9,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583818.1231802,
+   "machine_cpu": 13.0,
+   "mem_used_mb": 1810,
+   "mongod:5509": 4.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583820.1284547,
+   "machine_cpu": 20.9,
+   "mem_used_mb": 1816,
+   "mongod:5509": 5.5,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583822.1336873,
+   "machine_cpu": 25.3,
+   "mem_used_mb": 1818,
+   "mongod:5509": 7.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583824.1472774,
+   "machine_cpu": 16.9,
+   "mem_used_mb": 1818,
+   "mongod:5509": 6.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583826.154335,
+   "machine_cpu": 16.2,
+   "mem_used_mb": 1817,
+   "mongod:5509": 6.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583828.1593134,
+   "machine_cpu": 19.8,
+   "mem_used_mb": 1823,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583830.1652777,
+   "machine_cpu": 18.8,
+   "mem_used_mb": 1812,
+   "mongod:5509": 7.5,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583832.1743314,
+   "machine_cpu": 15.9,
+   "mem_used_mb": 1814,
+   "mongod:5509": 6.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583834.181346,
+   "machine_cpu": 16.9,
+   "mem_used_mb": 1812,
+   "mongod:5509": 7.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583836.1867218,
+   "machine_cpu": 15.0,
+   "mem_used_mb": 1817,
+   "mongod:5509": 7.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583838.192208,
+   "machine_cpu": 14.7,
+   "mem_used_mb": 1818,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583840.1974304,
+   "machine_cpu": 16.5,
+   "mem_used_mb": 1819,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583842.203755,
+   "machine_cpu": 20.8,
+   "mem_used_mb": 1824,
+   "mongod:5509": 7.5,
+   "python:5623": 3.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583844.2129874,
+   "machine_cpu": 14.9,
+   "mem_used_mb": 1824,
+   "mongod:5509": 6.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583846.2208753,
+   "machine_cpu": 21.6,
+   "mem_used_mb": 1852,
+   "mongod:5509": 6.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583848.228316,
+   "machine_cpu": 17.4,
+   "mem_used_mb": 1857,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583850.2349749,
+   "machine_cpu": 18.6,
+   "mem_used_mb": 1849,
+   "mongod:5509": 6.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583852.2539935,
+   "machine_cpu": 23.3,
+   "mem_used_mb": 1851,
+   "mongod:5509": 8.4,
+   "python:5623": 3.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583854.2601316,
+   "machine_cpu": 17.3,
+   "mem_used_mb": 1856,
+   "mongod:5509": 7.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583856.2780116,
+   "machine_cpu": 15.0,
+   "mem_used_mb": 1859,
+   "mongod:5509": 5.5,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583858.285332,
+   "machine_cpu": 21.1,
+   "mem_used_mb": 1842,
+   "mongod:5509": 6.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583860.2912405,
+   "machine_cpu": 11.0,
+   "mem_used_mb": 1842,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583862.2978644,
+   "machine_cpu": 13.5,
+   "mem_used_mb": 1836,
+   "mongod:5509": 6.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583864.3029544,
+   "machine_cpu": 17.9,
+   "mem_used_mb": 1851,
+   "mongod:5509": 5.5,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583866.3114057,
+   "machine_cpu": 21.8,
+   "mem_used_mb": 1849,
+   "mongod:5509": 9.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583868.3176763,
+   "machine_cpu": 23.6,
+   "mem_used_mb": 1849,
+   "mongod:5509": 8.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583870.3232968,
+   "machine_cpu": 15.7,
+   "mem_used_mb": 1841,
+   "mongod:5509": 6.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583872.3286781,
+   "machine_cpu": 21.7,
+   "mem_used_mb": 1839,
+   "mongod:5509": 8.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583874.3340752,
+   "machine_cpu": 25.4,
+   "mem_used_mb": 1839,
+   "mongod:5509": 9.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583876.345352,
+   "machine_cpu": 24.9,
+   "mem_used_mb": 1835,
+   "mongod:5509": 8.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583878.3539455,
+   "machine_cpu": 26.4,
+   "mem_used_mb": 1836,
+   "mongod:5509": 9.0,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583880.3608077,
+   "machine_cpu": 28.1,
+   "mem_used_mb": 1836,
+   "mongod:5509": 11.5,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583882.368264,
+   "machine_cpu": 31.8,
+   "mem_used_mb": 1837,
+   "mongod:5509": 10.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583884.374869,
+   "machine_cpu": 26.2,
+   "mem_used_mb": 1837,
+   "mongod:5509": 9.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583886.381939,
+   "machine_cpu": 26.6,
+   "mem_used_mb": 1838,
+   "mongod:5509": 11.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583888.387036,
+   "machine_cpu": 27.8,
+   "mem_used_mb": 1846,
+   "mongod:5509": 10.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583890.39408,
+   "machine_cpu": 31.3,
+   "mem_used_mb": 1843,
+   "mongod:5509": 10.0,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583892.4001007,
+   "machine_cpu": 31.8,
+   "mem_used_mb": 1840,
+   "mongod:5509": 10.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583894.4051602,
+   "machine_cpu": 33.1,
+   "mem_used_mb": 1844,
+   "mongod:5509": 11.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583896.4142485,
+   "machine_cpu": 25.6,
+   "mem_used_mb": 1846,
+   "mongod:5509": 10.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583898.421752,
+   "machine_cpu": 36.7,
+   "mem_used_mb": 1863,
+   "mongod:5509": 11.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583900.4274757,
+   "machine_cpu": 31.0,
+   "mem_used_mb": 1862,
+   "mongod:5509": 9.5,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583902.434766,
+   "machine_cpu": 27.6,
+   "mem_used_mb": 1862,
+   "mongod:5509": 9.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583904.4407516,
+   "machine_cpu": 31.9,
+   "mem_used_mb": 1866,
+   "mongod:5509": 11.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583906.4460006,
+   "machine_cpu": 27.4,
+   "mem_used_mb": 1859,
+   "mongod:5509": 9.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583908.451267,
+   "machine_cpu": 25.4,
+   "mem_used_mb": 1865,
+   "mongod:5509": 9.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583910.456344,
+   "machine_cpu": 22.9,
+   "mem_used_mb": 1860,
+   "mongod:5509": 8.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583912.4638796,
+   "machine_cpu": 17.9,
+   "mem_used_mb": 1858,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583914.4689982,
+   "machine_cpu": 15.3,
+   "mem_used_mb": 1861,
+   "mongod:5509": 6.0,
+   "python:5623": 2.0,
+   "python:6652": 1.0
+  },
+  {
+   "t": 1792583916.4736972,
+   "machine_cpu": 16.1,
+   "mem_used_mb": 1862,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583918.4786937,
+   "machine_cpu": 12.3,
+   "mem_used_mb": 1865,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583920.484217,
+   "machine_cpu": 9.5,
+   "mem_used_mb": 1865,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583922.4911287,
+   "machine_cpu": 17.0,
+   "mem_used_mb": 1864,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583924.4976318,
+   "machine_cpu": 16.2,
+   "mem_used_mb": 1855,
+   "mongod:5509": 5.5,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583926.5076098,
+   "machine_cpu": 20.3,
+   "mem_used_mb": 1860,
+   "mongod:5509": 6.5,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583928.5128393,
+   "machine_cpu": 17.0,
+   "mem_used_mb": 1857,
+   "mongod:5509": 8.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583930.5194347,
+   "machine_cpu": 15.9,
+   "mem_used_mb": 1860,
+   "mongod:5509": 6.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583932.5252295,
+   "machine_cpu": 18.0,
+   "mem_used_mb": 1861,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583934.5325549,
+   "machine_cpu": 16.9,
+   "mem_used_mb": 1854,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583936.5410407,
+   "machine_cpu": 16.7,
+   "mem_used_mb": 1856,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583938.5474255,
+   "machine_cpu": 22.3,
+   "mem_used_mb": 1858,
+   "mongod:5509": 7.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583940.5552766,
+   "machine_cpu": 22.2,
+   "mem_used_mb": 1859,
+   "mongod:5509": 6.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583942.5609233,
+   "machine_cpu": 12.9,
+   "mem_used_mb": 1858,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583944.5720723,
+   "machine_cpu": 17.5,
+   "mem_used_mb": 1858,
+   "mongod:5509": 7.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583946.5802844,
+   "machine_cpu": 12.6,
+   "mem_used_mb": 1858,
+   "mongod:5509": 5.5,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583948.5879304,
+   "machine_cpu": 14.4,
+   "mem_used_mb": 1846,
+   "mongod:5509": 6.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583950.592871,
+   "machine_cpu": 18.1,
+   "mem_used_mb": 1846,
+   "mongod:5509": 6.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583952.599728,
+   "machine_cpu": 16.9,
+   "mem_used_mb": 1839,
+   "mongod:5509": 5.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583954.60623,
+   "machine_cpu": 18.7,
+   "mem_used_mb": 1843,
+   "mongod:5509": 7.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583956.611976,
+   "machine_cpu": 16.5,
+   "mem_used_mb": 1847,
+   "mongod:5509": 5.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583958.6170206,
+   "machine_cpu": 15.4,
+   "mem_used_mb": 1853,
+   "mongod:5509": 5.5,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583960.6239593,
+   "machine_cpu": 15.9,
+   "mem_used_mb": 1863,
+   "mongod:5509": 5.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583962.6292381,
+   "machine_cpu": 20.1,
+   "mem_used_mb": 1884,
+   "mongod:5509": 7.0,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583964.6345189,
+   "machine_cpu": 9.0,
+   "mem_used_mb": 1883,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583966.642024,
+   "machine_cpu": 14.5,
+   "mem_used_mb": 1880,
+   "mongod:5509": 5.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583968.6471376,
+   "machine_cpu": 11.5,
+   "mem_used_mb": 1871,
+   "mongod:5509": 5.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583970.6590674,
+   "machine_cpu": 14.1,
+   "mem_used_mb": 1874,
+   "mongod:5509": 5.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583972.6671686,
+   "machine_cpu": 15.0,
+   "mem_used_mb": 1874,
+   "mongod:5509": 7.0,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583974.673103,
+   "machine_cpu": 16.8,
+   "mem_used_mb": 1861,
+   "mongod:5509": 6.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583976.6797276,
+   "machine_cpu": 14.9,
+   "mem_used_mb": 1861,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583978.684971,
+   "machine_cpu": 14.0,
+   "mem_used_mb": 1855,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583980.7002845,
+   "machine_cpu": 14.3,
+   "mem_used_mb": 1854,
+   "mongod:5509": 6.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583982.7068572,
+   "machine_cpu": 10.1,
+   "mem_used_mb": 1854,
+   "mongod:5509": 5.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583984.7125363,
+   "machine_cpu": 10.6,
+   "mem_used_mb": 1851,
+   "mongod:5509": 5.5,
+   "python:5623": 3.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583986.7177806,
+   "machine_cpu": 10.0,
+   "mem_used_mb": 1852,
+   "mongod:5509": 5.5,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792583988.722802,
+   "machine_cpu": 16.0,
+   "mem_used_mb": 1854,
+   "mongod:5509": 7.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583990.7280066,
+   "machine_cpu": 11.3,
+   "mem_used_mb": 1854,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583992.733924,
+   "machine_cpu": 11.6,
+   "mem_used_mb": 1858,
+   "mongod:5509": 5.5,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583994.740672,
+   "machine_cpu": 10.4,
+   "mem_used_mb": 1858,
+   "mongod:5509": 5.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583996.747282,
+   "machine_cpu": 14.4,
+   "mem_used_mb": 1860,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792583998.7524855,
+   "machine_cpu": 13.6,
+   "mem_used_mb": 1869,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584000.7591887,
+   "machine_cpu": 17.7,
+   "mem_used_mb": 1860,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584002.7648432,
+   "machine_cpu": 17.0,
+   "mem_used_mb": 1867,
+   "mongod:5509": 5.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584004.7761083,
+   "machine_cpu": 12.0,
+   "mem_used_mb": 1871,
+   "mongod:5509": 6.0,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584006.7844143,
+   "machine_cpu": 11.1,
+   "mem_used_mb": 1870,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584008.7917752,
+   "machine_cpu": 47.6,
+   "mem_used_mb": 1940,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584010.7986789,
+   "machine_cpu": 61.3,
+   "mem_used_mb": 1967,
+   "mongod:5509": 5.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584012.8106503,
+   "machine_cpu": 24.2,
+   "mem_used_mb": 1896,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584014.8233926,
+   "machine_cpu": 19.1,
+   "mem_used_mb": 1912,
+   "mongod:5509": 5.0,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584016.830738,
+   "machine_cpu": 60.2,
+   "mem_used_mb": 1960,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584018.8378038,
+   "machine_cpu": 55.8,
+   "mem_used_mb": 1970,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584020.8440223,
+   "machine_cpu": 59.5,
+   "mem_used_mb": 1951,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584022.8512342,
+   "machine_cpu": 42.1,
+   "mem_used_mb": 1852,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584024.8581364,
+   "machine_cpu": 14.3,
+   "mem_used_mb": 1841,
+   "mongod:5509": 6.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584026.8648384,
+   "machine_cpu": 37.3,
+   "mem_used_mb": 1888,
+   "mongod:5509": 5.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584028.8723004,
+   "machine_cpu": 60.5,
+   "mem_used_mb": 1914,
+   "mongod:5509": 5.0,
+   "python:5623": 1.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584030.8812673,
+   "machine_cpu": 54.4,
+   "mem_used_mb": 1914,
+   "mongod:5509": 6.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584032.8861973,
+   "machine_cpu": 54.1,
+   "mem_used_mb": 1916,
+   "mongod:5509": 5.5,
+   "python:5623": 1.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584034.8952873,
+   "machine_cpu": 32.7,
+   "mem_used_mb": 1816,
+   "mongod:5509": 6.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584036.9013746,
+   "machine_cpu": 14.6,
+   "mem_used_mb": 1816,
+   "mongod:5509": 7.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584038.9064121,
+   "machine_cpu": 58.9,
+   "mem_used_mb": 1905,
+   "mongod:5509": 7.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584040.9116616,
+   "machine_cpu": 54.7,
+   "mem_used_mb": 1915,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584042.9171937,
+   "machine_cpu": 60.8,
+   "mem_used_mb": 1917,
+   "mongod:5509": 6.0,
+   "python:5623": 1.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584044.9238276,
+   "machine_cpu": 31.5,
+   "mem_used_mb": 1823,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584046.9317615,
+   "machine_cpu": 13.4,
+   "mem_used_mb": 1823,
+   "mongod:5509": 6.0,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584048.9364276,
+   "machine_cpu": 17.6,
+   "mem_used_mb": 1830,
+   "mongod:5509": 8.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584050.946129,
+   "machine_cpu": 13.2,
+   "mem_used_mb": 1830,
+   "mongod:5509": 6.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584052.951185,
+   "machine_cpu": 12.1,
+   "mem_used_mb": 1830,
+   "mongod:5509": 6.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584054.9558656,
+   "machine_cpu": 12.2,
+   "mem_used_mb": 1830,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584056.961423,
+   "machine_cpu": 17.3,
+   "mem_used_mb": 1830,
+   "mongod:5509": 7.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584058.9677322,
+   "machine_cpu": 14.6,
+   "mem_used_mb": 1823,
+   "mongod:5509": 7.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584060.9741688,
+   "machine_cpu": 17.5,
+   "mem_used_mb": 1825,
+   "mongod:5509": 8.0,
+   "python:5623": 3.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584062.9815066,
+   "machine_cpu": 12.3,
+   "mem_used_mb": 1825,
+   "mongod:5509": 6.5,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584064.9865224,
+   "machine_cpu": 9.3,
+   "mem_used_mb": 1825,
+   "mongod:5509": 5.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584066.9926596,
+   "machine_cpu": 10.4,
+   "mem_used_mb": 1825,
+   "mongod:5509": 6.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584068.9979806,
+   "machine_cpu": 10.0,
+   "mem_used_mb": 1825,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584071.0085893,
+   "machine_cpu": 11.2,
+   "mem_used_mb": 1824,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584073.0140643,
+   "machine_cpu": 17.1,
+   "mem_used_mb": 1824,
+   "mongod:5509": 6.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584075.020316,
+   "machine_cpu": 26.5,
+   "mem_used_mb": 1825,
+   "mongod:5509": 9.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584077.0276248,
+   "machine_cpu": 23.9,
+   "mem_used_mb": 1826,
+   "mongod:5509": 9.0,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584079.0371187,
+   "machine_cpu": 16.9,
+   "mem_used_mb": 1826,
+   "mongod:5509": 7.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584081.0452402,
+   "machine_cpu": 25.7,
+   "mem_used_mb": 1826,
+   "mongod:5509": 10.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584083.0585446,
+   "machine_cpu": 17.8,
+   "mem_used_mb": 1826,
+   "mongod:5509": 7.9,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584085.0636156,
+   "machine_cpu": 14.4,
+   "mem_used_mb": 1826,
+   "mongod:5509": 6.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584087.0721915,
+   "machine_cpu": 16.1,
+   "mem_used_mb": 1826,
+   "mongod:5509": 7.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584089.0774722,
+   "machine_cpu": 21.9,
+   "mem_used_mb": 1826,
+   "mongod:5509": 9.5,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584091.1123252,
+   "machine_cpu": 25.0,
+   "mem_used_mb": 1826,
+   "mongod:5509": 9.8,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584093.120118,
+   "machine_cpu": 16.8,
+   "mem_used_mb": 1826,
+   "mongod:5509": 6.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584095.1259196,
+   "machine_cpu": 21.1,
+   "mem_used_mb": 1826,
+   "mongod:5509": 9.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584097.130844,
+   "machine_cpu": 22.4,
+   "mem_used_mb": 1826,
+   "mongod:5509": 9.5,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584099.1377752,
+   "machine_cpu": 18.6,
+   "mem_used_mb": 1826,
+   "mongod:5509": 8.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584101.1446605,
+   "machine_cpu": 15.7,
+   "mem_used_mb": 1826,
+   "mongod:5509": 7.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584103.1509936,
+   "machine_cpu": 17.9,
+   "mem_used_mb": 1826,
+   "mongod:5509": 7.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584105.1578608,
+   "machine_cpu": 13.6,
+   "mem_used_mb": 1826,
+   "mongod:5509": 6.0,
+   "python:5623": 3.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584107.1640806,
+   "machine_cpu": 21.6,
+   "mem_used_mb": 1826,
+   "mongod:5509": 9.0,
+   "python:5623": 1.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584109.169485,
+   "machine_cpu": 20.6,
+   "mem_used_mb": 1826,
+   "mongod:5509": 10.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584111.1764424,
+   "machine_cpu": 18.4,
+   "mem_used_mb": 1826,
+   "mongod:5509": 8.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584113.1877637,
+   "machine_cpu": 21.0,
+   "mem_used_mb": 1826,
+   "mongod:5509": 9.4,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584115.1940699,
+   "machine_cpu": 23.2,
+   "mem_used_mb": 1826,
+   "mongod:5509": 9.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584117.2003112,
+   "machine_cpu": 32.6,
+   "mem_used_mb": 1826,
+   "mongod:5509": 12.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584119.207624,
+   "machine_cpu": 16.4,
+   "mem_used_mb": 1826,
+   "mongod:5509": 7.0,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584121.2148561,
+   "machine_cpu": 25.0,
+   "mem_used_mb": 1830,
+   "mongod:5509": 9.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584123.2205439,
+   "machine_cpu": 19.0,
+   "mem_used_mb": 1830,
+   "mongod:5509": 8.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584125.2273803,
+   "machine_cpu": 16.9,
+   "mem_used_mb": 1830,
+   "mongod:5509": 6.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584127.2361104,
+   "machine_cpu": 20.2,
+   "mem_used_mb": 1834,
+   "mongod:5509": 9.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584129.2445376,
+   "machine_cpu": 22.5,
+   "mem_used_mb": 1834,
+   "mongod:5509": 9.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584131.2635727,
+   "machine_cpu": 16.3,
+   "mem_used_mb": 1834,
+   "mongod:5509": 7.4,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584133.2697117,
+   "machine_cpu": 18.9,
+   "mem_used_mb": 1834,
+   "mongod:5509": 8.0,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584135.2759798,
+   "machine_cpu": 9.8,
+   "mem_used_mb": 1834,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584137.2824743,
+   "machine_cpu": 18.9,
+   "mem_used_mb": 1834,
+   "mongod:5509": 8.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584139.2888389,
+   "machine_cpu": 18.7,
+   "mem_used_mb": 1834,
+   "mongod:5509": 8.0,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584141.2938411,
+   "machine_cpu": 17.8,
+   "mem_used_mb": 1834,
+   "mongod:5509": 7.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584143.2991617,
+   "machine_cpu": 19.8,
+   "mem_used_mb": 1834,
+   "mongod:5509": 8.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584145.3040876,
+   "machine_cpu": 16.7,
+   "mem_used_mb": 1834,
+   "mongod:5509": 7.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584147.308815,
+   "machine_cpu": 8.9,
+   "mem_used_mb": 1834,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584149.3137527,
+   "machine_cpu": 12.4,
+   "mem_used_mb": 1834,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584151.3186707,
+   "machine_cpu": 22.4,
+   "mem_used_mb": 1833,
+   "mongod:5509": 8.5,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584153.32427,
+   "machine_cpu": 13.9,
+   "mem_used_mb": 1833,
+   "mongod:5509": 6.5,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584155.331421,
+   "machine_cpu": 15.5,
+   "mem_used_mb": 1833,
+   "mongod:5509": 6.5,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584157.3365862,
+   "machine_cpu": 21.7,
+   "mem_used_mb": 1833,
+   "mongod:5509": 8.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584159.3415196,
+   "machine_cpu": 19.5,
+   "mem_used_mb": 1833,
+   "mongod:5509": 7.5,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584161.347652,
+   "machine_cpu": 15.3,
+   "mem_used_mb": 1833,
+   "mongod:5509": 6.5,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584163.359781,
+   "machine_cpu": 12.7,
+   "mem_used_mb": 1828,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584165.3686023,
+   "machine_cpu": 14.7,
+   "mem_used_mb": 1828,
+   "mongod:5509": 6.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584167.374464,
+   "machine_cpu": 13.6,
+   "mem_used_mb": 1827,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584169.3818908,
+   "machine_cpu": 14.8,
+   "mem_used_mb": 1827,
+   "mongod:5509": 8.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584171.3891296,
+   "machine_cpu": 14.3,
+   "mem_used_mb": 1827,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584173.3943505,
+   "machine_cpu": 12.3,
+   "mem_used_mb": 1823,
+   "mongod:5509": 5.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584175.3998177,
+   "machine_cpu": 18.3,
+   "mem_used_mb": 1827,
+   "mongod:5509": 6.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584177.4068477,
+   "machine_cpu": 11.3,
+   "mem_used_mb": 1827,
+   "mongod:5509": 5.5,
+   "python:5623": 3.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584179.4132583,
+   "machine_cpu": 15.4,
+   "mem_used_mb": 1827,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584181.4204016,
+   "machine_cpu": 11.6,
+   "mem_used_mb": 1827,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584183.4259522,
+   "machine_cpu": 14.2,
+   "mem_used_mb": 1827,
+   "mongod:5509": 6.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584185.4315693,
+   "machine_cpu": 10.7,
+   "mem_used_mb": 1827,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584187.4385822,
+   "machine_cpu": 10.5,
+   "mem_used_mb": 1827,
+   "mongod:5509": 5.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584189.4444697,
+   "machine_cpu": 15.1,
+   "mem_used_mb": 1827,
+   "mongod:5509": 6.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584191.4497175,
+   "machine_cpu": 14.2,
+   "mem_used_mb": 1827,
+   "mongod:5509": 6.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584193.4556298,
+   "machine_cpu": 13.3,
+   "mem_used_mb": 1827,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584195.47114,
+   "machine_cpu": 11.5,
+   "mem_used_mb": 1827,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584197.4781287,
+   "machine_cpu": 13.3,
+   "mem_used_mb": 1827,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584199.4844215,
+   "machine_cpu": 13.6,
+   "mem_used_mb": 1827,
+   "mongod:5509": 7.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584201.4914098,
+   "machine_cpu": 18.0,
+   "mem_used_mb": 1827,
+   "mongod:5509": 7.0,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584203.49649,
+   "machine_cpu": 7.5,
+   "mem_used_mb": 1827,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584205.5016358,
+   "machine_cpu": 10.1,
+   "mem_used_mb": 1827,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584207.508735,
+   "machine_cpu": 9.4,
+   "mem_used_mb": 1827,
+   "mongod:5509": 5.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584209.514571,
+   "machine_cpu": 6.8,
+   "mem_used_mb": 1827,
+   "mongod:5509": 4.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584211.5215518,
+   "machine_cpu": 9.2,
+   "mem_used_mb": 1827,
+   "mongod:5509": 5.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584213.527315,
+   "machine_cpu": 8.2,
+   "mem_used_mb": 1827,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584215.533151,
+   "machine_cpu": 7.2,
+   "mem_used_mb": 1827,
+   "mongod:5509": 4.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584217.538339,
+   "machine_cpu": 9.7,
+   "mem_used_mb": 1827,
+   "mongod:5509": 5.5,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584219.545449,
+   "machine_cpu": 8.0,
+   "mem_used_mb": 1827,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584221.5541155,
+   "machine_cpu": 6.8,
+   "mem_used_mb": 1827,
+   "mongod:5509": 4.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584223.561201,
+   "machine_cpu": 7.7,
+   "mem_used_mb": 1827,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584225.5672047,
+   "machine_cpu": 7.0,
+   "mem_used_mb": 1827,
+   "mongod:5509": 4.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584227.571983,
+   "machine_cpu": 7.3,
+   "mem_used_mb": 1827,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584229.577268,
+   "machine_cpu": 9.4,
+   "mem_used_mb": 1827,
+   "mongod:5509": 6.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584231.5825946,
+   "machine_cpu": 9.2,
+   "mem_used_mb": 1827,
+   "mongod:5509": 4.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584233.587753,
+   "machine_cpu": 7.3,
+   "mem_used_mb": 1827,
+   "mongod:5509": 5.0,
+   "python:5623": 3.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584235.5951653,
+   "machine_cpu": 8.0,
+   "mem_used_mb": 1827,
+   "mongod:5509": 4.5,
+   "python:5623": 1.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584237.6013675,
+   "machine_cpu": 7.3,
+   "mem_used_mb": 1827,
+   "mongod:5509": 5.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584239.6074,
+   "machine_cpu": 8.4,
+   "mem_used_mb": 1827,
+   "mongod:5509": 4.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584241.6138542,
+   "machine_cpu": 10.0,
+   "mem_used_mb": 1827,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584243.6191924,
+   "machine_cpu": 7.0,
+   "mem_used_mb": 1827,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584245.6242857,
+   "machine_cpu": 7.5,
+   "mem_used_mb": 1827,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584247.6291132,
+   "machine_cpu": 8.2,
+   "mem_used_mb": 1827,
+   "mongod:5509": 4.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584249.6380272,
+   "machine_cpu": 6.5,
+   "mem_used_mb": 1827,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584251.6438005,
+   "machine_cpu": 7.2,
+   "mem_used_mb": 1827,
+   "mongod:5509": 4.0,
+   "python:5623": 3.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584253.6513393,
+   "machine_cpu": 9.2,
+   "mem_used_mb": 1827,
+   "mongod:5509": 5.0,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584255.657102,
+   "machine_cpu": 7.8,
+   "mem_used_mb": 1827,
+   "mongod:5509": 4.5,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584257.6633832,
+   "machine_cpu": 8.7,
+   "mem_used_mb": 1827,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584259.6698923,
+   "machine_cpu": 7.8,
+   "mem_used_mb": 1827,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584261.675013,
+   "machine_cpu": 8.3,
+   "mem_used_mb": 1827,
+   "mongod:5509": 4.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584263.6814313,
+   "machine_cpu": 37.4,
+   "mem_used_mb": 1863,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584265.6881413,
+   "machine_cpu": 11.7,
+   "mem_used_mb": 1857,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584267.6935608,
+   "machine_cpu": 10.9,
+   "mem_used_mb": 1851,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584269.699214,
+   "machine_cpu": 9.2,
+   "mem_used_mb": 1847,
+   "mongod:5509": 3.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584271.7061675,
+   "machine_cpu": 10.8,
+   "mem_used_mb": 1847,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584273.7115111,
+   "machine_cpu": 9.5,
+   "mem_used_mb": 1847,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584275.7166657,
+   "machine_cpu": 7.1,
+   "mem_used_mb": 1847,
+   "mongod:5509": 4.0,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584277.7252069,
+   "machine_cpu": 9.0,
+   "mem_used_mb": 1849,
+   "mongod:5509": 4.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584279.7310517,
+   "machine_cpu": 9.1,
+   "mem_used_mb": 1849,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584281.7362063,
+   "machine_cpu": 10.1,
+   "mem_used_mb": 1850,
+   "mongod:5509": 4.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584283.7420943,
+   "machine_cpu": 8.5,
+   "mem_used_mb": 1840,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584285.7472334,
+   "machine_cpu": 8.5,
+   "mem_used_mb": 1840,
+   "mongod:5509": 4.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584287.753577,
+   "machine_cpu": 10.8,
+   "mem_used_mb": 1836,
+   "mongod:5509": 5.5,
+   "python:5623": 1.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584289.7587566,
+   "machine_cpu": 9.5,
+   "mem_used_mb": 1836,
+   "mongod:5509": 5.5,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584291.7640584,
+   "machine_cpu": 11.3,
+   "mem_used_mb": 1836,
+   "mongod:5509": 5.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584293.7695506,
+   "machine_cpu": 8.5,
+   "mem_used_mb": 1836,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584295.7768984,
+   "machine_cpu": 10.4,
+   "mem_used_mb": 1836,
+   "mongod:5509": 4.0,
+   "python:5623": 1.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584297.7825816,
+   "machine_cpu": 10.2,
+   "mem_used_mb": 1836,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584299.7891707,
+   "machine_cpu": 9.5,
+   "mem_used_mb": 1836,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584301.7947807,
+   "machine_cpu": 10.7,
+   "mem_used_mb": 1836,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584303.8002594,
+   "machine_cpu": 12.5,
+   "mem_used_mb": 1837,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584305.8069077,
+   "machine_cpu": 8.7,
+   "mem_used_mb": 1837,
+   "mongod:5509": 4.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584307.8137543,
+   "machine_cpu": 12.6,
+   "mem_used_mb": 1852,
+   "mongod:5509": 5.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584309.8221817,
+   "machine_cpu": 12.2,
+   "mem_used_mb": 1854,
+   "mongod:5509": 4.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584311.829151,
+   "machine_cpu": 13.3,
+   "mem_used_mb": 1849,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584313.8357322,
+   "machine_cpu": 8.3,
+   "mem_used_mb": 1848,
+   "mongod:5509": 4.0,
+   "python:5623": 2.5,
+   "python:6652": 1.0
+  },
+  {
+   "t": 1792584315.8422642,
+   "machine_cpu": 11.5,
+   "mem_used_mb": 1848,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584317.8470533,
+   "machine_cpu": 10.3,
+   "mem_used_mb": 1857,
+   "mongod:5509": 4.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584319.8534923,
+   "machine_cpu": 9.2,
+   "mem_used_mb": 1857,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584321.8591585,
+   "machine_cpu": 7.8,
+   "mem_used_mb": 1857,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584323.864715,
+   "machine_cpu": 7.3,
+   "mem_used_mb": 1857,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584325.8702157,
+   "machine_cpu": 9.5,
+   "mem_used_mb": 1857,
+   "mongod:5509": 4.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584327.8776066,
+   "machine_cpu": 11.0,
+   "mem_used_mb": 1857,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584329.8829567,
+   "machine_cpu": 8.5,
+   "mem_used_mb": 1852,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584331.8897026,
+   "machine_cpu": 11.6,
+   "mem_used_mb": 1852,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584333.8978882,
+   "machine_cpu": 11.4,
+   "mem_used_mb": 1856,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584335.9050198,
+   "machine_cpu": 9.0,
+   "mem_used_mb": 1853,
+   "mongod:5509": 5.0,
+   "python:5623": 3.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584337.9105685,
+   "machine_cpu": 10.0,
+   "mem_used_mb": 1853,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584339.9166281,
+   "machine_cpu": 10.0,
+   "mem_used_mb": 1853,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584341.921993,
+   "machine_cpu": 8.4,
+   "mem_used_mb": 1853,
+   "mongod:5509": 4.5,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584343.9273884,
+   "machine_cpu": 9.5,
+   "mem_used_mb": 1853,
+   "mongod:5509": 5.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584345.9360855,
+   "machine_cpu": 9.3,
+   "mem_used_mb": 1853,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584347.9426951,
+   "machine_cpu": 8.8,
+   "mem_used_mb": 1853,
+   "mongod:5509": 6.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584349.949287,
+   "machine_cpu": 9.0,
+   "mem_used_mb": 1853,
+   "mongod:5509": 5.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584351.9542046,
+   "machine_cpu": 9.2,
+   "mem_used_mb": 1853,
+   "mongod:5509": 5.5,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584353.9613,
+   "machine_cpu": 10.1,
+   "mem_used_mb": 1853,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584355.9669867,
+   "machine_cpu": 10.0,
+   "mem_used_mb": 1850,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584357.9722173,
+   "machine_cpu": 8.5,
+   "mem_used_mb": 1850,
+   "mongod:5509": 4.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584359.9773374,
+   "machine_cpu": 7.8,
+   "mem_used_mb": 1850,
+   "mongod:5509": 4.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584361.9824748,
+   "machine_cpu": 10.8,
+   "mem_used_mb": 1850,
+   "mongod:5509": 5.0,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584363.9883697,
+   "machine_cpu": 9.0,
+   "mem_used_mb": 1850,
+   "mongod:5509": 4.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584365.9934125,
+   "machine_cpu": 10.2,
+   "mem_used_mb": 1850,
+   "mongod:5509": 5.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584367.9994211,
+   "machine_cpu": 9.5,
+   "mem_used_mb": 1850,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584370.006619,
+   "machine_cpu": 16.1,
+   "mem_used_mb": 1852,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584372.0126567,
+   "machine_cpu": 12.9,
+   "mem_used_mb": 1849,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584374.018062,
+   "machine_cpu": 8.2,
+   "mem_used_mb": 1850,
+   "mongod:5509": 4.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584376.0248916,
+   "machine_cpu": 10.7,
+   "mem_used_mb": 1851,
+   "mongod:5509": 5.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584378.0301723,
+   "machine_cpu": 7.2,
+   "mem_used_mb": 1851,
+   "mongod:5509": 4.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584380.0378299,
+   "machine_cpu": 9.0,
+   "mem_used_mb": 1851,
+   "mongod:5509": 5.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584382.0435574,
+   "machine_cpu": 9.1,
+   "mem_used_mb": 1851,
+   "mongod:5509": 4.0,
+   "python:5623": 1.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584384.0505054,
+   "machine_cpu": 12.0,
+   "mem_used_mb": 1860,
+   "mongod:5509": 5.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584386.0583417,
+   "machine_cpu": 8.8,
+   "mem_used_mb": 1854,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584388.0637965,
+   "machine_cpu": 9.8,
+   "mem_used_mb": 1853,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584390.0737188,
+   "machine_cpu": 48.1,
+   "mem_used_mb": 1928,
+   "mongod:5509": 4.0,
+   "python:5623": 1.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584392.0795276,
+   "machine_cpu": 16.5,
+   "mem_used_mb": 1904,
+   "mongod:5509": 5.5,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584394.0875754,
+   "machine_cpu": 12.1,
+   "mem_used_mb": 1890,
+   "mongod:5509": 5.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584396.1045928,
+   "machine_cpu": 7.0,
+   "mem_used_mb": 1880,
+   "mongod:5509": 4.5,
+   "python:5623": 3.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584398.110294,
+   "machine_cpu": 9.9,
+   "mem_used_mb": 1864,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584400.1169634,
+   "machine_cpu": 10.9,
+   "mem_used_mb": 1858,
+   "mongod:5509": 5.0,
+   "python:5623": 3.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584402.1240082,
+   "machine_cpu": 12.3,
+   "mem_used_mb": 1856,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584404.1304526,
+   "machine_cpu": 14.0,
+   "mem_used_mb": 1836,
+   "mongod:5509": 5.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584406.1384184,
+   "machine_cpu": 7.3,
+   "mem_used_mb": 1836,
+   "mongod:5509": 4.5,
+   "python:5623": 3.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584408.1452677,
+   "machine_cpu": 11.4,
+   "mem_used_mb": 1831,
+   "mongod:5509": 7.5,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584410.1505232,
+   "machine_cpu": 7.3,
+   "mem_used_mb": 1831,
+   "mongod:5509": 4.5,
+   "python:5623": 1.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584412.1578927,
+   "machine_cpu": 8.8,
+   "mem_used_mb": 1831,
+   "mongod:5509": 6.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584414.1630259,
+   "machine_cpu": 9.0,
+   "mem_used_mb": 1831,
+   "mongod:5509": 4.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584416.1699438,
+   "machine_cpu": 9.7,
+   "mem_used_mb": 1831,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584418.1754642,
+   "machine_cpu": 8.3,
+   "mem_used_mb": 1831,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584420.1827295,
+   "machine_cpu": 9.7,
+   "mem_used_mb": 1831,
+   "mongod:5509": 5.5,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584422.192758,
+   "machine_cpu": 9.8,
+   "mem_used_mb": 1831,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584424.1999292,
+   "machine_cpu": 9.4,
+   "mem_used_mb": 1831,
+   "mongod:5509": 5.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584426.206954,
+   "machine_cpu": 9.1,
+   "mem_used_mb": 1831,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584428.2120423,
+   "machine_cpu": 10.4,
+   "mem_used_mb": 1831,
+   "mongod:5509": 4.0,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584430.2192466,
+   "machine_cpu": 10.5,
+   "mem_used_mb": 1835,
+   "mongod:5509": 5.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584432.2310534,
+   "machine_cpu": 9.9,
+   "mem_used_mb": 1835,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584434.2364647,
+   "machine_cpu": 10.8,
+   "mem_used_mb": 1834,
+   "mongod:5509": 5.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584436.2423482,
+   "machine_cpu": 8.8,
+   "mem_used_mb": 1834,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584438.2489893,
+   "machine_cpu": 21.9,
+   "mem_used_mb": 1854,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584440.2543504,
+   "machine_cpu": 9.7,
+   "mem_used_mb": 1839,
+   "mongod:5509": 5.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584442.262317,
+   "machine_cpu": 7.1,
+   "mem_used_mb": 1835,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584444.2674642,
+   "machine_cpu": 9.7,
+   "mem_used_mb": 1830,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584446.2729096,
+   "machine_cpu": 9.5,
+   "mem_used_mb": 1830,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584448.2782874,
+   "machine_cpu": 9.0,
+   "mem_used_mb": 1830,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584450.2858279,
+   "machine_cpu": 10.2,
+   "mem_used_mb": 1830,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584452.2910686,
+   "machine_cpu": 10.4,
+   "mem_used_mb": 1830,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584454.2971954,
+   "machine_cpu": 8.0,
+   "mem_used_mb": 1830,
+   "mongod:5509": 4.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584456.3061361,
+   "machine_cpu": 14.1,
+   "mem_used_mb": 1830,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584458.3120832,
+   "machine_cpu": 8.3,
+   "mem_used_mb": 1830,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584460.3186872,
+   "machine_cpu": 9.8,
+   "mem_used_mb": 1830,
+   "mongod:5509": 4.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584462.3237407,
+   "machine_cpu": 9.8,
+   "mem_used_mb": 1830,
+   "mongod:5509": 5.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584464.3291974,
+   "machine_cpu": 9.8,
+   "mem_used_mb": 1830,
+   "mongod:5509": 5.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584466.338224,
+   "machine_cpu": 8.5,
+   "mem_used_mb": 1830,
+   "mongod:5509": 4.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584468.3447075,
+   "machine_cpu": 11.6,
+   "mem_used_mb": 1830,
+   "mongod:5509": 8.0,
+   "python:5623": 3.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584470.351769,
+   "machine_cpu": 7.6,
+   "mem_used_mb": 1829,
+   "mongod:5509": 4.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584472.357734,
+   "machine_cpu": 8.1,
+   "mem_used_mb": 1829,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584474.3631542,
+   "machine_cpu": 8.0,
+   "mem_used_mb": 1829,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584476.370574,
+   "machine_cpu": 10.0,
+   "mem_used_mb": 1829,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584478.37718,
+   "machine_cpu": 10.4,
+   "mem_used_mb": 1829,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584480.3830733,
+   "machine_cpu": 8.2,
+   "mem_used_mb": 1829,
+   "mongod:5509": 4.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584482.389928,
+   "machine_cpu": 9.2,
+   "mem_used_mb": 1829,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584484.3953629,
+   "machine_cpu": 9.2,
+   "mem_used_mb": 1829,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584486.400544,
+   "machine_cpu": 8.3,
+   "mem_used_mb": 1829,
+   "mongod:5509": 4.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584488.4057956,
+   "machine_cpu": 8.8,
+   "mem_used_mb": 1829,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584490.4113562,
+   "machine_cpu": 9.0,
+   "mem_used_mb": 1829,
+   "mongod:5509": 4.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584492.4159853,
+   "machine_cpu": 9.0,
+   "mem_used_mb": 1829,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584494.4208007,
+   "machine_cpu": 8.1,
+   "mem_used_mb": 1829,
+   "mongod:5509": 4.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584496.425771,
+   "machine_cpu": 12.3,
+   "mem_used_mb": 1830,
+   "mongod:5509": 5.0,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584498.4322045,
+   "machine_cpu": 8.2,
+   "mem_used_mb": 1830,
+   "mongod:5509": 4.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584500.4398656,
+   "machine_cpu": 9.5,
+   "mem_used_mb": 1830,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584502.4452958,
+   "machine_cpu": 8.7,
+   "mem_used_mb": 1830,
+   "mongod:5509": 3.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584504.4507554,
+   "machine_cpu": 9.0,
+   "mem_used_mb": 1830,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584506.4557319,
+   "machine_cpu": 10.0,
+   "mem_used_mb": 1830,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584508.4638276,
+   "machine_cpu": 12.2,
+   "mem_used_mb": 1828,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584510.4713638,
+   "machine_cpu": 7.5,
+   "mem_used_mb": 1828,
+   "mongod:5509": 3.5,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584512.4817364,
+   "machine_cpu": 10.2,
+   "mem_used_mb": 1828,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584514.4872894,
+   "machine_cpu": 9.0,
+   "mem_used_mb": 1828,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584516.4933066,
+   "machine_cpu": 8.9,
+   "mem_used_mb": 1828,
+   "mongod:5509": 4.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584518.5009744,
+   "machine_cpu": 10.8,
+   "mem_used_mb": 1836,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584520.5081859,
+   "machine_cpu": 10.0,
+   "mem_used_mb": 1836,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584522.5131083,
+   "machine_cpu": 9.3,
+   "mem_used_mb": 1828,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584524.5196333,
+   "machine_cpu": 8.4,
+   "mem_used_mb": 1828,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584526.5262523,
+   "machine_cpu": 10.4,
+   "mem_used_mb": 1828,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584528.532512,
+   "machine_cpu": 8.1,
+   "mem_used_mb": 1828,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584530.5381052,
+   "machine_cpu": 9.0,
+   "mem_used_mb": 1828,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584532.5441842,
+   "machine_cpu": 33.4,
+   "mem_used_mb": 1888,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584534.5505567,
+   "machine_cpu": 15.8,
+   "mem_used_mb": 1875,
+   "mongod:5509": 3.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584536.5555432,
+   "machine_cpu": 7.5,
+   "mem_used_mb": 1862,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584538.567334,
+   "machine_cpu": 9.0,
+   "mem_used_mb": 1851,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584540.5726438,
+   "machine_cpu": 7.5,
+   "mem_used_mb": 1843,
+   "mongod:5509": 3.5,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584542.5772138,
+   "machine_cpu": 7.5,
+   "mem_used_mb": 1838,
+   "mongod:5509": 4.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584544.5837653,
+   "machine_cpu": 8.5,
+   "mem_used_mb": 1837,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584546.5886364,
+   "machine_cpu": 6.6,
+   "mem_used_mb": 1837,
+   "mongod:5509": 3.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584548.5944273,
+   "machine_cpu": 9.5,
+   "mem_used_mb": 1838,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584550.599227,
+   "machine_cpu": 10.1,
+   "mem_used_mb": 1838,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584552.606389,
+   "machine_cpu": 10.7,
+   "mem_used_mb": 1821,
+   "mongod:5509": 4.5,
+   "python:5623": 3.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584554.6132288,
+   "machine_cpu": 12.4,
+   "mem_used_mb": 1827,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584556.6183534,
+   "machine_cpu": 10.6,
+   "mem_used_mb": 1827,
+   "mongod:5509": 5.0,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584558.6274037,
+   "machine_cpu": 7.1,
+   "mem_used_mb": 1827,
+   "mongod:5509": 4.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584560.6324897,
+   "machine_cpu": 10.9,
+   "mem_used_mb": 1827,
+   "mongod:5509": 5.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584562.6410744,
+   "machine_cpu": 10.9,
+   "mem_used_mb": 1828,
+   "mongod:5509": 5.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584564.6469972,
+   "machine_cpu": 8.3,
+   "mem_used_mb": 1828,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584566.6530375,
+   "machine_cpu": 9.0,
+   "mem_used_mb": 1828,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584568.6616452,
+   "machine_cpu": 9.5,
+   "mem_used_mb": 1828,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584570.670783,
+   "machine_cpu": 6.3,
+   "mem_used_mb": 1828,
+   "mongod:5509": 3.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584572.6759903,
+   "machine_cpu": 9.7,
+   "mem_used_mb": 1828,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584574.6815848,
+   "machine_cpu": 8.2,
+   "mem_used_mb": 1828,
+   "mongod:5509": 3.5,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584576.688496,
+   "machine_cpu": 8.8,
+   "mem_used_mb": 1828,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584578.6956344,
+   "machine_cpu": 13.4,
+   "mem_used_mb": 1837,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584580.7006848,
+   "machine_cpu": 8.1,
+   "mem_used_mb": 1837,
+   "mongod:5509": 5.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584582.7056372,
+   "machine_cpu": 7.4,
+   "mem_used_mb": 1831,
+   "mongod:5509": 4.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584584.7109134,
+   "machine_cpu": 9.5,
+   "mem_used_mb": 1831,
+   "mongod:5509": 4.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584586.7163343,
+   "machine_cpu": 9.5,
+   "mem_used_mb": 1831,
+   "mongod:5509": 5.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584588.7215073,
+   "machine_cpu": 7.8,
+   "mem_used_mb": 1831,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584590.7269206,
+   "machine_cpu": 8.0,
+   "mem_used_mb": 1831,
+   "mongod:5509": 4.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584592.7323284,
+   "machine_cpu": 9.4,
+   "mem_used_mb": 1831,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584594.7391386,
+   "machine_cpu": 8.5,
+   "mem_used_mb": 1831,
+   "mongod:5509": 4.0,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584596.7444253,
+   "machine_cpu": 9.6,
+   "mem_used_mb": 1831,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584598.7494528,
+   "machine_cpu": 9.9,
+   "mem_used_mb": 1831,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584600.7557437,
+   "machine_cpu": 12.0,
+   "mem_used_mb": 1831,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584602.7618225,
+   "machine_cpu": 13.7,
+   "mem_used_mb": 1831,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584604.7685502,
+   "machine_cpu": 13.3,
+   "mem_used_mb": 1833,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584606.7739153,
+   "machine_cpu": 9.7,
+   "mem_used_mb": 1833,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584608.7790437,
+   "machine_cpu": 52.2,
+   "mem_used_mb": 1926,
+   "mongod:5509": 4.5,
+   "python:5623": 1.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584610.785657,
+   "machine_cpu": 43.6,
+   "mem_used_mb": 1898,
+   "mongod:5509": 4.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584612.7906516,
+   "machine_cpu": 11.7,
+   "mem_used_mb": 1850,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584614.7965775,
+   "machine_cpu": 10.6,
+   "mem_used_mb": 1843,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584616.8039527,
+   "machine_cpu": 14.9,
+   "mem_used_mb": 1851,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584618.8089223,
+   "machine_cpu": 56.1,
+   "mem_used_mb": 1924,
+   "mongod:5509": 4.0,
+   "python:5623": 1.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584620.814707,
+   "machine_cpu": 31.4,
+   "mem_used_mb": 1835,
+   "mongod:5509": 4.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584622.820047,
+   "machine_cpu": 9.9,
+   "mem_used_mb": 1835,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584624.824937,
+   "machine_cpu": 38.8,
+   "mem_used_mb": 1907,
+   "mongod:5509": 4.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584626.8377924,
+   "machine_cpu": 55.9,
+   "mem_used_mb": 1936,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584628.8445454,
+   "machine_cpu": 29.1,
+   "mem_used_mb": 1905,
+   "mongod:5509": 5.0,
+   "python:5623": 1.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584630.850456,
+   "machine_cpu": 8.5,
+   "mem_used_mb": 1889,
+   "mongod:5509": 4.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584632.8579822,
+   "machine_cpu": 29.6,
+   "mem_used_mb": 1911,
+   "mongod:5509": 5.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584634.8641949,
+   "machine_cpu": 51.0,
+   "mem_used_mb": 1935,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584636.8693256,
+   "machine_cpu": 9.2,
+   "mem_used_mb": 1919,
+   "mongod:5509": 4.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584638.8762364,
+   "machine_cpu": 9.2,
+   "mem_used_mb": 1903,
+   "mongod:5509": 4.5,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584640.8831916,
+   "machine_cpu": 10.9,
+   "mem_used_mb": 1867,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584642.8910704,
+   "machine_cpu": 9.2,
+   "mem_used_mb": 1859,
+   "mongod:5509": 3.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584644.8975668,
+   "machine_cpu": 10.1,
+   "mem_used_mb": 1851,
+   "mongod:5509": 5.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584646.9038925,
+   "machine_cpu": 9.2,
+   "mem_used_mb": 1849,
+   "mongod:5509": 4.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584648.9096446,
+   "machine_cpu": 10.7,
+   "mem_used_mb": 1849,
+   "mongod:5509": 6.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584650.9145834,
+   "machine_cpu": 9.5,
+   "mem_used_mb": 1849,
+   "mongod:5509": 4.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584652.9196825,
+   "machine_cpu": 17.4,
+   "mem_used_mb": 1849,
+   "mongod:5509": 7.0,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584654.9250762,
+   "machine_cpu": 15.1,
+   "mem_used_mb": 1849,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584656.930197,
+   "machine_cpu": 12.3,
+   "mem_used_mb": 1849,
+   "mongod:5509": 5.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584658.939769,
+   "machine_cpu": 15.4,
+   "mem_used_mb": 1849,
+   "mongod:5509": 5.5,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584660.9468231,
+   "machine_cpu": 16.1,
+   "mem_used_mb": 1849,
+   "mongod:5509": 6.5,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584662.953898,
+   "machine_cpu": 20.2,
+   "mem_used_mb": 1850,
+   "mongod:5509": 7.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584664.9602692,
+   "machine_cpu": 24.4,
+   "mem_used_mb": 1850,
+   "mongod:5509": 9.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584666.9665694,
+   "machine_cpu": 15.3,
+   "mem_used_mb": 1848,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584668.971982,
+   "machine_cpu": 17.5,
+   "mem_used_mb": 1848,
+   "mongod:5509": 7.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584670.9837282,
+   "machine_cpu": 16.8,
+   "mem_used_mb": 1848,
+   "mongod:5509": 6.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584672.9952695,
+   "machine_cpu": 17.8,
+   "mem_used_mb": 1848,
+   "mongod:5509": 7.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584675.0015643,
+   "machine_cpu": 16.7,
+   "mem_used_mb": 1848,
+   "mongod:5509": 7.0,
+   "python:5623": 3.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584677.0137544,
+   "machine_cpu": 19.3,
+   "mem_used_mb": 1848,
+   "mongod:5509": 8.0,
+   "python:5623": 2.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584679.0189354,
+   "machine_cpu": 22.9,
+   "mem_used_mb": 1850,
+   "mongod:5509": 8.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584681.0286267,
+   "machine_cpu": 12.8,
+   "mem_used_mb": 1850,
+   "mongod:5509": 6.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584683.0346282,
+   "machine_cpu": 17.0,
+   "mem_used_mb": 1848,
+   "mongod:5509": 6.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584685.0394077,
+   "machine_cpu": 14.9,
+   "mem_used_mb": 1848,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584687.045389,
+   "machine_cpu": 12.7,
+   "mem_used_mb": 1852,
+   "mongod:5509": 5.5,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584689.0504827,
+   "machine_cpu": 17.5,
+   "mem_used_mb": 1852,
+   "mongod:5509": 7.5,
+   "python:5623": 2.5,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584691.0552905,
+   "machine_cpu": 8.3,
+   "mem_used_mb": 1852,
+   "mongod:5509": 4.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584693.061597,
+   "machine_cpu": 19.4,
+   "mem_used_mb": 1852,
+   "mongod:5509": 8.0,
+   "python:5623": 3.0,
+   "python:6652": 0.5
+  },
+  {
+   "t": 1792584695.0673232,
+   "machine_cpu": 17.4,
+   "mem_used_mb": 1852,
+   "mongod:5509": 6.5,
+   "python:5623": 2.0,
+   "python:6652": 0.0
+  },
+  {
+   "t": 1792584697.0723994,
+   "machine_cpu": 17.6,
+   "mem_used_mb": 1852,
+   "mongod:5509": 7.0,
+   "python:5623": 2.5,
+   "python:6652": 0.0
+  }
+ ]
+}

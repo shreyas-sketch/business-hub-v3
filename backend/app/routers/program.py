@@ -422,16 +422,24 @@ class LeaksIn(BaseModel):
 
 def leaks_result(numbers: dict, targets: dict, avg_sale: float) -> dict:
     steps, worst = [], None
+    # Most owners don't know their website visitors: with none given, the funnel starts at inquiries (that first step is
+    # left out, not counted as a 0% leak)
+    from_inquiries = float(numbers.get("visitors") or 0) <= 0 and float(numbers.get("inquiries") or 0) > 0
     for i, (k, label) in enumerate(FUNNEL):
         n = float(numbers.get(k) or 0)
         step = {"key": k, "label": label, "n": n}
+        if i == 1 and from_inquiries:
+            steps.append({**step, "skipped": True})
+            continue
         if i:
             prev = float(numbers.get(FUNNEL[i - 1][0]) or 0)
             rate = round(n / prev * 100, 1) if prev else 0
             target = float(targets.get(k) or DEFAULT_TARGETS[k])
             gap = (target - rate) / target if target else 0
             step.update(rate=rate, target=target, gap=round(gap * 100))
-            if worst is None or gap > worst["gap_raw"]:
+            if not prev:
+                step["no_data"] = True        # nothing came into this step, so there's nothing to judge it on (all zeros: no leak)
+            elif worst is None or gap > worst["gap_raw"]:
                 worst = {**step, "gap_raw": gap}
         steps.append(step)
     lost = None
@@ -446,7 +454,8 @@ def leaks_result(numbers: dict, targets: dict, avg_sale: float) -> dict:
         lost = {"extra_customers": round(extra_here * downstream, 1), "extra_sales": round(extra_here * downstream * avg_sale)}
     if worst:
         worst.pop("gap_raw", None)
-    return {"steps": steps, "biggest_leak": worst if worst and worst.get("gap", 0) > 0 else None, "if_fixed": lost}
+    return {"steps": steps, "biggest_leak": worst if worst and worst.get("gap", 0) > 0 else None, "if_fixed": lost,
+            "starts_at": "inquiries" if from_inquiries else "visitors"}
 
 
 async def funnel_from_hub(ws: str) -> dict:
@@ -467,6 +476,8 @@ async def funnel_from_hub(ws: str) -> dict:
 @router.get("/leaks")
 async def get_leaks(ctx: Ctx = Depends(feature("funnel_leaks", "manager"))):
     d = await db().leaks.find_one({"_id": ctx.ws})
+    if d and "starts_at" not in (d.get("result") or {}):      # saved before v2.2: worked out again with today's rules
+        d["result"] = leaks_result(d.get("numbers") or {}, d.get("targets") or {}, float(d.get("avg_sale") or 0))
     return {"saved": public(d) if d else None, "from_hub": await funnel_from_hub(ctx.ws), "stages": [{"key": k, "label": l} for k, l in FUNNEL],
             "default_targets": DEFAULT_TARGETS}
 

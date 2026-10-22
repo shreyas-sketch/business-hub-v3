@@ -68,6 +68,16 @@ const Day1 = lazy(() => import("./pages/Day1.jsx"));
 const Event = lazy(() => import("./pages/Event.jsx"));
 const AdminEvent = lazy(() => import("./pages/AdminEvent.jsx"));
 const AdminDay1 = lazy(() => import("./pages/AdminDay1.jsx"));
+const Expenses = lazy(() => import("./pages/Expenses.jsx"));
+const BankStatement = lazy(() => import("./pages/BankStatement.jsx"));
+const Gst = lazy(() => import("./pages/Gst.jsx"));
+const CustomerRisk = lazy(() => import("./pages/CustomerRisk.jsx"));
+const GettingPaid = lazy(() => import("./pages/GettingPaid.jsx"));
+const Competitors = lazy(() => import("./pages/Competitors.jsx"));
+const Research = lazy(() => import("./pages/Research.jsx"));
+const Reputation = lazy(() => import("./pages/Reputation.jsx"));
+const WinBack = lazy(() => import("./pages/WinBack.jsx"));
+const LeadResponse = lazy(() => import("./pages/LeadResponse.jsx"));
 const kit = (name) => lazy(() => import("./pages/Kits.jsx").then((m) => ({ default: m[name] })));
 const [Competence, Culture, Decisions, Hiring, Reviews, Roles, Sops] = ["Competence", "Culture", "Decisions", "Hiring", "Reviews", "Roles", "Sops"].map(kit);
 
@@ -95,6 +105,10 @@ const PAGES = [
   ["/culture", Culture, "culture_plan", "staff"], ["/competence", Competence, "competence_plan", "staff"], ["/meetings", Meetings, "meetings", "staff"],
   ["/tasks", Tasks, "tasks", "staff"], ["/reviews", Reviews, "monthly_review", "manager"], ["/workforce", Workforce, "workforce", "owner"],
   ["/office", Office, "agentic_office", "manager"],
+  ["/expenses", Expenses, "expenses", "staff"], ["/bank-statement", BankStatement, "bank_reader", "owner"], ["/gst", Gst, "gst_setaside", "manager"],
+  ["/customer-risk", CustomerRisk, "customer_risk", "manager"], ["/getting-paid", GettingPaid, "getting_paid", "manager"],
+  ["/competitors", Competitors, "competitor_watch", "manager"], ["/research", Research, "market_research", "manager"],
+  ["/reputation", Reputation, "reputation", "manager"], ["/win-back", WinBack, "win_back", "manager"], ["/lead-response", LeadResponse, "lead_response", "manager"],
 ];
 
 function Shell({ me, children }) {
