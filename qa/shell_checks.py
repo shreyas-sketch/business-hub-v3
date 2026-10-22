@@ -38,9 +38,14 @@ with sync_playwright() as p:
         pg.goto(f"{B}/inquiries/new"); expect(pg.locator(".crumbs b")).to_have_text("Inquiries")
     check("top bar shows the section and page, for sub-pages too", crumbs)
     def theme():
-        assert pg.evaluate("document.body.classList.contains('app')")
+        # the OwnerDesk design system: the logo in the menu, Manrope, the dark base, the gold signal
+        expect(pg.locator(".rail .mark .logo, .rail .mark img").first).to_be_visible()
+        font = pg.evaluate("getComputedStyle(document.body).fontFamily")
+        assert "Manrope" in font, font
+        gold = pg.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--gold').trim()")
+        assert gold.upper() == "#C9A84C", gold
         pg.goto(f"{B}/"); pg.wait_for_timeout(600)
-    check("the workspace look is on inside the hub", theme)
+    check("the OwnerDesk look is on: logo, Manrope, gold", theme)
     def slash_opens():
         pg.goto(f"{B}/leads"); expect(pg.locator(".sheet h1")).to_be_visible(); pg.keyboard.press("/"); expect(pg.locator(".finder")).to_be_visible()
         expect(pg.locator(".finder input")).to_be_focused(); pg.keyboard.press("Escape"); expect(pg.locator(".finder")).to_have_count(0)
