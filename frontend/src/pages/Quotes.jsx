@@ -53,7 +53,7 @@ function DraftBox({ onDraft, initial = "" }) {
       </div>
       <FormError msg={err} />
       <div className="row">
-        <Busy className="btn" disabled={brief.trim().length < 5} onError={setErr} run={async () => {
+        <Busy className="btn ai" disabled={brief.trim().length < 5} onError={setErr} run={async () => {
           const r = await api("/quotes/draft", { method: "POST", body: { brief: brief.trim() } });
           onDraft(r);
           refresh();
@@ -277,7 +277,7 @@ function InvoiceEditor({ onClose, onSaved }) {
           placeholder="Sold 40 boxes to Mehta Traders, ₹850 each, 18% GST, due in 30 days" />
         <div className="rb-voice"><VoiceNote purpose="quote" onText={(x) => setEntry((b) => (b.trim() ? `${b.trim()} ${x}` : x))} /></div>
         <div className="row">
-          <Busy className="btn" disabled={entry.trim().length < 5} onError={setErr} run={async () => {
+          <Busy className="btn ai" disabled={entry.trim().length < 5} onError={setErr} run={async () => {
             const d = await api("/invoices/draft", { method: "POST", body: { text: entry.trim() } });
             setF({ customer: { ...blankInvoice().customer, ...Object.fromEntries(Object.entries(d.customer || {}).filter(([, v]) => v)) },
               items: d.items.map((i) => ({ name: i.name, qty: String(i.qty), unit: i.unit || "nos", rate: i.rate ? String(i.rate) : "", gst: GST_RATES.includes(i.gst) ? i.gst : 18 })),

@@ -144,9 +144,9 @@ export default function VoiceNote({ onText, purpose = "sop", hint }) {
       </div>
       <div className="row">
         {state === "recording"
-          ? <button type="button" className="btn primary" onClick={stop}>Stop and use this</button>
-          : <button type="button" className="btn" disabled={busy} onClick={start}>Record a voice note</button>}
-        <label className={`btn ghost file-pick ${busy ? "off" : ""}`}>
+          ? <button type="button" className="btn primary ai" onClick={stop}>Stop and use this</button>
+          : <button type="button" className="btn ai" disabled={busy} onClick={start}>Record a voice note</button>}
+        <label className={`btn ghost file-pick ai ${busy ? "off" : ""}`}>
           or upload a voice note
           <input type="file" accept="audio/*,video/webm,.opus,.m4a" disabled={busy} onChange={pick} aria-label="Upload a voice note" />
         </label>

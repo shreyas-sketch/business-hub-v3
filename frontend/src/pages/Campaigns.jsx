@@ -124,7 +124,7 @@ function NewCampaign({ onSaved, onCancel }) {
         </Field>
       </div>
       <div className="row">
-        <Busy className="btn" onError={setErr} run={async () => {
+        <Busy className="btn ai" onError={setErr} run={async () => {
           const d = await api("/campaigns/draft", { method: "POST", body: { kind, notes: notes.trim() } });
           setTitle(d.title);
           setMessage(d.message);

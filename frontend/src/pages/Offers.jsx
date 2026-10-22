@@ -27,7 +27,7 @@ function BuildForm({ first, onDone, onCancel }) {
       </Field>
       <FormError msg={err} />
       <div className="row">
-        <Busy className="btn primary" onError={setErr} run={async () => {
+        <Busy className="btn primary ai" onError={setErr} run={async () => {
           if (!first && !window.confirm("Build the ladder again? It replaces the three levels you have now.")) return;
           const d = await api("/offers/generate", { method: "POST", body: { notes: notes.trim(), entry: entry.trim() } });
           refresh();

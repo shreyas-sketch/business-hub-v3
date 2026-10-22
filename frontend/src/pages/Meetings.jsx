@@ -127,7 +127,7 @@ function MeetingView({ id, people, onChanged, onDeleted }) {
         <div className="row between">
           <span className="label">Decisions and actions</span>
           {editor && (
-            <Busy className="btn primary" run={async () => {
+            <Busy className="btn primary ai" run={async () => {
               await flush();
               const d = await api(`/meetings/${id}/actions`, { method: "POST" });
               load(d); onChanged(); refresh();

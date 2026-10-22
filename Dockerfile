@@ -1,4 +1,4 @@
-# Business AI Action Hub — one container: builds the React app, then serves it with the API.
+# OwnerDesk — one container: builds the React app, then serves it with the API.
 # Railway detects this file automatically. Set the environment variables listed in backend/.env.example.
 
 FROM node:22-slim AS web

@@ -37,7 +37,7 @@ function PromptEditor({ dirty, onApplied }) {
       {dirty && <span className="hint">Save your own changes first — a prompt works on the saved page.</span>}
       <FormError msg={err} />
       <div className="row">
-        <Busy className="btn primary sm" disabled={dirty || text.trim().length < 3} onError={setErr} run={async () => {
+        <Busy className="btn primary sm ai" disabled={dirty || text.trim().length < 3} onError={setErr} run={async () => {
           show(await api("/site/prompt", { method: "POST", body: { instruction: text.trim() } }));
         }}>Show me the change</Busy>
         {state?.can_undo && !pv && (
@@ -242,7 +242,7 @@ export default function Website() {
         <div className="empty">
           <h2>{building ? "Writing your website…" : "Ready when you are."}</h2>
           <p className="muted">Uses 1 AI run. Takes about a minute.</p>
-          <button className="btn primary" disabled={building} onClick={build}>{building ? "Building…" : "Build my website"}</button>
+          <button className="btn primary ai" disabled={building} onClick={build}>{building ? "Building…" : "Build my website"}</button>
         </div>
       </Sheet>
     );
@@ -343,11 +343,11 @@ export default function Website() {
           </div>
           <div className="panel">
             <span className="label">Badge</span>
-            <p className="small">{site.badge ? "Free websites show a small “Built free with Business AI Action Hub” badge. When an owner signs up from your badge, you get rewards." : "Badge off — your website shows only your business."}</p>
+            <p className="small">{site.badge ? "Free websites show a small “Built free with OwnerDesk” badge. When an owner signs up from your badge, you get rewards." : "Badge off — your website shows only your business."}</p>
             {site.badge && <Locked feature="badge_off" what="Remove the badge" />}
           </div>
           <div className="row">
-            <Busy className="btn ghost sm" run={async () => { if (window.confirm("Rewrite the website with AI? This replaces your edits and uses 1 AI run.")) await build(); }}>Rewrite with AI</Busy>
+            <Busy className="btn ghost sm ai" run={async () => { if (window.confirm("Rewrite the website with AI? This replaces your edits and uses 1 AI run.")) await build(); }}>Rewrite with AI</Busy>
           </div>
           <InviteLine />
         </div>

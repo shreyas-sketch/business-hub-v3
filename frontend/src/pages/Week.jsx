@@ -157,7 +157,7 @@ export default function Week() {
         <div className="panel">
           <h3>Your week isn't planned yet</h3>
           <p className="muted">One AI run writes 7 posts and 3 actions from your Magic Number, your gaps and your leads. It's also written for you every Monday at 8am.</p>
-          <div className="row"><Busy className="btn primary" run={plan}>Plan my week</Busy><span className="small muted">Uses one AI run.</span></div>
+          <div className="row"><Busy className="btn primary ai" run={plan}>Plan my week</Busy><span className="small muted">Uses one AI run.</span></div>
         </div>
       )}
 
@@ -201,7 +201,7 @@ export default function Week() {
         <div className="stack">
           <div className="row between">
             <h2>This week's posts</h2>
-            <Busy className="btn sm ghost" run={rewrite}>Rewrite my week</Busy>
+            <Busy className="btn sm ghost ai" run={rewrite}>Rewrite my week</Busy>
           </div>
           <div className="grid3">
             {w.posts.map((p, i) => (

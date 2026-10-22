@@ -1,16 +1,16 @@
 /* GST set-aside (v2.2) — phone first: one card per month, the sum reads top to bottom */
 .gst-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 16px; }
-.gst-card { background: var(--ink-raised); border: 1px solid var(--ink-line); padding: 20px; display: grid; gap: 14px; align-content: start; min-width: 0; }
+.gst-card { background: var(--ink-raised); border: 1px solid var(--ink-line); padding: 20px; display: grid; gap: 14px; align-content: start; min-width: 0; border-radius: 12px; }
 .gst-card.running { border-style: dashed; }
 .gst-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
-.gst-head h3 { font: 500 18px/1.2 var(--head); }
+.gst-head h3 { font: 700 18px/1.2 var(--head); }
 .gst-eq { display: grid; }
 .gst-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--ink-line); }
 .gst-row > span:first-child { min-width: 0; }
-.gst-row .gst-amt { font: 400 17px/1.2 var(--head); color: var(--paper); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gst-row .gst-amt { font: 700 17px/1.2 var(--head); color: var(--paper); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .gst-row.total { border-bottom: 0; padding-top: 14px; align-items: center; flex-wrap: wrap; }
 .gst-row.total > span { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.gst-row.total b { font: 400 32px/1 var(--head); font-variant-numeric: tabular-nums; }
+.gst-row.total b { font: 800 32px/1 var(--head); font-variant-numeric: tabular-nums; }
 .gst-break summary { cursor: pointer; font-size: 13px; color: var(--grey); padding: 4px 0; }
 .gst-break ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
 .gst-break li { display: flex; justify-content: space-between; gap: 12px; }
@@ -21,7 +21,7 @@
 .gst-due { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; font-size: 14px; }
 .gst-cf { border-top: 1px solid var(--ink-line); padding-top: 14px; display: grid; gap: 10px; }
 .gst-in { color: var(--aqua); font-weight: 500; }
-.gst-ask { border: 1px solid #5a4320; background: rgba(242,169,59,.06); padding: 12px 14px; display: grid; gap: 10px; }
+.gst-ask { border: 1px solid var(--gold-deep); background: rgba(201, 168, 76,.06); padding: 12px 14px; display: grid; gap: 10px; border-radius: 12px; }
 .gst-notes { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 13px; color: var(--grey); }
 .gst-notes li { overflow-wrap: anywhere; }
 .gst-counted { margin: 0; padding-left: 18px; display: grid; gap: 10px; }

@@ -75,7 +75,7 @@ function Paste({ prefill, onDone }) {
       <Field label="Their message"><textarea className="input" rows={4} value={f.message} maxLength={3000} onChange={(e) => setF({ ...f, message: e.target.value })} /></Field>
       <FormError msg={err} />
       <div className="row">
-        <Busy className="btn primary" onError={setErr} disabled={!f.phone || f.message.trim().length < 2} run={async () => {
+        <Busy className="btn primary ai" onError={setErr} disabled={!f.phone || f.message.trim().length < 2} run={async () => {
           await api("/inquiries/whatsapp", { method: "POST", body: f });
           toast("Added. The proposal is being written.");
           setF({ name: "", phone: "", message: "" });
@@ -93,7 +93,7 @@ function Proposal({ it, reload }) {
   const p = it.proposal;
   const [open, setOpen] = useState(false);
   if (!p && it.status !== "new") return null;   // already being handled in the pipeline
-  const writeOne = manager && <Busy className="btn sm ghost" run={async () => { await api(`/inquiries/${it.id}/proposal`, { method: "POST" }); reload(); }}>Write one</Busy>;
+  const writeOne = manager && <Busy className="btn sm ghost ai" run={async () => { await api(`/inquiries/${it.id}/proposal`, { method: "POST" }); reload(); }}>Write one</Busy>;
   if (!p) return <p className="small muted">No proposal for this one. {writeOne}</p>;
   if (p.status === "skipped") return <p className="small muted">No automatic reply: {p.why} {writeOne}</p>;
   const text = it.email && p.email_text ? p.email_text : p.whatsapp_text;
@@ -124,7 +124,7 @@ function Proposal({ it, reload }) {
           }}>Send on WhatsApp</Busy>
         )}
         <Copy text={text || ""} label="Copy" className="btn sm ghost" />
-        <Busy className="btn sm ghost" run={async () => { await api(`/inquiries/${it.id}/proposal`, { method: "POST" }); toast("Written again"); reload(); }}>Write again</Busy>
+        <Busy className="btn sm ghost ai" run={async () => { await api(`/inquiries/${it.id}/proposal`, { method: "POST" }); toast("Written again"); reload(); }}>Write again</Busy>
       </div>}
     </div>
   );

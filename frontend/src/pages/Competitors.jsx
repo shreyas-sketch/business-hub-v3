@@ -264,7 +264,7 @@ export default function Competitors() {
         <div className="panel active">
           <div className="row between">
             <span className="label">{latest ? `Report · week of ${weekOf(latest.week)} · ${latest.source === "weekly" ? "Monday check" : "Check now"} · ${ago(latest.at)}` : "No report yet"}</span>
-            <Busy className="btn sm primary" disabled={!d.can_check} onError={setCheckErr} run={async () => {
+            <Busy className="btn sm primary ai" disabled={!d.can_check} onError={setCheckErr} run={async () => {
               await api("/competitors/check", { method: "POST" });
               toast("Checked");
               reloadAll();

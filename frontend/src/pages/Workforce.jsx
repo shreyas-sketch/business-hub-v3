@@ -25,7 +25,7 @@ function Job({ r }) {
       </Field>
       <FormError msg={err} />
       <div className="row">
-        <Busy className="btn primary" disabled={brief.trim().length < 2} onError={setErr} run={async () => {
+        <Busy className="btn primary ai" disabled={brief.trim().length < 2} onError={setErr} run={async () => {
           const res = await api(`/tools/role:${r.id}/run`, { method: "POST", body: { inputs: { brief: brief.trim() } } });
           setOut(res.output);
           setView(null);

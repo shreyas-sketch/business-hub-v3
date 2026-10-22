@@ -288,7 +288,7 @@ function ComplianceInner() {
       {d.identity && (
         <div className="row between">
           <span className="small muted">{explained ? "Explanations written for your business." : "Want each item explained for your business in plain words?"}</span>
-          <Busy className="btn sm" run={async () => { const r = await api("/compliance/explain", { method: "POST" }); toast(`${r.explained} explained`); reload(); }}>
+          <Busy className="btn sm ai" run={async () => { const r = await api("/compliance/explain", { method: "POST" }); toast(`${r.explained} explained`); reload(); }}>
             {explained ? "Explain again" : "Explain for my business"}
           </Busy>
         </div>

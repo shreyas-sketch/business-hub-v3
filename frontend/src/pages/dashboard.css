@@ -1,7 +1,7 @@
 /* Smart Dashboard (v2.1). Tiles on the blueprint grid: aqua = what the hub counted, amber only for rupees. */
 .db-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; }
 .db-tile { position: relative; background: var(--ink-raised); border: 1px solid var(--ink-line); padding: 18px; display: grid; gap: 12px;
-  align-content: start; min-width: 0; transition: border-color .15s; }
+  align-content: start; min-width: 0; transition: border-color .15s; border-radius: 12px; }
 .db-tile.l { grid-column: span 2; }
 .db-tile:hover { border-color: var(--slate); }
 .db-tile:focus-within { border-color: var(--aqua-deep); }
@@ -15,10 +15,10 @@
 .db-tile:hover .db-go { color: var(--aqua); }
 .db-tile .paper { color: var(--paper); font-weight: 500; }
 
-.db-big { font: 400 32px/1.05 var(--head); color: var(--paper); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.db-big { font: 800 32px/1.05 var(--head); color: var(--paper); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .db-big.money { color: var(--amber); }
 .db-big.neg { color: var(--amber); }
-.db-num { font: 400 28px/1.05 var(--head); color: var(--paper); font-variant-numeric: tabular-nums; }
+.db-num { font: 800 28px/1.05 var(--head); color: var(--paper); font-variant-numeric: tabular-nums; }
 .db-pair { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; min-width: 0; }
 .db-trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: start; }
 .db-trio > div { display: grid; gap: 4px; min-width: 0; }
@@ -32,7 +32,7 @@
 .db-barrow b { text-align: right; color: var(--paper); font-weight: 500; font-variant-numeric: tabular-nums; }
 .db-barrow .bar { height: 6px; }
 
-.db-pace { position: relative; height: 10px; background: var(--ink); border: 1px solid var(--ink-line); }
+.db-pace { position: relative; height: 10px; background: var(--ink); border: 1px solid var(--ink-line); border-radius: 12px; }
 .db-pace > i { display: block; height: 100%; max-width: 100%; background: var(--aqua); }
 .db-pace > b { position: absolute; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; background: var(--paper); }
 
@@ -41,7 +41,7 @@
 .db-today li:first-child { border-top: 0; }
 .db-today a { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; color: var(--paper); }
 .db-today a:hover { text-decoration: none; color: var(--aqua); }
-.db-today b { font: 400 22px/1 var(--head); color: var(--aqua); font-variant-numeric: tabular-nums; }
+.db-today b { font: 700 22px/1 var(--head); color: var(--aqua); font-variant-numeric: tabular-nums; }
 .db-today li.zero a { color: var(--grey); }
 .db-today li.zero b { color: var(--slate); }
 .db-list li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-top: 1px solid var(--ink-line); font-size: 13px; }
@@ -49,7 +49,7 @@
 .db-list li span { min-width: 0; overflow-wrap: anywhere; }
 .db-list li b { font-weight: 500; white-space: nowrap; }
 
-.db-alert { margin: 0; padding: 8px 10px; border: 1px solid #5a4320; color: var(--amber); font-size: 13px; }
+.db-alert { margin: 0; padding: 8px 10px; border: 1px solid var(--gold-deep); color: var(--amber); font-size: 13px; border-radius: 12px; }
 .db-empty { display: grid; gap: 10px; justify-items: start; }
 .db-empty p { margin: 0; }
 

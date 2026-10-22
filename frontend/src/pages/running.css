@@ -25,12 +25,12 @@
 .rb-x:hover { color: var(--paper); border-color: var(--slate); }
 .rb-totals { display: grid; gap: 4px; justify-self: end; min-width: min(280px, 100%); }
 .rb-totals > div { display: flex; justify-content: space-between; gap: 18px; }
-.rb-totals .grand { border-top: 1px solid var(--ink-line); padding-top: 8px; margin-top: 4px; font: 400 22px/1.2 var(--head); }
+.rb-totals .grand { border-top: 1px solid var(--ink-line); padding-top: 8px; margin-top: 4px; font: 700 22px/1.2 var(--head); }
 
 /* ── Control Room pipeline ── */
 .rb-stages { display: grid; gap: 10px; }
 .rb-stage { display: grid; grid-template-columns: minmax(110px, 160px) 1fr auto; gap: 12px; align-items: center; }
-.rb-stage .track { height: 10px; background: var(--ink); border: 1px solid var(--ink-line); }
+.rb-stage .track { height: 10px; background: var(--ink); border: 1px solid var(--ink-line); border-radius: 12px; }
 .rb-stage .track i { display: block; height: 100%; background: var(--aqua); border-radius: 0 4px 4px 0; }
 .rb-stage .nums { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rb-ceo { border-left: 3px solid var(--aqua); background: var(--ink-raised); padding: 14px 16px; display: grid; gap: 6px; }
@@ -45,12 +45,12 @@
 
 /* ── Setup ── */
 .rb-months { display: grid; gap: 14px; }
-.rb-month { display: grid; grid-template-columns: 120px 1fr; gap: 16px; padding: 16px 18px; border: 1px solid var(--ink-line); background: var(--ink-raised); }
+.rb-month { display: grid; grid-template-columns: 120px 1fr; gap: 16px; padding: 16px 18px; border: 1px solid var(--ink-line); background: var(--ink-raised); border-radius: 12px; }
 .rb-month.now { border-color: var(--aqua-deep); box-shadow: inset 2px 0 0 var(--aqua); }
 .rb-month .when { display: grid; gap: 4px; align-content: start; }
-.rb-month .when b { font: 400 22px/1 var(--head); color: var(--paper); }
+.rb-month .when b { font: 700 22px/1 var(--head); color: var(--paper); }
 .rb-step { display: grid; grid-template-columns: 22px 1fr; gap: 10px; padding: 6px 0; }
-.rb-tick { width: 18px; height: 18px; border: 1px solid var(--slate); display: inline-grid; place-items: center; font-size: 12px; line-height: 1; color: var(--ink); margin-top: 2px; }
+.rb-tick { width: 18px; height: 18px; border: 1px solid var(--slate); display: inline-grid; place-items: center; font-size: 12px; line-height: 1; color: var(--ink); margin-top: 2px; border-radius: 12px; }
 .rb-tick.done { background: var(--aqua); border-color: var(--aqua); }
 
 /* ── Connections ── */
@@ -63,7 +63,7 @@
   .rb-line > :first-child { grid-column: 1 / -1; }
   .rb-cell > span { display: block; }
   .rb-line .amt { text-align: left; align-self: center; }
-  .rb-line { padding: 10px; border: 1px solid var(--ink-line); }
+  .rb-line { padding: 10px; border: 1px solid var(--ink-line); border-radius: 12px; }
   .rb-totals { justify-self: stretch; }
   .rb-stage { grid-template-columns: 1fr auto; }
   .rb-stage .track { grid-column: 1 / -1; grid-row: 2; }

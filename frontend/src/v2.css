@@ -1,25 +1,27 @@
-/* Shared v2 styles. Page-specific styles live next to the pages (src/pages/*.css). */
-.pill { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--ink-line); padding: 3px 9px; font: 500 10px/1.3 var(--body);
-  letter-spacing: .12em; text-transform: uppercase; color: var(--grey); white-space: nowrap; }
-.pill.on { border-color: var(--aqua-deep); color: var(--aqua); }
-.pill.money { border-color: #5a4320; color: var(--amber); }
-.pill.warn { border-color: #5a4320; color: var(--amber); }
+/* Shared v2 styles (OwnerDesk design system). Page-specific styles live next to the pages (src/pages/*.css). */
+.pill { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--hairline); border-radius: 999px; padding: 3px 10px; font: 700 10px/1.3 var(--body);
+  letter-spacing: .1em; text-transform: uppercase; color: var(--ivory-70); white-space: nowrap; }
+.pill.on { border-color: var(--gold-deep); color: var(--gold); }
+.pill.money { border-color: var(--gold-deep); color: var(--gold); }
+.pill.warn { border-color: var(--gold-deep); color: var(--gold-light); }
+.pill.ai { border-color: var(--teal-line); color: var(--teal); }
 .pill.off { opacity: .6; }
 .out-sec { padding: 14px 16px; gap: 8px; }
 .kanban { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(220px, 1fr); gap: 12px; overflow-x: auto; padding-bottom: 8px; }
-.kcol { background: var(--ink-raised); border: 1px solid var(--ink-line); padding: 12px; display: grid; gap: 10px; align-content: start; min-height: 160px; }
-.kcol.over { border-color: var(--aqua); }
-.kcard { background: var(--ink); border: 1px solid var(--ink-line); padding: 10px 12px; display: grid; gap: 6px; cursor: grab; }
-.kcard:hover { border-color: var(--slate); }
+.kcol { background: var(--panel); border: 1px solid var(--hairline); border-radius: var(--radius-card); padding: 12px; display: grid; gap: 10px; align-content: start; min-height: 160px; }
+.kcol.over { border-color: var(--gold); }
+.kcard { background: var(--panel-raised); border: 1px solid var(--hairline); border-radius: 12px; padding: 10px 12px; display: grid; gap: 6px; cursor: grab; }
+.kcard:hover { border-color: var(--ivory-35); }
+/* chat: the customer's message on the left, the owner's own message raised on the right */
 .bubbles { display: grid; gap: 8px; }
-.bubble { max-width: 78%; padding: 9px 12px; border: 1px solid var(--ink-line); background: var(--ink-raised); white-space: pre-wrap; }
-.bubble.out { justify-self: end; border-color: var(--aqua-shadow); background: #0f2a30; }
+.bubble { max-width: 78%; padding: 10px 14px; border: 1px solid var(--hairline); border-radius: 16px 16px 16px 4px; background: var(--panel); white-space: pre-wrap; }
+.bubble.out { justify-self: end; border-color: var(--gold-deep); border-radius: 16px 16px 4px 16px; background: var(--panel-raised); }
 .bubble .small { display: block; margin-top: 4px; }
-.bigscore { font: 400 64px/1 var(--head); color: var(--aqua); }
-.dragrow { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--ink-line); background: var(--ink-raised); cursor: grab; }
+.bigscore { font: 800 64px/1 var(--head); letter-spacing: -0.04em; color: var(--gold); text-shadow: 0 0 30px rgba(201,168,76,.3); }
+.dragrow { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--hairline); border-radius: 12px; background: var(--panel); cursor: grab; }
 .dragrow.dragging { opacity: .5; }
-.dropzone { min-height: 60px; border: 1px dashed var(--ink-line); padding: 8px; display: grid; gap: 6px; align-content: start; }
-.dropzone.over { border-color: var(--aqua); }
+.dropzone { min-height: 60px; border: 1px dashed var(--hairline); border-radius: 12px; padding: 8px; display: grid; gap: 6px; align-content: start; }
+.dropzone.over { border-color: var(--gold); }
 .cols4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 .cols5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
 @media (max-width: 900px) {
@@ -29,4 +31,8 @@
 }
 
 /* v2.1: a second line under a menu item ("Knowledge Hub · Business Brain") */
-.nav a .nav-sub { display: block; margin-top: 3px; font: 400 10px/1.2 var(--body); letter-spacing: .02em; text-transform: none; color: var(--grey); opacity: .8; }
+.nav a .nav-sub { display: block; margin-top: 3px; font: 400 10px/1.2 var(--body); letter-spacing: .02em; text-transform: none; color: var(--ivory-35); }
+
+/* AI output (tool results): the AI is on screen, so its sections carry a teal edge */
+.out .out-sec { border-left: 2px solid var(--teal-line); border-radius: 0 12px 12px 0; }
+.out .read-list li::marker { color: var(--teal); }

@@ -158,7 +158,7 @@ function Drafts({ d, reload }) {
         <span className="label">This week{ready ? ` · ${ready} waiting for you` : ""}</span>
         {manager && d.on && (
           d.ran_today ? <span className="small muted">Ran today</span>
-            : <Busy className="btn sm" run={async () => { const r = await api("/win-back/run", { method: "POST" }); toast(r.note); reload(); }}>Run now</Busy>
+            : <Busy className="btn sm ai" run={async () => { const r = await api("/win-back/run", { method: "POST" }); toast(r.note); reload(); }}>Run now</Busy>
         )}
       </div>
       {!list.length ? (

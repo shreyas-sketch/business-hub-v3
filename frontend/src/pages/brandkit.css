@@ -15,30 +15,30 @@
 .bk-colours { display: grid; gap: 14px; }
 .bk-colour { display: grid; gap: 6px; min-width: 0; }
 .bk-colour-row { gap: 8px; flex-wrap: nowrap; }
-.bk-swatch-in { width: 46px; height: 42px; padding: 0; border: 1px solid var(--ink-line); background: var(--ink); cursor: pointer; flex: none; }
+.bk-swatch-in { width: 46px; height: 42px; padding: 0; border: 1px solid var(--ink-line); background: var(--ink); cursor: pointer; flex: none; border-radius: 12px; }
 .bk-hex { max-width: 130px; text-transform: uppercase; }
 .bk-sample { display: inline-block; justify-self: start; padding: 6px 10px; font: 500 11px/1.3 var(--body); letter-spacing: .04em; max-width: 100%; }
 .bk-suggest { padding: 12px 14px; gap: 8px; }
-.bk-chip { width: 34px; height: 34px; border: 1px solid var(--ink-line); display: inline-block; }
+.bk-chip { width: 34px; height: 34px; border: 1px solid var(--ink-line); display: inline-block; border-radius: 12px; }
 .bk-logo { max-width: 160px; max-height: 90px; object-fit: contain; background: #fff; padding: 8px; justify-self: start; }
 .bk-preview { display: grid; gap: 12px; justify-items: start; max-width: 520px; }
 .bk-preview-logo { font: 500 13px/1.2 var(--body); letter-spacing: .14em; text-transform: uppercase; opacity: .85; }
-.bk-preview-line { font: 400 24px/1.25 var(--head); overflow-wrap: anywhere; }
+.bk-preview-line { font: 700 24px/1.25 var(--head); overflow-wrap: anywhere; }
 .bk-preview-btn { padding: 9px 16px; font: 600 12px/1 var(--body); letter-spacing: .06em; }
 
 /* ── Designs ── */
 .bk-designs { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 16px; align-items: start; }
 .bk-tpls { gap: 16px; }
-.bk-out img { display: block; max-width: 100%; max-height: 70vh; width: auto; height: auto; border: 1px solid var(--ink-line); justify-self: start; }
+.bk-out img { display: block; max-width: 100%; max-height: 70vh; width: auto; height: auto; border: 1px solid var(--ink-line); justify-self: start; border-radius: 12px; }
 
 /* ── Mark as posted / Make the design ── */
 .pa { display: grid; gap: 10px; min-width: 0; }
 .pa-row { gap: 8px; }
-.pa-form { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--ink-line); background: var(--ink); }
+.pa-form { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--ink-line); background: var(--ink); border-radius: 12px; }
 .pa-sum { padding: 14px 16px; gap: 10px; }
 .pa-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .pa-stats > div { display: grid; gap: 4px; }
-.pa-stats b { font: 400 26px/1 var(--head); color: var(--paper); }
+.pa-stats b { font: 800 26px/1 var(--head); color: var(--paper); }
 .pa-posts { gap: 8px; }
 .pa-post { padding: 12px 14px; gap: 6px; }
 .pa-hook { font-weight: 500; overflow-wrap: anywhere; }

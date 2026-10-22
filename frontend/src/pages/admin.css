@@ -10,13 +10,13 @@
 /* The board needs more room than a normal page: on laptop screens it spreads into the page margins. */
 @media (min-width: 901px) and (max-width: 1400px) { .plan-board { margin-inline: calc(28px - var(--gutter)); } }
 .plan-board { display: grid; grid-template-columns: repeat(6, minmax(150px, 1fr)); gap: 10px; overflow-x: auto; padding-bottom: 8px; align-items: start; }
-.plan-col { background: var(--ink-raised); border: 1px solid var(--ink-line); padding: 8px; display: grid; gap: 8px; align-content: start; min-height: 220px; min-width: 0; }
+.plan-col { background: var(--ink-raised); border: 1px solid var(--ink-line); padding: 8px; display: grid; gap: 8px; align-content: start; min-height: 220px; min-width: 0; border-radius: 12px; }
 .plan-col.over { border-color: var(--aqua); box-shadow: inset 0 0 0 1px var(--aqua); }
 .plan-col-head { display: grid; gap: 3px; padding: 2px 2px 10px; border-bottom: 1px solid var(--ink-line); }
-.plan-col-head b { font: 500 15px/1.2 var(--head); }
-.plan-col-drop { font-size: 12px; color: var(--slate); text-align: center; padding: 18px 6px; border: 1px dashed var(--ink-line); }
+.plan-col-head b { font: 700 15px/1.2 var(--head); }
+.plan-col-drop { font-size: 12px; color: var(--slate); text-align: center; padding: 18px 6px; border: 1px dashed var(--ink-line); border-radius: 12px; }
 
-.fcard { background: var(--ink); border: 1px solid var(--ink-line); padding: 9px; display: grid; gap: 7px; min-width: 0; cursor: grab; }
+.fcard { background: var(--ink); border: 1px solid var(--ink-line); padding: 9px; display: grid; gap: 7px; min-width: 0; cursor: grab; border-radius: 12px; }
 .fcard:hover { border-color: var(--slate); }
 .fcard.core { cursor: default; border-style: dashed; }
 .fcard.off { opacity: .6; }
@@ -41,8 +41,8 @@
 /* ── Menu order ── */
 .menu-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; align-items: start; }
 .menu-group { display: grid; gap: 8px; align-content: start; min-width: 0; }
-.menu-group .dropzone.over { background: rgba(63, 214, 201, .04); }
-.mrow { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 8px 8px 10px; border: 1px solid var(--ink-line); background: var(--ink-raised); cursor: grab; }
+.menu-group .dropzone.over { background: rgba(201, 168, 76, .04); }
+.mrow { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 8px 8px 10px; border: 1px solid var(--ink-line); background: var(--ink-raised); cursor: grab; border-radius: 12px; }
 .mrow.before { box-shadow: 0 -2px 0 var(--aqua); }
 .mrow.after { box-shadow: 0 2px 0 var(--aqua); }
 .mrow.dragging { opacity: .35; }
@@ -54,16 +54,16 @@
 .iconbtn { width: 34px; height: 34px; display: inline-grid; place-items: center; border: 1px solid var(--ink-line); background: var(--ink); color: var(--grey); cursor: pointer; border-radius: 2px; padding: 0; flex: none; }
 .iconbtn:hover:not(:disabled) { color: var(--aqua); border-color: var(--aqua-deep); }
 .iconbtn:disabled { opacity: .3; cursor: default; }
-.savebar { position: sticky; bottom: 12px; z-index: 5; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--ink); border: 1px solid var(--aqua-deep); padding: 12px 16px; }
+.savebar { position: sticky; bottom: 12px; z-index: 5; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--ink); border: 1px solid var(--aqua-deep); padding: 12px 16px; border-radius: 12px; }
 
 /* ── Grants: owner picker ── */
-.picked { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; border: 1px solid var(--aqua-deep); padding: 10px 14px; }
+.picked { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; border: 1px solid var(--aqua-deep); padding: 10px 14px; border-radius: 12px; }
 .listbox button .small { color: var(--grey); }
 
 /* ── One owner: setup steps ── */
 .steps { display: grid; gap: 8px; }
 .steps-month { font: 500 10px/1 var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--grey); padding-top: 8px; }
-.ad-step { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 12px; padding: 12px 14px; border: 1px solid var(--ink-line); background: var(--ink); align-items: start; }
+.ad-step { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 12px; padding: 12px 14px; border: 1px solid var(--ink-line); background: var(--ink); align-items: start; border-radius: 12px; }
 .ad-step.done { border-color: var(--aqua-shadow); }
 .ad-step input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--aqua); margin: 1px 0 0; cursor: pointer; }
 .step-body { display: grid; gap: 8px; min-width: 0; }

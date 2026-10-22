@@ -49,7 +49,7 @@ class Settings:
     trusted_proxy_hops: int = _int("TRUSTED_PROXY_HOPS", 1)        # Railway = 1; add 1 for each proxy in front (e.g. Cloudflare = 2)
 
     # Program identity (footer rail + public pages)
-    program_name: str = os.getenv("PROGRAM_NAME", "Business AI Action Hub")
+    program_name: str = os.getenv("PROGRAM_NAME", "OwnerDesk")
     speaker_line: str = os.getenv("SPEAKER_LINE", "Akshat Dani · Chirag J.")
 
     # AI engine: anthropic | gemini | openai | mock

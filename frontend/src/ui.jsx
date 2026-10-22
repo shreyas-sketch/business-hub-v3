@@ -4,6 +4,11 @@ import { allPages, findPage } from "./shell.jsx";
 import { api } from "./api.js";
 
 export const HubCtx = createContext(null);
+
+/** The OwnerDesk logo (logo kit: Horizontal Dark Flat; the monogram alone with mark). Flat files, because it shows under 64px. */
+export const Logo = ({ h = 36, mark = false, className = "" }) => (
+  <img className={`logo ${mark ? "logo-mark" : ""} ${className}`} src={mark ? "/brand/ownerdesk-mark.svg" : "/brand/ownerdesk-logo.svg"} alt="OwnerDesk" height={h} />
+);
 export const useHub = () => useContext(HubCtx);
 
 export function useLoad(path, deps = []) {
@@ -19,8 +24,8 @@ export function useLoad(path, deps = []) {
   return [data, reload, error];
 }
 
-/** Every view: one title, one line under it, its actions. Where it sits shows in the top bar ("Systems / Website");
-    the kicker only shows when the page isn't in the menu, or on a phone, where there's no top bar. */
+/** Every view: the kicker (the page's menu section), one headline with one gold phrase, one line under it, its actions,
+    and a footer rule with the program's names. Where it sits also shows in the top bar ("Systems / Website"). */
 export function Sheet({ kicker, title, sub, actions, children }) {
   const { me } = useHub() || {};
   const loc = useLocation();
@@ -29,13 +34,17 @@ export function Sheet({ kicker, title, sub, actions, children }) {
     <div className="sheet">
       <div className="sheet-head">
         <div className="titles">
-          {page ? <span className="kicker phone-only">{page.group}</span> : kicker && <span className="kicker">{kicker}</span>}
+          {(page?.group || kicker) && <span className="kicker">{page ? page.group : kicker}</span>}
           <h1>{title}</h1>
           {sub && <p className="sub">{sub}</p>}
         </div>
         {actions && <div className="actions">{actions}</div>}
       </div>
       {children}
+      <footer className="sheet-foot">
+        <span>{me?.program?.speakers || "Akshat Dani · Chirag J."}</span>
+        <span>{me?.program?.name || "OwnerDesk"}</span>
+      </footer>
     </div>
   );
 }
@@ -45,7 +54,7 @@ export function Busy({ run, children, className = "btn", onError, ...p }) {
   const [busy, setBusy] = useState(false);
   const { toast } = useHub();
   return (
-    <button {...p} className={className} disabled={busy || p.disabled}
+    <button {...p} className={busy ? `${className} is-busy` : className} disabled={busy || p.disabled}
       onClick={async () => {
         setBusy(true);
         try { await run(); if (onError) onError(""); }
