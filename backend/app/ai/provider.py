@@ -146,5 +146,29 @@ async def _call_once(provider: str, system: str, prompt: str, mock, max_tokens: 
     return _json(text), usage
 
 
+def explain(error: str) -> str:
+    """What an engine failure means for whoever runs the hub, and what to change: the owner only ever sees "the AI is busy"."""
+    e = error.lower()
+    if "credit balance" in e or "billing" in e or "quota" in e or "insufficient" in e:
+        return "The AI account is out of credit. Add credit in the provider's console (Anthropic: console.anthropic.com → Billing)."
+    if " 401" in e or " 403" in e or "authentication" in e or "api key" in e or "x-api-key" in e:
+        return "The API key is wrong, revoked or missing. Check ANTHROPIC_API_KEY (or the key for your AI_PROVIDER) in Railway → Variables."
+    if "effort" in e or "output_config" in e:
+        return "This model doesn't take a thinking depth. Set AI_EFFORT to blank in Railway → Variables, or clear AI_MODEL."
+    if "model" in e and (" 404" in e or "not_found" in e or " 400" in e):
+        return "AI_MODEL isn't a model this key can use. Clear AI_MODEL in Railway → Variables to use the built-in default."
+    if (" 429" in e or " 529" in e or " 503" in e or "overloaded" in e):
+        return "The provider is turning calls away (rate limit or overload). Wait a minute; if it keeps happening, raise the account's rate limits."
+    if "could not be reached" in e:
+        return "The hub couldn't reach the AI provider (network or timeout). Try again; if it keeps happening, check the provider's status page."
+    if "cut off" in e:
+        return "The answer ran past its length limit. Try again; if it keeps happening, send this message to the developer."
+    if "unreadable" in e:
+        return "The AI answered in a form the hub couldn't read. Try again; if it keeps happening, send this message to the developer."
+    if "unknown ai_provider" in e:
+        return "AI_PROVIDER isn't one of anthropic, gemini, openai or mock. Fix it in Railway → Variables."
+    return "Send this message to the developer."
+
+
 def cost_inr(usage: Usage) -> float:
     return round(usage.input_tokens / 1e6 * settings.ai_cost_in_per_m + usage.output_tokens / 1e6 * settings.ai_cost_out_per_m, 4)

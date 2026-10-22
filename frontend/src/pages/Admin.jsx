@@ -11,6 +11,35 @@ const pct = (n, d) => (d ? `${Math.round((n / d) * 100)}%` : "—");
 const SOURCE_NAMES = { direct: "Came directly", cohort: "Workshop join link", badge: "Website badge", invite: "Invite link", showcase: "Showcase" };
 const SOURCE_LABEL = { purchase: "paid", subscription: "Membership", trial: "trial", admin: "set", hub_admin: "admin number" };
 
+const when = (at) => new Date(at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+
+/** Test the AI: one tiny real call, and when it fails, what it means and what to change. Also the last failure an owner hit. */
+function AiCheck() {
+  const [r, setR] = useState(null);
+  return (
+    <div className="panel">
+      <div className="row between">
+        <div className="stack" style={{ gap: 4 }}>
+          <span className="label">AI engine</span>
+          <span className="small muted">Owners only ever see “the AI is busy”. This shows the real reason. It doesn't use anyone's runs.</span>
+        </div>
+        <Busy className="btn sm ai" run={async () => setR(await api("/admin/ai/check", { method: "POST" }))}>Test the AI</Busy>
+      </div>
+      {r && (
+        <div className="stack" style={{ gap: 6 }}>
+          <span className="small">{r.provider}{r.model ? ` · ${r.model}` : ""}{r.effort ? ` · effort ${r.effort}` : ""}{r.key_set ? "" : " · no API key set"}</span>
+          {r.ok ? <b className="small" style={{ color: "var(--teal)" }}>Working. Answered in {r.seconds} s.</b>
+            : <><b className="small" style={{ color: "var(--alert)" }}>Not working: {r.fix}</b><span className="small muted mono">{r.error}</span></>}
+          {r.last_failure && (
+            <span className="small muted">Last failure an owner hit: {when(r.last_failure.at)}, {r.last_failure.kind === "site" ? "website build" : r.last_failure.kind}. {r.last_failure.fix}
+              <span className="mono"> ({r.last_failure.error})</span></span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Admin() {
   const { toast, me } = useHub();
   const [days, setDays] = useState(7);
@@ -52,6 +81,8 @@ export default function Admin() {
           {Object.entries(p.plans.mix).filter(([, v]) => v).map(([k, v]) => <div key={k} className="row between small"><span>{me?.tiers?.[k]?.name || k}</span><b>{v}</b></div>)}
           <span className="small muted">{p.plans.trials} on a referral trial · upgrade clicks: {Object.entries(p.revenue_intent.upgrade_clicks).map(([k, v]) => `${me?.tiers?.[k]?.name || k} ${v}`).join(", ") || "none"}</span></div>
       </div>
+
+      <AiCheck />
 
       <AdminPayments />
 
