@@ -35,6 +35,32 @@ function Preset() {
   );
 }
 
+/** For the event only: the agents above Membership, in one tap, and back again afterwards. */
+function Extras() {
+  const { toast, me } = useHub();
+  const [s, reload] = useLoad("/admin/config/presets/event-extras");
+  if (!s) return null;
+  const tier = (t) => me?.tiers?.[t]?.name || t;
+  const above = s.features.filter((f) => f.above_membership);
+  return (
+    <div className="panel">
+      <div className="row between">
+        <div className="stack" style={{ gap: 4 }}>
+          <span className="label">For the event · extras in Membership</span>
+          <span className="small">{s.applied
+            ? "Every Membership account has Win-Back, Content & company research, WhatsApp chats and Lead Response — paying members too, until you move them back."
+            : "Give every pack made in the room these too. They sit in higher plans today, so paying members on Membership get them as well while they're moved:"}</span>
+          {!s.applied && <span className="small muted">{above.map((f) => `${f.label} (${tier(f.tier)})`).join(", ")}</span>}
+          <span className="small muted">On Membership, WhatsApp AI replies and the instant reply stay off until each owner switches them on. Each owner still connects their own WhatsApp number.</span>
+        </div>
+        {s.applied
+          ? <Busy className="btn sm ghost" run={async () => { const r = await api("/admin/config/presets/event-extras/undo", { method: "POST" }); toast(`Moved ${r.moved_back.length} back to their plans`); reload(); }}>Move them back</Busy>
+          : <Busy className="btn primary" run={async () => { const r = await api("/admin/config/presets/event-extras", { method: "POST" }); toast(`Moved ${r.moved.length} into Membership`); reload(); }}>Move them into Membership</Busy>}
+      </div>
+    </div>
+  );
+}
+
 function Settings({ e, reload }) {
   const { toast } = useHub();
   const [f, setF] = useState({ open: e.open, ai: e.ai, pack_cap: e.pack_cap, ai_cap: e.ai_cap, trial_until: e.trial_until || "" });
@@ -144,6 +170,7 @@ export default function AdminEvent() {
     <Sheet kicker="Admin · Live event" id="A-08" pillar="Admin" title={<>The room, <em>live</em>.</>}
       sub="Open the event link, put its QR on the projector, and watch packs being built and each demo being done.">
       <Preset />
+      <Extras />
       {!list ? <Loading /> : !list.length ? <Empty>Create a cohort first in <Link to="/admin">Admin</Link> (code, name, date). Each cohort can be an event.</Empty> : (
         <>
           <div className="row">

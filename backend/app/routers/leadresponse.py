@@ -229,14 +229,14 @@ async def overview(ctx: Ctx = Depends(feature("lead_response", "manager"))):
     conn = await _connection(ctx)
     line = booking_line(st, now())
     biz = b.get("name") or "us"
-    chat_on = (await jobs.get_settings(ctx.ws, "wa_sales")).get("on", True)
+    chat_on = jobs.on_for(ctx.owner, "wa_sales", await jobs.get_settings(ctx.ws, "wa_sales"))
     doc = await db().lead_response_settings.find_one({"_id": ctx.ws}, {"note": 1}) or {}
     return {"settings": st, "can_edit": ctx.role == "owner", "connected": conn["ready"], "connection": conn, "note": doc.get("note") or "",
             "preview": {"line": line, "params": ["(the customer's first name)", biz, line], "template_hint": TEMPLATE_HINT,
                         "text": f"Hello (first name), thank you for contacting {biz}. {line} {TEMPLATE_CLOSE}", "wording": wording(st),
                         "key": sample_key(st, b.get("name") or "")},
             "stats": await stats(ctx.ws), "channels": _channels(chat_on, conn["number"]), "what_options": list(WHAT),
-            "instant_reply_on": await jobs.is_on(ctx.ws, "instant_reply")}
+            "instant_reply_on": await jobs.is_on_for(ctx.owner, "instant_reply")}
 
 
 class SettingsIn(BaseModel):

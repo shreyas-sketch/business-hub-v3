@@ -59,7 +59,9 @@ async def is_on(ws: str, key: str) -> bool:
 # Agents that are on by default from their usual plan up, but wait for the owner's own switch on a lower plan that only
 # has them because the admin moved them there (v2.2: follow-ups in the ₹1,999 Membership). Each run is an AI run, so a
 # Membership owner chooses it. agent key -> feature (its tier in the code is the "usual plan").
-OPT_IN = {"followup": "follow_up_agent"}
+# The WhatsApp number's two agents too: moved below Growth Mentorship, nothing replies to a customer on the owner's
+# number until the owner switches it on.
+OPT_IN = {"followup": "follow_up_agent", "instant_reply": "whatsapp_ai", "wa_sales": "whatsapp_ai"}
 
 
 def needs_opt_in(owner: dict, key: str) -> bool:
