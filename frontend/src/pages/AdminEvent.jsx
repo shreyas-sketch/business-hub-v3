@@ -61,6 +61,20 @@ function Extras() {
   );
 }
 
+/** The link and its QR are built from APP_URL. If that names another site (the v2 hub, an old domain), a scan lands there,
+    not on this hub's event page: say so before the room scans it. */
+function WrongAddress({ link }) {
+  let host = "";
+  try { host = new URL(link).host; } catch { return null; }
+  if (!host || host === window.location.host) return null;
+  return (
+    <p className="form-err" role="alert">
+      This link and its QR open <b>{host}</b>, but this hub is <b>{window.location.host}</b>, so a scan won't reach this event.
+      Set <span className="mono">APP_URL=https://{window.location.host}</span> in Railway → Variables (or delete it), then reopen this page.
+    </p>
+  );
+}
+
 function Settings({ e, reload }) {
   const { toast } = useHub();
   const [f, setF] = useState({ open: e.open, ai: e.ai, pack_cap: e.pack_cap, ai_cap: e.ai_cap, trial_until: e.trial_until || "" });
@@ -186,6 +200,7 @@ export default function AdminEvent() {
                 <div className="stack" style={{ gap: 4 }}><b>{e.name || e.code}</b><span className="small mono">{e.link}</span></div>
                 <div className="row"><Copy text={e.link} label="Copy link" /><button className="btn sm" onClick={() => setQr(e)}>Show the QR</button></div>
               </div>
+              <WrongAddress link={e.link} />
               <Settings key={e.code + String(e.open) + e.pack_cap + e.ai_cap + (e.trial_until || "")} e={e} reload={reload} />
             </div>
           )}
