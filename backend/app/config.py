@@ -2,6 +2,7 @@
 import os
 import re
 from dataclasses import dataclass, field
+from urllib.parse import urlsplit
 
 
 def _int(name: str, default: int) -> int:
@@ -26,13 +27,24 @@ def _demo_phone(raw: str) -> str:
     return "+" + ("91" + digits if len(digits) == 10 else digits)
 
 
+def _origin(url: str) -> str:
+    """https://hub.example.in/admin/event/ → https://hub.example.in (a missing scheme counts as https)."""
+    url = url.strip()
+    if "://" not in url:
+        url = "https://" + url
+    p = urlsplit(url)
+    return f"{p.scheme}://{p.netloc}" if p.netloc else url.rstrip("/")
+
+
 @dataclass(frozen=True)
 class Settings:
     # production unless you explicitly say otherwise; "development" only takes effect on a localhost APP_URL
     env: str = os.getenv("APP_ENV", "production").strip().lower()        # production | development | test
     # Blank APP_URL on Railway falls back to the domain Railway generated for the service (Settings → Networking).
-    app_url: str = (os.getenv("APP_URL") or (f"https://{os.getenv('RAILWAY_PUBLIC_DOMAIN')}" if os.getenv("RAILWAY_PUBLIC_DOMAIN")
-                                            else "http://localhost:8000")).rstrip("/")
+    # Only the scheme and host are kept: the hub is served at the root, and a page pasted on the end ("…/admin/event")
+    # would break every link built from it (the event link and its QR, websites, badges, cards, reports).
+    app_url: str = _origin(os.getenv("APP_URL") or (f"https://{os.getenv('RAILWAY_PUBLIC_DOMAIN')}" if os.getenv("RAILWAY_PUBLIC_DOMAIN")
+                                                    else "http://localhost:8000"))
     mongo_url: str = os.getenv("MONGO_URL", "mongodb://127.0.0.1:27017")
     db_name: str = os.getenv("DB_NAME", "action_hub")
     jwt_secret: str = os.getenv("JWT_SECRET", "")

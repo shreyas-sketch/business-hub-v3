@@ -64,13 +64,14 @@ function Extras() {
 /** The link and its QR are built from APP_URL. If that names another site (the v2 hub, an old domain), a scan lands there,
     not on this hub's event page: say so before the room scans it. */
 function WrongAddress({ link }) {
-  let host = "";
-  try { host = new URL(link).host; } catch { return null; }
-  if (!host || host === window.location.host) return null;
+  let u;
+  try { u = new URL(link); } catch { return null; }
+  if (u.host === window.location.host && u.pathname === "/event") return null;
   return (
     <p className="form-err" role="alert">
-      This link and its QR open <b>{host}</b>, but this hub is <b>{window.location.host}</b>, so a scan won't reach this event.
-      Set <span className="mono">APP_URL=https://{window.location.host}</span> in Railway → Variables (or delete it), then reopen this page.
+      This link and its QR open <b>{u.host}{u.pathname}</b>, not this hub's event page (<b>{window.location.host}/event</b>), so a scan
+      won't reach this event. Set <span className="mono">APP_URL=https://{window.location.host}</span> in Railway → Variables (or delete it),
+      then reopen this page.
     </p>
   );
 }
