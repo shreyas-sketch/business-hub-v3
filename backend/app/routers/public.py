@@ -5,6 +5,7 @@ the showcase and invite lookups.
 Each website answers at <name>.SITES_DOMAIN (and at an owner's own domain once live) through the rewrite in main.py,
 and at APP_URL/s/<name> on the hub itself. `base` is the prefix links on the page use: '' on the website's own host.
 """
+import re
 from pathlib import Path
 from urllib.parse import quote
 
@@ -92,6 +93,49 @@ async def site_photo(slug: str, photo_id: str, viewer: dict | None = Depends(opt
     return Response(bytes(p["data"]), media_type=p["type"], headers={"Cache-Control": "public, max-age=604800, immutable"})
 
 
+# The brand kit's fonts, as Google Fonts families (heading weights, body weights)
+SITE_FONTS = {"poppins": ("Poppins", "600;700", "400;500;600"), "mukta": ("Mukta", "600;700", "400;500;600"),
+              "hind": ("Hind", "600;700", "400;500;600"), "baloo2": ("Baloo 2", "600;700", "400;500;600"),
+              "martel": ("Martel", "700;800", "400;600"), "yatra": ("Yatra One", "400", "400"),
+              "playfair": ("Playfair Display", "600;700", "400;500"), "inter": ("Inter", "600;700", "400;500;600"),
+              "noto": ("Noto Sans Devanagari", "600;700", "400;500;600")}
+
+
+def _mix(a: str, b: str, t: float) -> str:
+    """t of colour a over colour b (#RRGGBB), worked out here so every phone browser shows the same colour."""
+    ca, cb = (tuple(int(x[i:i + 2], 16) for i in (1, 3, 5)) for x in (a, b))
+    return "#" + "".join(f"{round(ca[i] * t + cb[i] * (1 - t)):02X}" for i in range(3))
+
+
+async def site_theme(owner_id: str, accent: str) -> dict:
+    """The website's colours and fonts from the owner's brand: the website's own colour leads, the brand kit adds its second
+    colour, fonts and corners. Text on the brand colour is white or ink, whichever reads better."""
+    from .. import brand_kit as bk
+    design = ((await db().brand_kits.find_one({"_id": owner_id}, {"design": 1})) or {}).get("design") or {}
+    primary = accent if re.fullmatch(r"#[0-9A-Fa-f]{6}", accent or "") else "#1F4E79"
+    colors = design.get("colors") or {}
+    second = colors.get("secondary") if re.fullmatch(r"#[0-9A-Fa-f]{6}", colors.get("secondary") or "") else _mix(primary, "#000000", .55)
+    fonts = design.get("fonts") or {}
+    head, body = SITE_FONTS.get(fonts.get("heading"), SITE_FONTS["poppins"]), SITE_FONTS.get(fonts.get("body"), SITE_FONTS["mukta"])
+    families = {head[0]: head[1], body[0]: body[2]} if head[0] != body[0] else {head[0]: ";".join(sorted(set((head[1] + ";" + body[2]).split(";"))))}
+    radius = {"square": "3px", "soft": "12px", "round": "22px"}.get(design.get("corners"), "12px")
+    ink = _mix(primary, "#0E1116", .16)
+    # dark sections: the brand's second colour when it is dark enough to carry white text, else a darker shade of the first
+    deep = second if bk.contrast(second, "#FFFFFF") >= 7 else _mix(primary, "#000000", .58 if bk.luminance(primary) > .04 else .8)
+    # the brand colour as text on white: darkened step by step until it passes WCAG AA (4.5:1), so a yellow brand stays legible
+    text = primary
+    for t in (.85, .7, .55, .4, .25):
+        if bk.contrast(text, "#FFFFFF") >= 5:      # 5:1 on white keeps 4.5:1 on the pale brand tint too
+            break
+        text = _mix(primary, "#0E1116", t)
+    return {"primary": primary.upper(), "on_primary": bk.text_on(primary), "deep": deep.upper(), "on_deep": bk.text_on(deep), "text": text,
+            "second": second.upper(), "soft": _mix(primary, "#FFFFFF", .07), "tint": _mix(primary, "#FFFFFF", .16),
+            "ink": ink, "line": _mix(primary, "#E7E9EC", .1), "radius": radius,
+            "pill": "999px" if design.get("corners") != "square" else "3px",
+            "head_font": head[0], "body_font": body[0],
+            "fonts_url": "https://fonts.googleapis.com/css2?" + "&".join(f"family={quote(f)}:wght@{w}" for f, w in families.items()) + "&display=swap"}
+
+
 @router.api_route("/s/{slug}", methods=["GET", "HEAD"], response_class=HTMLResponse)
 async def member_site(slug: str, request: Request, preview: int = 0, sent: int = 0, viewer: dict | None = Depends(optional_user)):
     site, owner, business = await _site_and_owner(slug, viewer, bool(preview))
@@ -111,7 +155,8 @@ async def member_site(slug: str, request: Request, preview: int = 0, sent: int =
         badge=not plans.has(owner, "badge_off"), badge_link=f"{settings.app_url}/join?ref={owner['ref_code']}&src=badge",
         ladder=extras["ladder"], guide=extras["guide"], logo=extras["logo"], url=site_url(site["slug"]),
         program=settings.program_name, year=now().year, photos=photos_mod.resolved(site.get("photos"), base),
-        industry=business.get("industry", ""))
+        industry=business.get("industry", ""), proof=(business.get("proof") or "").strip(),
+        theme=await site_theme(owner["_id"], site.get("accent", "#1F4E79")))
     photos_mod.fill_later(site, business)
     return HTMLResponse(html, headers={"Cache-Control": "no-store" if preview else "no-cache"})  # edits and plan changes show at once
 
