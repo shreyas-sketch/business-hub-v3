@@ -32,7 +32,7 @@ CHECK = r"""(phone) => {
   const scrollable = (el) => { for (let e = el.parentElement; e; e = e.parentElement) { const o = getComputedStyle(e).overflowX;
     if (o === "auto" || o === "scroll" || o === "hidden" || o === "clip") return true; } return false; };
   const visible = (el) => { const r = el.getBoundingClientRect(); const cs = getComputedStyle(el);
-    return r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && +cs.opacity > 0; };
+    return r.width > 1 && r.height > 1 && cs.visibility !== "hidden" && +cs.opacity > 0; };   // 1px: screen-reader-only text
   const name = (el) => (el.tagName.toLowerCase() + (el.className && typeof el.className === "string" ? "." + el.className.trim().split(/\s+/).slice(0, 2).join(".") : ""))
     + " “" + (el.innerText || el.value || el.getAttribute("aria-label") || "").trim().slice(0, 40) + "”";
   for (const el of document.querySelectorAll("body *")) {

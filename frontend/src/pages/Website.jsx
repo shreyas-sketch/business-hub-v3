@@ -208,6 +208,7 @@ export default function Website() {
   const [site, reload] = useLoad("/site");
   const [c, setC] = useState(null);
   const [accent, setAccent] = useState(null);
+  const [look, setLook] = useState("auto");
   const [slug, setSlug] = useState("");
   const [showcase, setShowcase] = useState(false);
   const [frame, setFrame] = useState(0);
@@ -216,7 +217,7 @@ export default function Website() {
   const [qr, setQr] = useState(false);
 
   useEffect(() => {
-    if (site?.content) { setC(site.content); setAccent(site.accent); setSlug(site.slug); setShowcase(!!site.showcase); }
+    if (site?.content) { setC(site.content); setAccent(site.accent); setLook(site.look || "auto"); setSlug(site.slug); setShowcase(!!site.showcase); }
   }, [site]);
   // The free guide's link, once the lead magnet is published (Action Program).
   useEffect(() => {
@@ -230,7 +231,7 @@ export default function Website() {
     catch (e) { if (!e.handled) toast(e.message, "err"); } finally { setBuilding(false); }
   };
   const save = async () => {
-    const r = await api("/site", { method: "PUT", body: { content: c, accent, slug, showcase } });
+    const r = await api("/site", { method: "PUT", body: { content: c, accent, look, slug, showcase } });
     await reload(); setFrame((f) => f + 1); await refresh(); return r;
   };
 
@@ -331,6 +332,16 @@ export default function Website() {
           <PhotosPanel site={site} onChange={async () => { await reload(); setFrame((f) => f + 1); }} />
           <div className="panel">
             <span className="label">Look</span>
+            {site.look_looks && (
+              <div className="look-pick" role="radiogroup" aria-label="Website look">
+                {[{ key: "auto", name: `Automatic · ${site.look_looks.find((l) => l.key === site.look_auto)?.name || ""}`, about: "Picked for your kind of business." }, ...site.look_looks].map((l) => (
+                  <button key={l.key} type="button" role="radio" aria-checked={look === l.key} className={`look-opt ${look === l.key ? "on" : ""}`} onClick={() => setLook(l.key)}>
+                    <b>{l.name}</b><span>{l.about}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <span className="small muted">Colour</span>
             <div className="row">{site.accents.map((a) => <button key={a} className={`swatch ${a === accent ? "on" : ""}`} style={{ background: a }} aria-label={`Colour ${a}`} onClick={() => setAccent(a)} />)}</div>
             <Field label="Web address" hint="Lowercase letters, numbers and dashes. Changing it changes your link everywhere.">
               <div className="row" style={{ flexWrap: "nowrap", gap: 6 }}>
