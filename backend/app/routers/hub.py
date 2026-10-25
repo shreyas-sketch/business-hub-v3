@@ -195,6 +195,8 @@ def site_view(site: dict | None, user: dict) -> dict | None:
     out["accents"] = ACCENTS
     out["photos"] = photos_mod.resolved(site.get("photos"), f"{settings.app_url}/s/{site['slug']}")
     out["stock_photos"] = bool(settings.pexels_api_key)
+    from ..rivals import public as rivals_public
+    out["competitors"] = rivals_public(site.get("competitors"))     # the addresses and whether each was read, not their text
     return out
 
 
@@ -230,20 +232,35 @@ def _site_from_ai(result: dict) -> dict:
                                        "steps": lists["steps"][:6], "faq": lists["faq"][:10]}).model_dump()
 
 
+class GenerateIn(BaseModel):
+    competitors: list[str] | None = Field(default=None, max_length=6)   # None: use the ones saved with the site
+
+
 @router.post("/site/generate")
-async def generate_site(ctx: Ctx = Depends(owner_ctx)):
+async def generate_site(body: GenerateIn | None = None, ctx: Ctx = Depends(owner_ctx)):
+    from .. import rivals as rv
     user = ctx.owner
     b = await _profile(ctx)
-    content = await run_ai(user, "site", tasks.site_content(b, b.get("brand")), f"Website — {b['name']}", check=_site_from_ai)
+    site = await db().sites.find_one({"owner_id": user["_id"]})
+    if body and body.competitors is not None:
+        try:
+            urls = rv.clean(body.competitors, b.get("website"))
+        except rv.RivalError as e:
+            raise HTTPException(400, str(e))
+        competitors = await rv.read_all(urls)       # read before the AI run is used, so a slow site doesn't hold a run
+    else:
+        competitors = (site or {}).get("competitors") or []
+    content = await run_ai(user, "site", tasks.site_content(b, b.get("brand"), competitors), f"Website — {b['name']}", check=_site_from_ai)
     site = await db().sites.find_one({"owner_id": user["_id"]})
     if site:
-        await db().sites.update_one({"_id": site["_id"]}, {"$set": {"content": content, "generated_content": content, "updated_at": now()}})
+        await db().sites.update_one({"_id": site["_id"]}, {"$set": {"content": content, "generated_content": content, "competitors": competitors,
+                                                                    "updated_at": now()}})
     else:
         for attempt in range(5):
             slug = await _unique_slug(_slugify(b["name"]) + (f"-{new_id()[:4]}" if attempt else ""), user["_id"])
             try:
                 await db().sites.insert_one({"_id": new_id(), "owner_id": user["_id"], "slug": slug, "status": "draft", "content": content,
-                                             "generated_content": content,
+                                             "generated_content": content, "competitors": competitors,
                                              "accent": ACCENTS[0], "showcase": False, "views": 0, "created_at": now(), "updated_at": now()})
                 break
             except DuplicateKeyError:
@@ -268,7 +285,8 @@ async def _site_edited(ws: str) -> bool:
 
 async def _site_rewrite(owner: dict) -> None:
     b = await profile_of(owner["_id"])
-    content = await run_ai(owner, "site", tasks.site_content(b, b.get("brand")), f"Website refreshed from your Knowledge Hub — {b['name']}",
+    stored = (await db().sites.find_one({"owner_id": owner["_id"]}, {"competitors": 1}) or {}).get("competitors")
+    content = await run_ai(owner, "site", tasks.site_content(b, b.get("brand"), stored), f"Website refreshed from your Knowledge Hub — {b['name']}",
                            check=_site_from_ai)
     await db().sites.update_one({"owner_id": owner["_id"]}, {"$set": {"content": content, "generated_content": content, "updated_at": now(),
                                                                       "brain_refreshed_at": now()}})

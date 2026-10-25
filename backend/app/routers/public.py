@@ -263,11 +263,12 @@ async def _inquiry(slug: str, request: Request, wants_json: bool, base: str):
 
 
 # ───────────────────────── the guide (lead magnet) ─────────────────────────
-async def _guide(slug: str):
-    site, owner, business = await _site_and_owner(slug, None, False)
+async def _guide(slug: str, viewer: dict | None = None, preview: bool = False):
+    """The published guide; with preview, the owner's own guide even before it (or the website) is published."""
+    site, owner, business = await _site_and_owner(slug, viewer, preview)
     if not site or not plans.has(owner, "lead_magnet"):
         return None
-    g = await db().lead_magnets.find_one({"_id": owner["_id"], "published": True})
+    g = await db().lead_magnets.find_one({"_id": owner["_id"], **({} if preview else {"published": True})})
     if not g:
         return None
     return site, owner, business, g
@@ -281,7 +282,15 @@ async def _uploads(slug: str) -> list[dict]:
 
 
 @router.get("/s/{slug}/guide", response_class=HTMLResponse)
-async def guide_page(slug: str, request: Request):
+async def guide_page(slug: str, request: Request, preview: int = 0, viewer: dict | None = Depends(optional_user)):
+    if preview:   # only the owner reads the whole guide as it will look, published or not; nothing is counted
+        found = await _guide(slug, viewer, True)
+        if not found or not viewer or viewer["_id"] != found[1]["_id"] or not found[3].get("content"):
+            return not_found()
+        site, owner, business, g = found
+        return HTMLResponse(templates.get_template("guide.html").render(
+            g=g["content"], name=business.get("name", ""), accent=site.get("accent", "#1F4E79"), base=base_for(request, site["slug"]),
+            unlocked=True, preview=True, form_error=None, program=settings.program_name, year=now().year, uploads=[]), headers={"Cache-Control": "no-store"})
     found = await _guide(slug)
     if not found:
         uploads = await _uploads(slug)   # no AI guide, but an uploaded download: /guide opens that

@@ -92,6 +92,7 @@ with sync_playwright() as p:
         pg.click("button:has-text('Copy link')"); expect(pg.locator(".toast")).to_contain_text("Copied")
     check("build, edit, save, preview, publish, copy link", build_site)
     def slug_rules():
+        pg.click("summary:has-text('Web address and settings')")       # the settings section is folded at first
         pg.locator("label:has-text('Web address') input").fill("admin"); pg.click("button:has-text('Save')")
         expect(pg.locator(".toast.err")).to_contain_text("web address"); pg.locator("label:has-text('Web address') input").fill("patel-pumps-motors")
     check("reserved web address refused", slug_rules)

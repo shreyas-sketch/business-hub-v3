@@ -3,6 +3,9 @@ import { Link } from "react-router-dom";
 import { api, upload, waLink } from "../api.js";
 import { Busy, Copy, Field, FormError, InviteLine, Locked, Modal, Sheet, useHub, useLoad } from "../ui.jsx";
 import DomainPanel from "../components/DomainPanel.jsx";
+import CompetitorInputs, { cleanCompetitors } from "../components/Competitors.jsx";
+import FullPreview from "../components/FullPreview.jsx";
+import Section from "../components/Section.jsx";
 import "./website21.css";
 
 const SECTION_LABEL = { headline: "Headline", subheadline: "Line under the headline", cta: "Button text", about: "About us",
@@ -203,6 +206,8 @@ function PhotosPanel({ site, onChange }) {
   );
 }
 
+const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
 export default function Website() {
   const { me, refresh, toast } = useHub();
   const [site, reload] = useLoad("/site");
@@ -211,13 +216,16 @@ export default function Website() {
   const [look, setLook] = useState("auto");
   const [slug, setSlug] = useState("");
   const [showcase, setShowcase] = useState(false);
+  const [rivals, setRivals] = useState([""]);
   const [frame, setFrame] = useState(0);
   const [building, setBuilding] = useState(false);
+  const [buildErr, setBuildErr] = useState("");
   const [guideUrl, setGuideUrl] = useState(null);
   const [qr, setQr] = useState(false);
 
   useEffect(() => {
     if (site?.content) { setC(site.content); setAccent(site.accent); setLook(site.look || "auto"); setSlug(site.slug); setShowcase(!!site.showcase); }
+    if (site?.competitors?.length) setRivals(site.competitors.map((x) => x.url));
   }, [site]);
   // The free guide's link, once the lead magnet is published (Action Program).
   useEffect(() => {
@@ -226,9 +234,11 @@ export default function Website() {
   }, [me.features?.lead_magnet, site?.status, site?.slug]);
 
   const build = async () => {
-    setBuilding(true);
-    try { await api("/site/generate", { method: "POST" }); await reload(); await refresh(); setFrame((f) => f + 1); }
-    catch (e) { if (!e.handled) toast(e.message, "err"); } finally { setBuilding(false); }
+    setBuilding(true); setBuildErr("");
+    try {
+      await api("/site/generate", { method: "POST", body: { competitors: cleanCompetitors(rivals) } });
+      await reload(); await refresh(); setFrame((f) => f + 1);
+    } catch (e) { if (!e.handled) setBuildErr(e.message); } finally { setBuilding(false); }
   };
   const save = async () => {
     const r = await api("/site", { method: "PUT", body: { content: c, accent, look, slug, showcase } });
@@ -240,10 +250,17 @@ export default function Website() {
     return (
       <Sheet kicker="Systems · Website" id="SY-01" pillar="Systems" step={2} title={<>Your website, written from your <em>Brain</em>.</>}
         sub="The AI uses your brand message, your products and why customers choose you. Nothing invented — you can edit every word before it goes live.">
-        <div className="empty">
-          <h2>{building ? "Writing your website…" : "Ready when you are."}</h2>
-          <p className="muted">Uses 1 AI run. Takes about a minute.</p>
-          <button className="btn primary ai" disabled={building} onClick={build}>{building ? "Building…" : "Build my website"}</button>
+        <div className="panel stack ws-build">
+          <div className="field">
+            <span className="label">Competitor websites <span className="muted">(optional, up to 3)</span></span>
+            <CompetitorInputs value={rivals} onChange={setRivals} />
+            <span className="hint">Your website is written to stand out from them. Nothing is copied, and they're never named.</span>
+          </div>
+          <FormError msg={buildErr} />
+          <div className="row">
+            <button className="btn primary ai" disabled={building} onClick={build}>{building ? "Writing your website…" : "Build my website"}</button>
+            <span className="small muted">Uses 1 AI run. Takes about a minute.</span>
+          </div>
         </div>
       </Sheet>
     );
@@ -251,16 +268,20 @@ export default function Website() {
   if (!c) return null;
   const live = site.status === "live";
   const shareText = encodeURIComponent(`Here's our website — you can send an inquiry directly: ${site.url}`);
+  const dirty = JSON.stringify(c) !== JSON.stringify(site.content) || accent !== site.accent || look !== (site.look || "auto")
+    || slug !== site.slug || showcase !== !!site.showcase;
+  const undo = () => { setC(site.content); setAccent(site.accent); setLook(site.look || "auto"); setSlug(site.slug); setShowcase(!!site.showcase); };
+  const lookName = look === "auto" ? `${site.look_looks?.find((l) => l.key === site.look_auto)?.name || ""} · automatic` : site.look_looks?.find((l) => l.key === look)?.name;
+  const photoCount = (site.photos?.hero?.kind === "upload" ? 1 : 0) + (site.photos?.gallery || []).filter((p) => p.kind === "upload").length;
+  const readRivals = (site.competitors || []).filter((x) => x.read);
+  const publish = async () => { await save(); await api("/site/publish", { method: "POST" }); await reload(); await refresh(); toast("Your website is live"); };
   return (
     <Sheet kicker="Systems · Website" id="SY-01" pillar="Systems" step={2}
       title={live ? <>Your website is <em>live</em>.</> : <>Check it, then go <em>live</em>.</>}
-      sub={live ? "Every inquiry from the form lands in Leads and alerts you on WhatsApp." : "Edit anything here. The preview shows exactly what customers will see."}
-      actions={<>
-        <Busy className="btn ghost sm" run={async () => { await save(); toast("Saved"); }}>Save</Busy>
-        {live
-          ? <Busy className="btn ghost sm" run={async () => { await api("/site/unpublish", { method: "POST" }); await reload(); await refresh(); }}>Take offline</Busy>
-          : <Busy className="btn primary" run={async () => { await save(); await api("/site/publish", { method: "POST" }); await reload(); await refresh(); toast("Your website is live"); }}>Publish</Busy>}
-      </>}>
+      sub={live ? "Every inquiry from the form lands in Leads and alerts you on WhatsApp." : "Change anything below, preview it full screen, then publish."}
+      actions={live
+        ? <Busy className="btn ghost sm" run={async () => { await api("/site/unpublish", { method: "POST" }); await reload(); await refresh(); }}>Take offline</Busy>
+        : <Busy className="btn primary" run={publish}>Publish</Busy>}>
       {live && qr && (
         <Modal onClose={() => setQr(false)}>
           <div className="stack" style={{ justifyItems: "center", textAlign: "center" }}>
@@ -271,67 +292,59 @@ export default function Website() {
           </div>
         </Modal>
       )}
-      {live && (
-        <div className="panel active">
-          <span className="label">Your web address</span>
-          <div className="row"><a className="mono" href={site.url} target="_blank" rel="noopener" style={{ wordBreak: "break-all" }}>{site.url}</a></div>
-          <div className="row">
+
+      <div className={`panel ws-top ${live ? "active" : ""}`}>
+        {live
+          ? <a className="mono ws-url" href={site.url} target="_blank" rel="noopener">{site.url.replace(/^https?:\/\//, "")}</a>
+          : <span className="small muted">Only you can see it until you publish.</span>}
+        <div className="row">
+          <FullPreview src={`/s/${site.slug}?preview=1`} title={`${me.business_name || "Your website"} · preview`} className={live ? "btn" : "btn primary"} />
+          {live && <>
             <Copy text={site.url} label="Copy link" />
-            <a className="btn sm" href={`https://wa.me/?text=${shareText}`} target="_blank" rel="noopener">Send to customers on WhatsApp</a>
-            <button className="btn sm" onClick={() => setQr(true)}>Show the QR</button>
-          </div>
-          <p className="small muted">Put this link on your WhatsApp Business profile, Google Business listing and visiting card.</p>
-          {site.card_url && (
-            <>
-              <hr className="rule" />
-              <span className="label">Your digital visiting card</span>
-              <a className="mono small" href={site.card_url} target="_blank" rel="noopener" style={{ wordBreak: "break-all" }}>{site.card_url}</a>
-              <div className="row">
-                <Copy text={site.card_url} label="Copy link" />
-                <a className="btn sm" href={waLink(`Here's my visiting card — save my number in one tap: ${site.card_url}`)} target="_blank" rel="noopener">Share on WhatsApp</a>
-              </div>
-            </>
-          )}
-          {guideUrl && (
-            <>
-              <hr className="rule" />
-              <span className="label">Your free guide</span>
-              <a className="mono small" href={guideUrl} target="_blank" rel="noopener" style={{ wordBreak: "break-all" }}>{guideUrl}</a>
-              <div className="row">
-                <Copy text={guideUrl} label="Copy link" />
-                <a className="btn sm" href={waLink(`Here's a free guide for you: ${guideUrl}`)} target="_blank" rel="noopener">Share on WhatsApp</a>
-                <Link className="btn sm ghost" to="/lead-magnet">Edit the guide</Link>
-              </div>
-            </>
-          )}
+            <a className="btn sm" href={`https://wa.me/?text=${shareText}`} target="_blank" rel="noopener">Share on WhatsApp</a>
+            <button className="btn sm ghost" onClick={() => setQr(true)}>QR code</button>
+          </>}
         </div>
-      )}
-      <DomainPanel />
-      <PromptEditor dirty={JSON.stringify(c) !== JSON.stringify(site.content)} onApplied={async () => { await reload(); setFrame((f) => f + 1); }} />
-      <div className="grid2" style={{ alignItems: "start" }}>
-        <div className="stack">
-          <div className="panel">
+        {live && (site.card_url || guideUrl) && (
+          <details className="ws-more">
+            <summary>More to share: {[site.card_url && "visiting card", guideUrl && "free guide"].filter(Boolean).join(" and ")}</summary>
+            {site.card_url && (
+              <div className="stack" style={{ gap: 6 }}>
+                <span className="label">Your digital visiting card</span>
+                <a className="mono small" href={site.card_url} target="_blank" rel="noopener" style={{ wordBreak: "break-all" }}>{site.card_url}</a>
+                <div className="row"><Copy text={site.card_url} label="Copy link" />
+                  <a className="btn sm" href={waLink(`Here's my visiting card — save my number in one tap: ${site.card_url}`)} target="_blank" rel="noopener">Share on WhatsApp</a></div>
+              </div>
+            )}
+            {guideUrl && (
+              <div className="stack" style={{ gap: 6 }}>
+                <span className="label">Your free guide</span>
+                <a className="mono small" href={guideUrl} target="_blank" rel="noopener" style={{ wordBreak: "break-all" }}>{guideUrl}</a>
+                <div className="row"><Copy text={guideUrl} label="Copy link" />
+                  <a className="btn sm" href={waLink(`Here's a free guide for you: ${guideUrl}`)} target="_blank" rel="noopener">Share on WhatsApp</a>
+                  <Link className="btn sm ghost" to="/lead-magnet">Edit the guide</Link></div>
+              </div>
+            )}
+          </details>
+        )}
+      </div>
+
+      <div className="ws-grid">
+        <div className="stack ws-edit">
+          <Section title="Main message" note={c.headline} open>
             <Field label="Headline"><input className="input" value={c.headline} maxLength={120} onChange={(e) => setC({ ...c, headline: e.target.value })} /></Field>
             <Field label="Line under the headline"><textarea className="textarea" style={{ minHeight: 64 }} value={c.subheadline} maxLength={300} onChange={(e) => setC({ ...c, subheadline: e.target.value })} /></Field>
             <Field label="Button text"><input className="input" value={c.cta} maxLength={40} onChange={(e) => setC({ ...c, cta: e.target.value })} /></Field>
             <Field label="About us"><textarea className="textarea" value={c.about} maxLength={1200} onChange={(e) => setC({ ...c, about: e.target.value })} /></Field>
-          </div>
-          <div className="panel">
-            <ListEditor label="What you offer" items={c.offers} setItems={(offers) => setC({ ...c, offers })} max={12} blank={{ name: "", description: "", price: "" }}
+          </Section>
+          <Section title="What you offer" note={count(c.offers.length, "product or service", "products and services")}>
+            <ListEditor label="Products and prices" items={c.offers} setItems={(offers) => setC({ ...c, offers })} max={12} blank={{ name: "", description: "", price: "" }}
               fields={[["name", "Product or service"], ["description", "One line about it", true], ["price", "Price (leave empty to quote)"]]} />
-          </div>
-          <div className="panel">
-            <ListEditor label="Why customers choose you" items={c.why} setItems={(why) => setC({ ...c, why })} max={6} blank={{ title: "", text: "" }} fields={[["title", "Reason"], ["text", "One line (optional)"]]} />
-          </div>
-          <div className="panel">
-            <ListEditor label="How it works" items={c.steps} setItems={(steps) => setC({ ...c, steps })} max={6} blank={{ title: "", text: "" }} fields={[["title", "Step"], ["text", "What happens"]]} />
-          </div>
-          <div className="panel">
-            <ListEditor label="Questions customers ask" items={c.faq} setItems={(faq) => setC({ ...c, faq })} max={10} blank={{ q: "", a: "" }} fields={[["q", "Question"], ["a", "Answer", true]]} />
-          </div>
-          <PhotosPanel site={site} onChange={async () => { await reload(); setFrame((f) => f + 1); }} />
-          <div className="panel">
-            <span className="label">Look</span>
+          </Section>
+          <Section title="Photos" note={photoCount ? count(photoCount, "of your photos", "of your photos") : site.stock_photos ? "Stock photos for now" : "No photos yet"}>
+            <PhotosPanel site={site} onChange={async () => { await reload(); setFrame((f) => f + 1); }} />
+          </Section>
+          <Section title="Look and colour" note={lookName}>
             {site.look_looks && (
               <div className="look-pick" role="radiogroup" aria-label="Website look">
                 {[{ key: "auto", name: `Automatic · ${site.look_looks.find((l) => l.key === site.look_auto)?.name || ""}`, about: "Picked for your kind of business." }, ...site.look_looks].map((l) => (
@@ -341,8 +354,35 @@ export default function Website() {
                 ))}
               </div>
             )}
-            <span className="small muted">Colour</span>
+            <span className="label">Colour</span>
             <div className="row">{site.accents.map((a) => <button key={a} className={`swatch ${a === accent ? "on" : ""}`} style={{ background: a }} aria-label={`Colour ${a}`} onClick={() => setAccent(a)} />)}</div>
+          </Section>
+          <Section title="More sections" note={`${count(c.why.length, "reason", "reasons")} · ${count(c.steps.length, "step", "steps")} · ${count(c.faq.length, "question", "questions")}`}>
+            <ListEditor label="Why customers choose you" items={c.why} setItems={(why) => setC({ ...c, why })} max={6} blank={{ title: "", text: "" }} fields={[["title", "Reason"], ["text", "One line (optional)"]]} />
+            <hr className="rule" />
+            <ListEditor label="How it works" items={c.steps} setItems={(steps) => setC({ ...c, steps })} max={6} blank={{ title: "", text: "" }} fields={[["title", "Step"], ["text", "What happens"]]} />
+            <hr className="rule" />
+            <ListEditor label="Questions customers ask" items={c.faq} setItems={(faq) => setC({ ...c, faq })} max={10} blank={{ q: "", a: "" }} fields={[["q", "Question"], ["a", "Answer", true]]} />
+          </Section>
+          <Section title="Change it with AI" note={readRivals.length ? `Standing out from ${readRivals.map((x) => x.host).join(", ")}` : "Describe a change, or rewrite it all"}>
+            <PromptEditor dirty={dirty} onApplied={async () => { await reload(); setFrame((f) => f + 1); }} />
+            <hr className="rule" />
+            <div className="panel stack">
+              <span className="label">Rewrite the whole website</span>
+              <div className="field">
+                <span className="small">Competitor websites <span className="muted">(optional, up to 3)</span></span>
+                <CompetitorInputs value={rivals} onChange={setRivals} read={site.competitors || []} />
+                <span className="hint">The new copy is written to stand out from them. Nothing is copied, and they're never named.</span>
+              </div>
+              <FormError msg={buildErr} />
+              <div className="row">
+                <Busy className="btn ai" disabled={building} run={async () => { if (window.confirm("Rewrite the website with AI? This replaces your edits and uses 1 AI run.")) await build(); }}>
+                  {building ? "Rewriting…" : "Rewrite with AI"}</Busy>
+                <span className="small muted">1 AI run · replaces your edits</span>
+              </div>
+            </div>
+          </Section>
+          <Section title="Web address and settings" note={site.sites_domain ? `${slug}.${site.sites_domain}` : `/s/${slug}`}>
             <Field label="Web address" hint="Lowercase letters, numbers and dashes. Changing it changes your link everywhere.">
               <div className="row" style={{ flexWrap: "nowrap", gap: 6 }}>
                 {!site.sites_domain && <span className="small muted hide-sm">{site.url.replace(/[^/]+$/, "")}</span>}
@@ -351,22 +391,31 @@ export default function Website() {
               </div>
             </Field>
             <label className="row small" style={{ cursor: "pointer" }}><input type="checkbox" checked={showcase} onChange={(e) => setShowcase(e.target.checked)} /> Show my website in the public showcase</label>
-          </div>
-          <div className="panel">
+            <hr className="rule" />
             <span className="label">Badge</span>
             <p className="small">{site.badge ? "Free websites show a small “Built free with OwnerDesk” badge. When an owner signs up from your badge, you get rewards." : "Badge off — your website shows only your business."}</p>
             {site.badge && <Locked feature="badge_off" what="Remove the badge" />}
-          </div>
-          <div className="row">
-            <Busy className="btn ghost sm ai" run={async () => { if (window.confirm("Rewrite the website with AI? This replaces your edits and uses 1 AI run.")) await build(); }}>Rewrite with AI</Busy>
-          </div>
+            <hr className="rule" />
+            <DomainPanel />
+          </Section>
           <InviteLine />
         </div>
-        <div style={{ position: "sticky", top: 20 }}>
-          <span className="label">Preview{live ? " · live" : " · only you can see this"}</span>
+        <div className="ws-side hide-sm">
+          <div className="row between"><span className="label">Preview{live ? " · live" : " · only you can see this"}</span>
+            <FullPreview src={`/s/${site.slug}?preview=1`} title={`${me.business_name || "Your website"} · preview`} label="Full screen" className="btn sm ghost" /></div>
           <iframe key={frame} title="Website preview" className="preview-frame" style={{ marginTop: 10 }} src={`/s/${site.slug}?preview=1`} />
         </div>
       </div>
+
+      {dirty && (
+        <div className="ws-savebar" role="status">
+          <span>You have changes that aren't saved.</span>
+          <div className="row">
+            <button className="btn sm ghost" onClick={undo}>Undo</button>
+            <Busy className="btn sm primary" run={async () => { await save(); toast("Saved"); }}>Save changes</Busy>
+          </div>
+        </div>
+      )}
     </Sheet>
   );
 }

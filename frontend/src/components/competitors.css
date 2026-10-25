@@ -1,0 +1,3 @@
+.comp-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.comp-row .input { flex: 1 1 220px; min-width: 0; }
+.comp-row > .small { flex-basis: 100%; }

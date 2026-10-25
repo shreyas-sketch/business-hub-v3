@@ -37,7 +37,7 @@ footer{color:var(--muted);font-size:14px;padding:24px 0 48px;border-top:1px soli
   <span class="kicker">Free guide from {{ name }}</span>
   <h1>{{ g.title }}</h1>
   {% if g.subtitle %}<p class="lead">{{ g.subtitle }}</p>{% endif %}
-  {% if unlocked %}<div class="ok">Here's your guide. {{ name }} may also send it to you on WhatsApp.</div>{% endif %}
+  {% if unlocked and not preview %}<div class="ok">Here's your guide. {{ name }} may also send it to you on WhatsApp.</div>{% endif %}
 </div></div>
 <div class="wrap">
   {% if g.intro %}<section style="border-top:0"><p>{{ g.intro }}</p></section>{% endif %}

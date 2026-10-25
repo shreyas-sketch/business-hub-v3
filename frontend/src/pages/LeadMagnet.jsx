@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ago, api, upload, waLink } from "../api.js";
-import { Busy, Copy, Field, FormError, Sheet, Stat, Switch, useHub, useLoad } from "../ui.jsx";
+import { Busy, Copy, Field, FormError, Sheet, Switch, useHub, useLoad } from "../ui.jsx";
 import { Loading, Pill } from "../v2.jsx";
 import "./program.css";
+import FullPreview from "../components/FullPreview.jsx";
+import Section from "../components/Section.jsx";
 import "./website21.css";
 
 const mb = (bytes) => `${(bytes / 1024 / 1024).toFixed(bytes < 1024 * 1024 ? 2 : 1)} MB`;
@@ -206,13 +208,12 @@ export default function LeadMagnet() {
   const { toast, refresh } = useHub();
   const [loaded] = useLoad("/lead-magnet");
   const [data, setData] = useState(null);
-  const [rewrite, setRewrite] = useState(false);
   const [pubErr, setPubErr] = useState("");
   const [publishing, setPublishing] = useState(false);
   useEffect(() => { if (loaded) setData(loaded); }, [loaded]);
 
   const head = { kicker: "Scale · Lead magnet", id: "PR-01", pillar: "Scale" };
-  const sub = "A free guide on your website that turns visitors into inquiries. Visitors leave their name and number to read it, and each one lands in your leads.";
+  const sub = "A free guide on your website. Visitors leave their name and number to read it, and each one lands in your leads.";
   if (!data) return <Sheet {...head} title={<>A free guide that brings <em>inquiries</em>.</>} sub={sub}><Loading /></Sheet>;
 
   const g = data.guide;
@@ -220,7 +221,9 @@ export default function LeadMagnet() {
     return (
       <Sheet {...head} title={<>A free guide that brings <em>inquiries</em>.</>} sub={sub}>
         <WriteForm first onDone={setData} />
-        <Uploads />
+        <Section title="Or upload your own PDF" note="A brochure, price list or checklist you already have">
+          <Uploads />
+        </Section>
       </Sheet>
     );
   }
@@ -242,44 +245,40 @@ export default function LeadMagnet() {
   const rate = data.stats.views ? Math.round((data.stats.leads / data.stats.views) * 1000) / 10 : 0;
 
   return (
-    <Sheet {...head} sub={sub}
+    <Sheet {...head} sub={live ? "Share the link. Everyone who leaves their number to read it lands in your leads." : "Read it full screen, change any words, then publish it on your website."}
       title={!live ? <>Check your guide, then <em>publish</em> it.</> : data.stats.leads ? <>Your guide is bringing in <em>leads</em>.</> : <>Your guide is live. Now <em>share</em> it.</>}>
-      <div className={`panel ${live ? "active" : ""}`}>
+      <div className={`panel ws-top ${live ? "active" : ""}`}>
         <div className="row between">
-          <span className="label">On your website</span>
+          <b className="lm-title">{content.title}</b>
           {live ? <Pill kind="on">Live{g.published_at ? ` · ${ago(g.published_at)}` : ""}</Pill> : <Pill>Not published</Pill>}
         </div>
-        <Switch checked={live} disabled={publishing} label={live ? "Published on my website" : "Publish on my website"} onChange={togglePublish} />
+        <div className="row">
+          {data.preview_url && <FullPreview src={data.preview_url} title={`${content.title} · preview`} className={live ? "btn" : "btn primary"} />}
+          {live && data.url && <>
+            <Copy text={data.url} label="Copy link" />
+            <a className="btn sm" href={waLink(shareText)} target="_blank" rel="noopener">Share on WhatsApp</a>
+          </>}
+        </div>
+        {live && data.url && <a className="mono ws-url" href={data.url} target="_blank" rel="noopener">{data.url.replace(/^https?:\/\//, "")}</a>}
+        <Switch checked={live} disabled={publishing || (!live && !data.site_live)} label={live ? "Published on my website" : "Publish on my website"} onChange={togglePublish} />
         <FormError msg={pubErr} />
         {!data.site_live && !live && (
-          <p className="small muted">The guide lives on your website, so the website has to be live first. <Link to="/website">Go to my website</Link></p>
+          <p className="small muted">The guide lives on your website, so your website has to be live first. <Link to="/website">Go to my website</Link></p>
         )}
-        {data.url && live && (
-          <>
-            <a className="pg-link" href={data.url} target="_blank" rel="noopener">{data.url}</a>
-            <div className="pg-actions">
-              <Copy text={data.url} label="Copy link" />
-              <a className="btn sm" href={data.url} target="_blank" rel="noopener">Open</a>
-              <a className="btn sm" href={waLink(shareText)} target="_blank" rel="noopener">Share on WhatsApp</a>
-            </div>
-            <p className="small muted">Put this link in your WhatsApp Status, your groups and your Google profile. A link to it also shows on your website.</p>
-          </>
-        )}
-        {data.url && !live && data.site_live && <span className="small muted">Once published, it will be at <span className="pg-link">{data.url}</span></span>}
+        {live && <p className="small muted">{data.stats.views ? `${data.stats.views} opened it · ${data.stats.leads} left their number (${rate}%)` : "Put the link in your WhatsApp Status, groups and Google profile. Opens and leads are counted here."}</p>}
       </div>
 
-      <div className="statgrid">
-        <Stat label="People who opened it" value={data.stats.views} />
-        <Stat label="Left their number" value={data.stats.leads} note={data.stats.views ? `${rate}% of readers` : "Counted from the day you publish"} />
+      <div className="stack ws-edit">
+        <Section title="Edit the words" note={`${(content.sections || []).length} sections · ${content.promise || content.subtitle || ""}`}>
+          <GuideEditor content={content} onSaved={setData} />
+        </Section>
+        <Section title="Write a new guide with AI" note="Replaces this one · 1 AI run">
+          <WriteForm onDone={setData} />
+        </Section>
+        <Section title="Your own downloads" note="Upload a PDF you already have">
+          <Uploads />
+        </Section>
       </div>
-
-      <GuideEditor content={content} onSaved={setData} />
-
-      {rewrite
-        ? <WriteForm onDone={(d) => { setData(d); setRewrite(false); }} onCancel={() => setRewrite(false)} />
-        : <div><button className="btn ghost sm" onClick={() => setRewrite(true)}>Write a new guide with AI</button></div>}
-
-      <Uploads />
     </Sheet>
   );
 }
