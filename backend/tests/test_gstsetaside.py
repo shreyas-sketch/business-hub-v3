@@ -10,6 +10,7 @@ import pytest
 from app import knowledge
 from app.db import IST, db, now
 from app.routers import cashflow as cashflow_router, compliance
+from app.routers import gstsetaside as gst
 from app.services import new_id
 from tests.conftest import new_owner
 
@@ -139,7 +140,8 @@ async def test_monthly_filer_sums_every_source_in_paise_and_takes_the_due_date_f
     assert oct_["bills_gst"] == 573.01 and oct_["bills_count"] == 2 and oct_["bills_without_gst_marked"] == 1
     assert oct_["estimate"] == 2947.80 and oct_["estimate_rounded"] == 2948 and oct_["carry_forward"] == 0
     assert oct_["counts"] == {"invoices": 3, "gateway_invoices": 1, "credit_notes": 1, "uploads": 2, "uploads_without_gst": 1,
-                              "uploads_already_in_hub": 1, "bills": 2, "bills_not_claimable": 1, "bills_waiting": 1}
+                              "uploads_already_in_hub": 1, "bills": 2, "bills_not_claimable": 1, "bills_waiting": 1,
+                              "bank_receipts": 0, "bank_accounts": 0}
     # the due date is the calendar's GSTR-3B item for October, never worked out here
     item = await gst_item(uid, "gstr3b", "October 2026")
     assert item and item["due_date"] == "2026-11-20"
@@ -160,7 +162,7 @@ async def test_monthly_filer_sums_every_source_in_paise_and_takes_the_due_date_f
     assert any("isn't over yet" in n for n in nov["notes"]) and any("₹377 more than the GST on your sales" in n for n in nov["notes"])
     assert nov["due"]["date"] == "2026-12-20" and nov["due"]["item_id"] == (await gst_item(uid, "gstr3b", "November 2026"))["_id"]
     assert nov["can_count"] is False and nov["cash_flow_note"] == "Nothing to keep aside, so nothing to add to your cash flow."
-    assert page["sources"] == {"invoices": 3, "gateway_invoices": 1, "credit_notes": 1, "uploads": 3, "bills": 3}
+    assert page["sources"] == {"invoices": 3, "gateway_invoices": 1, "credit_notes": 1, "uploads": 3, "bills": 3, "bank_months": 0}
     assert not any("upload your sales sheet" in n for n in page["notes"])   # they did upload
 
     # the other business sees only its own numbers
@@ -227,7 +229,7 @@ async def test_no_invoices_or_uploads_says_what_is_missing(client, on_day):
     c, uid = await owner_on("9000100005")
     await set_identity(c)
     page = (await c.get("/api/gst-setaside")).json()
-    assert "Sales made outside the hub aren't counted — upload your sales sheet on Customer risk or Getting paid." in page["notes"]
+    assert gst.UPLOAD_HINT in page["notes"]
     for p in page["periods"]:
         assert p["estimate"] == 0 and p["carry_forward"] == 0 and p["can_count"] is False
     assert "No invoices in the hub in October." in by_period(page)["2026-10"]["notes"]
@@ -261,7 +263,7 @@ async def test_qrmp_months_one_and_two_are_pmt06_and_month_three_is_the_quarterl
     assert oct_["due"]["item_id"] == (await gst_item(buid, "pmt06", "October 2026"))["_id"] and oct_["due"]["date"] == "2026-11-25"
     assert nov["due"]["item_id"] == (await gst_item(buid, "pmt06", "November 2026"))["_id"] and nov["due"]["date"] == "2026-12-25"
     assert oct_["estimate"] == 1000.00 and not any("quarterly GSTR-3B settles" in n for n in oct_["notes"])
-    assert "Sales made outside the hub aren't counted — upload your sales sheet on Customer risk or Getting paid." in page["notes"]
+    assert gst.UPLOAD_HINT in page["notes"]
 
     # 5 Jan: December is month 3 → paid with the quarterly GSTR-3B (22nd in Maharashtra, 24th in Delhi); January is PMT-06
     on_day(date(2027, 1, 5))

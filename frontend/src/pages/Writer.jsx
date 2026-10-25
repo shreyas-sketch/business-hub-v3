@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api, upload, waLink } from "../api.js";
 import { Busy, Copy, Field, InviteLine, Locked, Sheet, useHub } from "../ui.jsx";
 import { Tabs } from "../v2.jsx";
+import TemplatePicker from "../components/Templates.jsx";
 import "./free.css";
 
 /* ───────── Voice recorder (also used by Onboarding) ─────────
@@ -228,6 +229,7 @@ export default function Writer() {
           <div className="row">
             <Busy className="btn primary ai" disabled={msg.message.trim().length < 2}
               run={() => run("reply", "/studio/reply", { message: msg.message, customer_name: msg.customer_name })}>Draft my reply</Busy>
+            <TemplatePicker name={msg.customer_name} phone={msg.phone} className="btn ghost" />
             <Example onClick={() => setMsg(EXAMPLES.reply)} />
           </div>
           {result.reply && (

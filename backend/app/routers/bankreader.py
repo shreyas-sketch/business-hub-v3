@@ -21,6 +21,10 @@ bank_imports {_id, ws, by, created_at, expires_at, format, bank, account_last4, 
               transactions [{ref, date, narration, payee, amount, kind, balance, category, guessed}], warnings,
               imported [bank refs], to_cash_flow [recurring keys], cash_lines {recurring key: cash_item id}}
 bank_rules   {_id: "<ws>:<payee key>", ws, payee, category, by, at}       the owner's "remember this" choices
+bank_months  {_id: "<ws>:<last4 or ->:<YYYY-MM>", ws, account_last4, bank, period, receipts (paise), count, start, end, import_id, at}
+             only the month's total "From customers" — no rows, names or narrations — so GST set-aside can estimate the GST in
+             a month's sales after the statement itself is gone. A later statement of the same account replaces a month only
+             when it covers at least as many days of it; "Delete it now" removes that statement's totals too.
 """
 import asyncio
 import hashlib
@@ -136,6 +140,42 @@ async def _view(ws: str, imp: dict) -> dict:
             "keep_hours": KEEP_HOURS}
 
 
+def month_totals(imp: dict) -> list[dict]:
+    """Per calendar month the statement covers: the money in marked "From customers", and the days of the month it covers."""
+    from datetime import date as _date
+    txns = imp.get("transactions") or []
+    days = sorted(str(t.get("date") or "")[:10] for t in txns if t.get("date"))
+    if not days:
+        return []
+    start, end = _date.fromisoformat(imp.get("from") or days[0]), _date.fromisoformat(imp.get("to") or days[-1])
+    out: dict[str, dict] = {}
+    d = start.replace(day=1)
+    while d <= end:
+        nxt = (d.replace(day=28) + timedelta(days=4)).replace(day=1)
+        out[d.strftime("%Y-%m")] = {"period": d.strftime("%Y-%m"), "receipts": 0, "count": 0,
+                                    "start": max(start, d).isoformat(), "end": min(end, nxt - timedelta(days=1)).isoformat()}
+        d = nxt
+    for t in txns:
+        m = out.get(str(t.get("date") or "")[:7])
+        if m is not None and t.get("kind") == "credit" and t.get("category") == "sales_receipt":
+            m["receipts"] += int(round(float(t.get("amount") or 0) * 100))
+            m["count"] += 1
+    return list(out.values())
+
+
+async def save_months(ws: str, imp: dict, same_import: bool = False) -> None:
+    from datetime import date as _date
+    last4 = re.sub(r"\D", "", str(imp.get("account_last4") or ""))[-4:] or "-"
+    span = lambda m: (_date.fromisoformat(m["end"]) - _date.fromisoformat(m["start"])).days   # noqa: E731
+    for m in month_totals(imp):
+        _id = f"{ws}:{last4}:{m['period']}"
+        old = await db().bank_months.find_one({"_id": _id}, {"start": 1, "end": 1, "import_id": 1})
+        if old and old.get("import_id") != imp["_id"] and (same_import or span(old) > span(m)):
+            continue   # another statement covers more of this month (a re-sort only updates this statement's own months)
+        await db().bank_months.replace_one({"_id": _id}, {"_id": _id, "ws": ws, "account_last4": None if last4 == "-" else last4,
+                                                          "bank": imp.get("bank"), **m, "import_id": imp["_id"], "at": now()}, upsert=True)
+
+
 def _rec_key(r: dict) -> str:
     return hashlib.sha1(f"{(r.get('payee') or '').lower()}|{r.get('category')}".encode()).hexdigest()[:16]
 
@@ -177,6 +217,7 @@ async def upload(file: UploadFile = File(...), password: str = Form(default=""),
            "transactions": [{k: t.get(k) for k in ("ref", "date", "narration", "payee", "amount", "kind", "balance", "category", "guessed")} for t in txns],
            "warnings": st.get("warnings") or [], "imported": [], "to_cash_flow": [], "cash_lines": {}}
     await db().bank_imports.insert_one(imp)
+    await save_months(ctx.ws, imp)
     await track("bank_statement_read", ctx.ws, rows=len(txns), format=st["format"])
     return await _view(ctx.ws, imp)
 
@@ -203,6 +244,7 @@ async def delete_now(imp_id: str, ctx: Ctx = Depends(owner_only)):
     r = await db().bank_imports.delete_one({"_id": imp_id, "ws": ctx.ws})
     if not r.deleted_count:
         raise HTTPException(404, "Not found")
+    await db().bank_months.delete_many({"ws": ctx.ws, "import_id": imp_id})
     return {"ok": True}
 
 
@@ -232,6 +274,8 @@ async def set_category(imp_id: str, ref: str, body: CategoryIn, ctx: Ctx = Depen
     for x in targets:
         x["category"] = body.category
     await db().bank_imports.update_one({"_id": imp["_id"], "ws": ctx.ws}, {"$set": {"transactions": txns}})
+    if t["kind"] == "credit":
+        await save_months(ctx.ws, imp, same_import=True)   # "From customers" or not changes the GST set-aside's sales
     return await _view(ctx.ws, imp)
 
 
@@ -297,6 +341,7 @@ async def ensure_indexes() -> None:
     d = db()
     await d.bank_imports.create_index([("ws", 1), ("created_at", -1)])
     await d.bank_rules.create_index([("ws", 1)])
+    await d.bank_months.create_index([("ws", 1), ("period", 1)])
     if settings.env != "test":
         try:   # the database also deletes old statements on its own (the code deletes them on every visit too)
             await d.bank_imports.create_index("expires_at", expireAfterSeconds=0)

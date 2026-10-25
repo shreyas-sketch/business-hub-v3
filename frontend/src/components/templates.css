@@ -1,0 +1,14 @@
+/* "Use a template": ready WhatsApp messages, grouped, each shown with its words so the owner picks by reading */
+.tpl-groups { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -2px; padding: 2px; }
+.tpl-groups::-webkit-scrollbar { display: none; }
+.tpl-group { flex: none; min-height: 36px; padding: 0 14px; border: 1px solid var(--hairline); border-radius: 999px; background: transparent;
+  color: var(--ivory-70); font: 500 13px/1 var(--body); cursor: pointer; white-space: nowrap; }
+.tpl-group:hover { color: var(--ivory); }
+.tpl-group.on { border-color: var(--gold); color: var(--gold); font-weight: 700; }
+.tpl-list { display: grid; gap: 8px; }
+.tpl-item { display: grid; gap: 4px; text-align: left; padding: 12px 14px; min-height: 44px; border: 1px solid var(--hairline); border-radius: 10px;
+  background: transparent; color: inherit; font: inherit; cursor: pointer; transition: border-color .15s; }
+.tpl-item:hover, .tpl-item:focus-visible { border-color: var(--gold); }
+.tpl-item b { font-size: 14px; }
+.tpl-item span { font-size: 13px; line-height: 1.45; opacity: .72; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+@media (pointer: coarse), (max-width: 640px) { .tpl-group { min-height: 44px; } }

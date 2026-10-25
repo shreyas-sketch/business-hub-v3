@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ago, api, localPhone } from "../api.js";
 import { Busy, FormError, Sheet, Switch, canAct, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Pill } from "../v2.jsx";
+import TemplatePicker from "../components/Templates.jsx";
 import "./growth.css";
 
 const POLL_MS = 20000;
@@ -129,6 +130,7 @@ function Conversation({ id, tick, connected, aiOnAll, onBack, onChanged }) {
               reload();
               onChanged();
             }}>Send reply</Busy>
+            <TemplatePicker name={t.name || ""} onUse={(m) => setText(m)} className="btn ghost" />
             <span className="small muted">Goes from your own WhatsApp number.</span>
           </div>
         </div>

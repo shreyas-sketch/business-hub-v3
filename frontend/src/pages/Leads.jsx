@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { ago, api, localPhone } from "../api.js";
+import { ago, api, localPhone, waLink } from "../api.js";
 import { Busy, Copy, InviteLine, Locked, Modal, Sheet, useHub, useLoad } from "../ui.jsx";
+import TemplatePicker from "../components/Templates.jsx";
 
 const STATUS = { new: "New", contacted: "Contacted", won: "Won", lost: "Lost" };
 
@@ -35,7 +36,9 @@ export default function Leads() {
               <td><select className="select" style={{ minWidth: 130 }} aria-label="Status" value={l.status} onChange={(e) => setStatus(l.id, e.target.value)}>
                 {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></td>
               <td className="small muted hide-sm">{ago(l.created_at)}</td>
-              <td><Busy className="btn sm ai" run={async () => { setDraft({ lead: l, ...(await api(`/leads/${l.id}/reply`, { method: "POST" })) }); refresh(); }}>Draft reply</Busy></td>
+              <td><div className="row" style={{ flexWrap: "nowrap" }}><Busy className="btn sm ai" run={async () => { setDraft({ lead: l, ...(await api(`/leads/${l.id}/reply`, { method: "POST" })) }); refresh(); }}>Draft reply</Busy>
+                {l.phone && <TemplatePicker name={l.name} phone={l.phone} className="btn sm ghost"
+                  onSend={async (id, text) => { await setStatus(l.id, "contacted"); return { link: waLink(text, l.phone) }; }} />}</div></td>
             </tr>))}
           </tbody>
         </table>
