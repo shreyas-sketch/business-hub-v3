@@ -6,6 +6,10 @@
   quotation, the funnel leak finder, brand kit, cash flow + what-if, daily number, score twice, Dashboard — then "the next
   morning": the follow-ups for Day 1's inquiries are written (the hub's own scheduler, driven forward a day) and the room
   sends them from the Inquiries page.
+With --pack (the folder of the OwnerDesk test pack), the room then does the v2.2 features with the pack's real files, each as
+one demo: the leak finder's fixes, a year of sales from Tally (customer risk, getting paid, GST set-aside), two bills with
+their files, the bank statement (CSV, or the locked PDF), a review to reply to, Competitor Watch, Win-Back and research — with
+the event extras (Win-Back, research, WhatsApp chats, Lead Response) moved into Membership as for the live event.
 
 Every person, number, GST number and website here is made up. Usage:
   python attendees.py --base http://127.0.0.1:8830 --n 200 --arrive 90 --typing 20,45 --out results.json
@@ -176,9 +180,9 @@ async def attendee(i: int, a, room: Room, code: str):
         await call(c, "GET dashboard", "GET", "/api/dashboard")
         await room.finished("saved")
 
-        async def demo(stage, fn, window=45):
+        async def demo(stage, fn):
             await room.wait(stage)
-            await asyncio.sleep(rng.uniform(0, window))
+            await asyncio.sleep(rng.uniform(0, a.window))
             try:
                 await fn()
             finally:
@@ -264,6 +268,84 @@ async def attendee(i: int, a, room: Room, code: str):
 
         for stage, fn in DEMOS(publish, swap, own_customer, quotation, leak, brand, cash, target, score, followups):
             await demo(stage, fn)
+        if not PACK:
+            return
+
+        async def leak_fixes():
+            await call(c, "POST leaks/fixes (AI, waits)", "POST", "/api/leaks/fixes")
+
+        async def sales():
+            r = await call(c, "POST sales-upload (Tally xlsx, 80 rows)", "POST", "/api/sales-upload",
+                           files={"file": ("06_Sales_Register.xlsx", PACK["sales"], XLSX)})
+            if r and r.status_code == 200 and r.json().get("rows") != 80:
+                S.notes["sales sheet read short"] += 1
+            await asyncio.gather(call(c, "GET customer-risk", "GET", "/api/customer-risk"), call(c, "GET getting-paid", "GET", "/api/getting-paid"))
+            await call(c, "GET gst-setaside", "GET", "/api/gst-setaside")
+
+        async def expenses():
+            for (name, mime), body in zip(PACK["bills"], BILLS):
+                r = await call(c, "POST expenses", "POST", "/api/expenses", json=body)
+                if r and r.status_code == 200:
+                    await call(c, "POST expense bill (PDF/JPG)", "POST", f"/api/expenses/{r.json()['id']}/bill",
+                               files={"file": (name, PACK["files"][name], mime)})
+            await call(c, "GET expenses", "GET", "/api/expenses")
+
+        async def bank():
+            locked = rng.random() < 0.3
+            name, data, pw = ("statement.pdf", PACK["bank_pdf"], "DMK4417") if locked else ("statement.csv", PACK["bank_csv"], "")
+            label = "POST bank-statement (locked PDF)" if locked else "POST bank-statement (CSV)"
+            for attempt in range(3):         # "Several statements are being read right now": the owner taps again a little later
+                r = await call(c, label, "POST", "/api/bank-statement", ok=(200, 400), files={"file": (name, data)}, data={"password": pw})
+                if not r:
+                    return
+                if r.status_code == 200:
+                    S.notes[f"bank statement read on try {attempt + 1}"] += 1
+                    st = r.json()
+                    refs = [t["ref"] for t in st.get("transactions") or [] if t.get("kind") == "debit"]   # "Add all to Expenses"
+                    await call(c, "POST bank to-expenses (add all)", "POST", f"/api/bank-statement/{st['id']}/to-expenses", json={"refs": refs})
+                    return
+                msg = str(r.json().get("detail"))
+                S.notes["bank: " + ("busy, try again" if "right now" in msg else msg[:60])] += 1
+                if "right now" not in msg:
+                    return
+                await asyncio.sleep(rng.uniform(15, 40))
+            S.notes["bank statement not read after 3 tries"] += 1
+
+        async def reviews():
+            r = await call(c, "POST review paste + draft (AI)", "POST", "/api/reputation/reviews",
+                           json={"platform": "Google", "rating": 2, "author": "Sanjana P.", "date": date.today().isoformat(),
+                                 "text": "Kitchen looks good but installation was 9 days late and the site was left dusty."})
+            if r and r.status_code == 200 and not (r.json().get("review") or {}).get("reply_draft"):
+                S.notes["review: no draft"] += 1
+
+        async def competitors():
+            for k in (1, 2):
+                await call(c, "POST competitor", "POST", "/api/competitors",
+                           json={"name": f"Rival {k} of {i}",       # two hosts: the hub watches a website (host) once per owner
+                                 "website": f"{a.web if k == 1 else a.web.replace('127.0.0.1', 'localhost')}/b/{(i * 7 + k * 13) % a.n + 1}/"})
+            await call(c, "POST competitors/check (reads websites)", "POST", "/api/competitors/check")
+
+        async def winback():
+            # as on the page: save the settings, read the sample they give, then switch it on with that sample's key
+            await call(c, "PUT win-back settings", "PUT", "/api/win-back/settings",
+                       json={"days": 90, "min_purchases": 2, "per_week": 20, "offer": "Free hinge servicing this November."})
+            r = await call(c, "GET win-back", "GET", "/api/win-back")
+            key = ((r.json().get("sample") or {}).get("key") if r and r.status_code == 200 else None)
+            await call(c, "PUT win-back on (read the sample)", "PUT", "/api/win-back/settings", json={"on": True, "sample_key": key})
+            r = await call(c, "POST win-back/run (AI, waits)", "POST", "/api/win-back/run")
+            if r and r.status_code == 200:
+                S.notes[f"win-back run: {r.json().get('status')}"] += 1
+
+        async def research():
+            await call(c, "POST research/content (AI, waits)", "POST", "/api/research/content")
+            await call(c, "POST research/companies (AI, waits)", "POST", "/api/research/companies",
+                       json={"who": "Real estate developers with projects near possession", "city": "Pune"})
+            await asyncio.gather(call(c, "GET chats (event extra)", "GET", "/api/chats"),
+                                 call(c, "GET lead-response (event extra)", "GET", "/api/lead-response"))
+
+        for stage, fn in [("leak_fixes", leak_fixes), ("sales", sales), ("expenses", expenses), ("bank", bank), ("reviews", reviews),
+                          ("competitors", competitors), ("winback", winback), ("research", research)]:
+            await demo(stage, fn)
 
 
 def DEMOS(publish, swap, own_customer, quotation, leak, brand, cash, target, score, followups):
@@ -272,7 +354,23 @@ def DEMOS(publish, swap, own_customer, quotation, leak, brand, cash, target, sco
 
 
 STAGES = ["saved", "publish", "swap", "own_customer", "quotation", "leak", "brand", "cash", "target", "score", "followups"]
+V22_STAGES = ["leak_fixes", "sales", "expenses", "bank", "reviews", "competitors", "winback", "research"]
 NEXT_MORNING: dict = {}
+PACK: dict = {}
+XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+BILLS = [{"date": date.today().isoformat(), "amount": 74104, "gst": 11304, "gst_claimable": True, "category": "purchases",
+          "vendor": "Pune Hardware & Fittings Co.", "paid_by": "bank", "note": "Hinges and channels"},
+         {"date": date.today().isoformat(), "amount": 12500, "gst": 0, "gst_claimable": False, "category": "freight",
+          "vendor": "Ramesh Tempo Services", "paid_by": "cash", "note": "3 deliveries"}]
+
+
+def load_pack(folder: str) -> None:
+    import os
+    rd = lambda p: open(os.path.join(folder, p), "rb").read()  # noqa: E731
+    bills = [("bill_02_hardware_fittings.pdf", "application/pdf"), ("bill_06_tempo_transport_receipt.jpg", "image/jpeg")]
+    PACK.update(sales=rd("06_Sales_Register_Nov2025-Oct2026.xlsx"), bank_csv=rd("05_Bank_Statement_Jul-Sep2026.csv"),
+                bank_pdf=rd("05_Bank_Statement_Jul-Sep2026_password_DMK4417.pdf"), bills=bills,
+                files={n: rd(os.path.join("04_Expense_Bills", n)) for n, _ in bills})
 
 
 async def next_morning(a):
@@ -301,7 +399,7 @@ async def speaker(room: Room, a):
     await room.go_when("saved", share=a.share, limit=a.stage_limit * 3)
     room.events["publish:next"].set()   # the first demo starts once the room has saved its packs
     marks = {}
-    order = STAGES[1:]
+    order = STAGES[1:] + (V22_STAGES if PACK else [])
     marks["saved"] = time.monotonic()
     for prev, nxt in zip(order, order[1:]):
         await room.go_when(prev, share=a.share, limit=a.stage_limit)
@@ -345,6 +443,11 @@ async def setup(a, code):
                                                              "trial_until": (date.today() + timedelta(days=3)).isoformat()})
         assert r.status_code == 200, r.text
         await admin.post("/api/admin/config/presets/membership-v22")   # the ₹1,999 Membership: incl. leak finder and follow-ups
+        if PACK:   # the live event's extras: Win-Back, research, WhatsApp chats and Lead Response in Membership too
+            r = await admin.post("/api/admin/config/presets/event-extras")
+            assert r.status_code == 200, r.text
+            r = await admin.post("/api/admin/ai/check")
+            print("Test the AI:", r.json().get("ok"), r.json().get("error", ""))
         return dict(admin.cookies)
 
 
@@ -360,7 +463,11 @@ async def main():
     ap.add_argument("--stage-limit", type=float, default=240)
     ap.add_argument("--code", default=f"LT-{int(time.time()) % 100000}")
     ap.add_argument("--out", default="results.json")
+    ap.add_argument("--window", type=float, default=45, help="seconds over which the room starts each demo")
+    ap.add_argument("--pack", default="", help="the OwnerDesk test pack folder: adds the v2.2 features as demos")
     a = ap.parse_args()
+    if a.pack:
+        load_pack(a.pack)
     a.typing = tuple(float(x) for x in a.typing.split(","))
     a.reading = tuple(float(x) for x in a.reading.split(","))
     await setup(a, a.code)

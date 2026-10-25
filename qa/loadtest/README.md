@@ -57,3 +57,24 @@ These are in `results/`, measured with the stand-ins above:
 | `run2_realistic` | arrive over 90 s | generous | 6 s middle, 12 s for 95% | 71 s middle, 101 s for 95% | 0 of 12,953 requests |
 | `run4_burst_tight_wait` | all within 10 s | 80k output tokens a minute | 18 s / 29 s | 300 s / 416 s | in-hub AI demos refused ~70% "busy" |
 | `run3_burst_tight` | all within 10 s | 80k, before the "wait your turn" fix | 18 s / 30 s | 61 s / 84 s, but most AI pieces missing | as above |
+
+## Results (25 Oct 2026): the event flow plus the twelve v2.2 features, with the event extras in Membership
+
+Run with `--pack` (the test pack in `qa/testpack`), so after the demos above each attendee also does, with real files: the leak
+finder's fixes, a year of sales from Tally (customer risk, getting paid, GST set-aside), two bills with their PDF/photo, the bank
+statement (70% CSV, 30% the locked PDF), a review reply, Competitor Watch (two competitors, Check now), Win-Back (switch on,
+Run now) and research (post ideas, research plan) — with Win-Back, research, WhatsApp chats and Lead Response moved into
+Membership as for the live event. 200 attendees, one network address, MongoDB 8, a 4-core machine running the load generator too.
+
+| Run | AI limit | Whole pack | AI demos refused "busy" | Errors |
+|---|---|---|---|---|
+| `v23_realistic_with_v22_features` | generous (400k output tokens a minute) | 68 s middle, 103 s for 95% | none | 0 of 18,257 requests |
+| `v23_tight_ai` | 80k a minute | 258 s / 361 s; 95 websites written only after saving | ~60% of brand kit, quotation and research | none besides those |
+| `v23_tight_ai_retries6` | 80k, `AI_RETRIES=6` | 263 s / 367 s | ~57% — waiting longer doesn't add tokens | as above |
+
+- Every v2.2 feature held up with 200 at once: uploads and pages answer in well under a second (bank statement: CSV 0.2 s,
+  locked PDF 1 s in the middle), AI features 8–16 s like the rest.
+- `bank_burst.py`: all 200 upload their statement within 5 seconds — all read on the first try, the slowest after 21 s (the
+  reader's limit is 60 s), with 2 server processes as on Railway.
+- With a tight AI limit nothing breaks and no run is lost (a refused AI step is refunded), but the room waits: the AI account's
+  output-tokens-a-minute limit decides the day. Check it in the provider's console before the event.
