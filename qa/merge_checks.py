@@ -108,6 +108,7 @@ with sync_playwright() as p:
     w = new_page(b, "website")
     def photo_upload():
         otp_login(w, "9820000007"); w.wait_for_url("**/dashboard"); w.goto(f"{B}/website")
+        w.click("summary:has-text('Photos')")                            # folded at first
         w.locator("label:has-text('Upload main photo') input[type=file]").set_input_files(files=[{"name": "shop.png", "mimeType": "image/png", "buffer": png()}])
         expect(w.locator("label:has-text('Replace main photo')")).to_be_visible()
         w.wait_for_timeout(1500)
@@ -122,7 +123,7 @@ with sync_playwright() as p:
         c.click("button:has-text('Send')"); expect(c.locator(".ok")).to_be_visible()
     check("public website shows the uploaded photo and takes an inquiry", photo_public)
     def qr():
-        w.click("button:has-text('Show the QR')"); img = w.locator(".modal img, [role=dialog] img").first; expect(img).to_be_visible()
+        w.click(".ws-top button:has-text('QR code')"); img = w.locator(".modal img, [role=dialog] img").first; expect(img).to_be_visible()
         w.wait_for_function("() => { const i = document.querySelector('.modal img, [role=dialog] img'); return i && i.complete && i.naturalWidth > 100 }")
         w.screenshot(path=f"{OUT}/qr.png"); w.keyboard.press("Escape")
     check("website QR code opens and loads", qr)

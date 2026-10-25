@@ -180,7 +180,8 @@ async def _magnet_view(ws: str, g: dict | None) -> dict:
         stats["views"] += int(v.get("guide_views") or 0)
         stats["leads"] += int(v.get("guide_leads") or 0)
     return {"guide": public(g) if g else None, "url": site_url(site["slug"], "/guide") if site else None,
-            "site_live": bool(site and site.get("status") == "live"), "stats": stats}
+            "site_live": bool(site and site.get("status") == "live"), "stats": stats,
+            "preview_url": f"/s/{site['slug']}/guide?preview=1" if site and g else None}
 
 
 @router.get("/lead-magnet")

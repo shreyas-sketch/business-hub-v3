@@ -5,6 +5,7 @@ import { FormError, Logo } from "../ui.jsx";
 import "./free.css";
 import "./day1.css";
 import "./event.css";
+import CompetitorInputs, { cleanCompetitors } from "../components/Competitors.jsx";
 
 /* The live event link, no login: /event?e=CODE → website + GST + 3 taps → the pack builds in front of them →
    "Save it" with email + WhatsApp code → their hub, with everything inside. The server keeps the pack. */
@@ -35,7 +36,7 @@ function Form() {
   const code = params.get("e") || "";
   const [form, setForm] = useState(null);
   const [v, setV] = useState({ website: "", noSite: false, business_name: "", about: "", city: "", gstin: "", noGst: false, state: "",
-    entity: "", gst_scheme: "monthly", staff: "", consent: false });
+    entity: "", gst_scheme: "monthly", staff: "", consent: false, competitors: [""] });
   const [gst, setGst] = useState(null);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -79,7 +80,8 @@ function Form() {
       const r = await api("/event/runs", { method: "POST", body: {
         event: form.event, website: v.noSite ? null : v.website.trim(), business_name: v.noSite ? v.business_name.trim() : null,
         about: v.noSite ? v.about.trim() : null, city: v.noSite ? v.city.trim() : null, gstin: v.noGst ? null : g,
-        state: needState ? v.state : null, gst_scheme: v.gst_scheme, staff: Number(v.staff) || 0, entity: v.entity, consent: v.consent } });
+        state: needState ? v.state : null, gst_scheme: v.gst_scheme, staff: Number(v.staff) || 0, entity: v.entity, consent: v.consent,
+        competitors: form.ai ? cleanCompetitors(v.competitors) : [] } });
       nav(`/event/r/${r.token}`);
     } catch (e) { setErr(e.message); } finally { setBusy(false); }
   };
@@ -107,6 +109,13 @@ function Form() {
                 <textarea className="textarea" rows={2} maxLength={1000} value={v.about} onChange={(e) => set({ about: e.target.value })}
                   placeholder="Home-cooked lunch tiffins delivered to offices in Baner and Aundh" />
               </Field2>
+            </div>
+          )}
+          {form.ai && (
+            <div className="field">
+              <span className="label">Competitor websites <span className="muted">(optional, up to 3)</span></span>
+              <CompetitorInputs value={v.competitors} onChange={(competitors) => set({ competitors })} />
+              <span className="hint">Your new website is written to stand out from them. Nothing is copied, and they're never named.</span>
             </div>
           )}
         </div>
@@ -294,6 +303,7 @@ function Pack() {
             <div className="ev-site" style={{ "--brand": colors?.primary || "#1F4E79" }}>
               <div className="ev-site-hero"><span className="small">{b.name}</span><b>{run.website.headline}</b><span>{run.website.subheadline}</span><i>{run.website.cta}</i></div>
               {run.website.offers?.length > 0 && <ul className="ev-list">{run.website.offers.slice(0, 4).map((o) => <li key={o.name}><span>{o.name}</span>{o.price ? <b>{o.price}</b> : null}</li>)}</ul>}
+              {run.competitors?.some((x) => x.read) && <p className="small">Written to stand out from {run.competitors.filter((x) => x.read).map((x) => x.host).join(", ")}.</p>}
               <p className="small muted">In your brand's colours, with your prices, an inquiry form and a WhatsApp button. It goes live with one tap after you save, at its own address to share.</p>
             </div>
           )}

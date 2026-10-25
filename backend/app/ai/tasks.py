@@ -92,7 +92,8 @@ JSON: {{"options": [{{"message": "...", "pitch": "..."}}, ...]}}""", mock, 1500)
 
 
 # ───────────────────────── Systems: website content ─────────────────────────
-async def site_content(p: dict, brand: dict | None):
+async def site_content(p: dict, brand: dict | None, rivals: list[dict] | None = None):
+    from ..rivals import brief
     offers = [o for o in p.get("offers", []) if o.get("name")]
 
     def mock():
@@ -130,7 +131,7 @@ JSON: {{
  "faq": [{{"q": "...", "a": "..."}}] (2-4 items, only questions answerable from the profile),
  "photo_queries": ["2-4 plain English words for a stock photo search: the main scene of this kind of business", "2-4 words: the work or product up close"]
 }}
-Include only the offers listed in the profile.""", mock, 4000)
+Include only the offers listed in the profile.{brief(rivals)}""", mock, 4000)
 
 
 # ───────────────────────── Scale: a week of posts ─────────────────────────

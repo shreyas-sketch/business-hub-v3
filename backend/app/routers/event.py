@@ -72,6 +72,7 @@ class RunIn(BaseModel):
     staff: int = Field(default=0, ge=0, le=1_000_000)
     entity: str | None = Field(default=None, pattern="^(proprietor|partnership|llp|pvt_ltd|opc|other)$")
     consent: bool = False
+    competitors: list[str] = Field(default_factory=list, max_length=6)   # up to 3 competitor websites; the website is written to stand out
 
 
 def _inputs(body: RunIn) -> tuple[dict, dict, dict | None]:
@@ -87,6 +88,11 @@ def _inputs(body: RunIn) -> tuple[dict, dict, dict | None]:
             raise HTTPException(400, str(e))
     elif len(inp["business_name"]) < 2 or len(inp["about"]) < 10:
         raise HTTPException(400, "No website? Type your business name and what you sell, in a line or two.")
+    from .. import rivals
+    try:
+        inp["competitors"] = rivals.clean(body.competitors, inp["website_url"])
+    except rivals.RivalError as e:
+        raise HTTPException(400, str(e))
     gst = None
     if (body.gstin or "").strip():
         gst = ev.parse_gstin(body.gstin)

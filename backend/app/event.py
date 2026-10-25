@@ -41,7 +41,7 @@ from datetime import date, datetime, timedelta
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 
-from . import brand_kit as bk, compliance_rules as rules_mod, designs, fetch, knowledge, plans
+from . import brand_kit as bk, compliance_rules as rules_mod, designs, fetch, knowledge, plans, rivals
 from . import score as scoring
 from .ai import onboard_tasks, tasks
 from .ai.provider import AIError, cost_inr
@@ -472,8 +472,12 @@ async def build_ai(run: dict) -> bool:
                 if not opts:
                     raise ValueError("no brand message")
                 return opts
-            options, ideas = await asyncio.gather(_ai(rid, "brand_message", lambda: tasks.brand_message(profile), brand_shape),
-                                                  _ai(rid, "lead_ideas", lambda: _ideas_job(profile, kind, allowed, {}), lambda r: _shape(r, allowed)))
+            # the competitor websites (up to 3) are read while the brand message and ideas are written: no extra wait
+            options, ideas, competitors = await asyncio.gather(_ai(rid, "brand_message", lambda: tasks.brand_message(profile), brand_shape),
+                                                               _ai(rid, "lead_ideas", lambda: _ideas_job(profile, kind, allowed, {}), lambda r: _shape(r, allowed)),
+                                                               rivals.read_all(inp.get("competitors") or []))
+            if competitors:
+                await _set(run, {"competitors": competitors})
             if options:
                 await _set(run, {"brand": {"options": options, "pick": 0}, "steps.brand_message": {"status": "done"}})
             else:
@@ -484,7 +488,7 @@ async def build_ai(run: dict) -> bool:
                 await _step(run, "lead_ideas", "after_login", "Couldn't be written just now — one tap in your hub after you log in.")
             await _step(run, "website", "working")
             brand = options[0] if options else None
-            content = await _ai(rid, "website", lambda: tasks.site_content(profile, brand), _site_from_ai)
+            content = await _ai(rid, "website", lambda: tasks.site_content(profile, brand, competitors), _site_from_ai)
             if content:
                 await _set(run, {"website": content, "steps.website": {"status": "done"}})
             else:
@@ -660,6 +664,7 @@ def view(run: dict) -> dict:
         "brand": {"options": brand.get("options") or [], "pick": brand.get("pick", 0)},
         "ideas": [{k: x.get(k) for k in ("channel", "title", "why", "first_step")} for x in run.get("ideas") or []],
         "website": {k: website.get(k) for k in ("headline", "subheadline", "cta", "about", "offers", "why")} if website else None,
+        "competitors": rivals.public(run.get("competitors")),
         "completeness": preview_completeness(run) if p else None,
         # the website couldn't be read: one line about the business lets the AI write the rest
         "pending": bool(run.get("apply_pending")),
@@ -830,7 +835,8 @@ async def apply(run: dict, user: dict, email: str, name: str, late: bool = False
                 try:
                     await db().sites.insert_one({"_id": new_id(), "owner_id": ws, "slug": slug, "status": "draft", "content": content,
                                                  "generated_content": content, "accent": accent, "brand_accent": accent not in ACCENTS,
-                                                 "showcase": False, "views": 0, "created_at": now(), "updated_at": now(), "source": "event"})
+                                                 "showcase": False, "views": 0, "created_at": now(), "updated_at": now(), "source": "event",
+                                                 "competitors": run.get("competitors") or []})
                     out["website"] = "added"
                     break
                 except DuplicateKeyError:
