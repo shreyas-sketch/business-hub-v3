@@ -199,6 +199,58 @@ async def apply_membership_v22(admin: dict = Depends(require_admin)):
     return {"moved": [k for k, *_ in moved], **await membership_v22_state()}
 
 
+# For a live event, on top of the v2.2 Membership: the agents that sit in higher plans, so every pack made in the room has
+# them. WhatsApp chats brings the owner's own number (and with it Lead Response's first reply); its two agents wait for the
+# owner's own switch on Membership (agents.jobs.OPT_IN). Moved back after the event in one tap.
+EVENT_EXTRAS = ("win_back", "market_research", "whatsapp_ai", "lead_response")
+
+
+@router.get("/presets/event-extras")
+async def event_extras_state():
+    return _preset_state(EVENT_EXTRAS)
+
+
+@router.post("/presets/event-extras")
+async def apply_event_extras(admin: dict = Depends(require_admin)):
+    """Moves the event extras into Membership. Ones already in Membership or below are left alone."""
+    feats = await _overrides("features")
+    moved = []
+    for key in EVENT_EXTRAS:
+        if plans.rank(plans.META[key]["tier"]) <= plans.rank("lite"):
+            continue
+        before = dict(feats.get(key) or {})
+        feats[key] = _clean(key, {**before, "tier": "lite"})
+        moved.append((key, before, feats[key]))
+    if moved:
+        await _save("features", feats)
+        for key, before, after in moved:
+            await _log(admin, "feature", key, before, after, "Live event extras into Membership")
+        await track("preset_event_extras", admin["_id"], moved=[k for k, *_ in moved])
+    return {"moved": [k for k, *_ in moved], **await event_extras_state()}
+
+
+@router.post("/presets/event-extras/undo")
+async def undo_event_extras(admin: dict = Depends(require_admin)):
+    """After the event: the extras go back to the plan they sit on in the code. Their other changes (name, on/off) stay."""
+    feats = await _overrides("features")
+    back = []
+    for key in EVENT_EXTRAS:
+        before = dict(feats.get(key) or {})
+        if "tier" not in before:
+            continue
+        after = {k: v for k, v in before.items() if k != "tier"}
+        if after:
+            feats[key] = after
+        else:
+            feats.pop(key, None)
+        back.append((key, before, after))
+    if back:
+        await _save("features", feats)
+        for key, before, after in back:
+            await _log(admin, "feature", key, before, after, "Live event extras back to their plans")
+    return {"moved_back": [k for k, *_ in back], **await event_extras_state()}
+
+
 @router.put("/menu")
 async def save_menu(body: MenuIn, admin: dict = Depends(require_admin)):
     """After a drag in the menu editor: every page's group and position."""

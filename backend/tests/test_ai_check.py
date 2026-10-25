@@ -58,3 +58,11 @@ async def test_a_working_engine_says_so(client, monkeypatch):
     real_engine(monkeypatch, fine)
     r = (await (await new_owner(ADMIN)).post("/api/admin/ai/check")).json()
     assert r["ok"] is True and r["model"] == "claude-haiku-5-5" and r["tokens"] == 13
+
+
+def test_app_url_keeps_only_the_scheme_and_host():
+    from app.config import _origin
+    assert _origin("https://business-hub-v3-production.up.railway.app/admin/event") == "https://business-hub-v3-production.up.railway.app"
+    assert _origin(" https://hub.example.in/ ") == "https://hub.example.in"
+    assert _origin("hub.example.in") == "https://hub.example.in"
+    assert _origin("http://localhost:8000") == "http://localhost:8000"

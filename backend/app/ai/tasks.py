@@ -105,7 +105,7 @@ async def site_content(p: dict, brand: dict | None):
             "subheadline": (brand or {}).get("pitch", "").split(". ")[0].rstrip(".") + "." if brand else f"{name} — tell us what you need and get a clear quote.",
             "cta": "Get a quote on WhatsApp",
             "about": f"{name} works with {_lc(_v(p, 'ideal_customer', 'customers')).rstrip('.')}" + (f" across {city}" if city else "") + f". We take care of {_lc(_short(what))} from the first conversation to the final handover, so you always know what is happening and what it costs.",
-            "offers": [{"name": o["name"], "description": f"Ask us for details on {o['name'].lower()}.", "price": " ".join(x for x in [o.get("price", ""), o.get("unit", "")] if x).strip()} for o in offers[:6]],
+            "offers": [{"name": o["name"], "description": "", "price": " ".join(x for x in [o.get("price", ""), o.get("unit", "")] if x).strip()} for o in offers[:6]],
             "why": [{"title": w[:48], "text": ""} for w in why_lines],
             "steps": [{"title": "Tell us what you need", "text": "Send a message or fill the form. We reply the same day."},
                       {"title": "Get a clear quote", "text": "You see exactly what is included before anything starts."},

@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ago, api } from "../api.js";
 import { Busy, Copy, Field, FormError, Sheet, Switch, canAct, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Pill, Tabs } from "../v2.jsx";
+import TemplatePicker from "../components/Templates.jsx";
 import "./inquiries.css";
 
 const STATUS = { new: "New", proposal_sent: "Proposal sent", in_pipeline: "In pipeline" };
@@ -92,10 +93,25 @@ function Proposal({ it, reload }) {
   const manager = canAct(me, "manager");
   const p = it.proposal;
   const [open, setOpen] = useState(false);
+  const tr = it.template_reply;
+  // a ready message instead of the AI's words: no AI run; sending it withdraws the proposal waiting in the Send list
+  const template = manager && it.phone && (
+    <TemplatePicker name={it.name} phone={it.phone} label={tr ? "Send another template" : "Use a template"}
+      onSend={async (id, text) => { const r = await api(`/inquiries/${it.id}/template`, { method: "POST", body: { template: id, text } }); toast("Sent from your WhatsApp"); reload(); return r; }} />
+  );
+  const sentTemplate = tr && (
+    <div className="row between">
+      <span className="small"><b className="ok-text">Ready message sent on WhatsApp</b> · {ago(tr.at)}</span>
+      <button className="btn sm ghost" onClick={() => setOpen(!open)}>{open ? "Hide" : "Read it"}</button>
+    </div>
+  );
+  if (tr && (!p || p.approval_status !== "sent")) {
+    return <div className="stack inq-prop">{sentTemplate}{open && <div className="prompt">{tr.text}</div>}{template && <div className="row">{template}</div>}</div>;
+  }
   if (!p && it.status !== "new") return null;   // already being handled in the pipeline
   const writeOne = manager && <Busy className="btn sm ghost ai" run={async () => { await api(`/inquiries/${it.id}/proposal`, { method: "POST" }); reload(); }}>Write one</Busy>;
-  if (!p) return <p className="small muted">No proposal for this one. {writeOne}</p>;
-  if (p.status === "skipped") return <p className="small muted">No automatic reply: {p.why} {writeOne}</p>;
+  if (!p) return <div className="row small muted">No proposal for this one. {writeOne}{template}</div>;
+  if (p.status === "skipped") return <div className="row small muted">No automatic reply: {p.why} {writeOne}{template}</div>;
   const text = it.email && p.email_text ? p.email_text : p.whatsapp_text;
   return (
     <div className="stack inq-prop">
@@ -125,6 +141,7 @@ function Proposal({ it, reload }) {
         )}
         <Copy text={text || ""} label="Copy" className="btn sm ghost" />
         <Busy className="btn sm ghost ai" run={async () => { await api(`/inquiries/${it.id}/proposal`, { method: "POST" }); toast("Written again"); reload(); }}>Write again</Busy>
+        {template}
       </div>}
     </div>
   );

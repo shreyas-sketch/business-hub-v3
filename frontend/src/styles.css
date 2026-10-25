@@ -170,6 +170,7 @@ hr.rule { border: 0; border-top: 1px solid var(--hairline); margin: 4px 0; width
 .tabs button.on { color: var(--gold); font-weight: 700; border-bottom-color: var(--gold); }
 .swatch { width: 30px; height: 30px; border: 1px solid var(--hairline); border-radius: 8px; cursor: pointer; padding: 0; }
 .swatch.on { outline: 1px solid var(--gold); outline-offset: 3px; }
+@media (pointer: coarse), (max-width: 640px) { .swatch { width: 44px; height: 44px; } }
 
 /* ── Data ── */
 table.t { width: 100%; border-collapse: collapse; }
@@ -193,9 +194,9 @@ table.t { width: 100%; border-collapse: collapse; }
 .progress .now .state { color: var(--gold); }
 
 /* ── Overlays ── */
-.scrim { position: fixed; inset: 0; background: rgba(10,10,12,.72); backdrop-filter: blur(3px); z-index: 20; }
-.modal { position: fixed; z-index: 21; left: 50%; top: 12vh; transform: translateX(-50%); width: min(560px, 92vw); background: var(--bg); border: 1px solid var(--hairline); border-radius: var(--radius-frame); box-shadow: var(--shadow-float); padding: 28px; display: grid; gap: 18px; max-height: 80vh; overflow: auto; }
-.toast { position: fixed; z-index: 30; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--panel-raised); border: 1px solid var(--hairline); border-radius: 12px; box-shadow: var(--shadow-float); padding: 12px 18px; max-width: 92vw; font-size: 14px; }
+.scrim { position: fixed; inset: 0; background: rgba(10,10,12,.72); backdrop-filter: blur(3px); z-index: 40; }
+.modal { position: fixed; z-index: 41; left: 50%; top: 12vh; transform: translateX(-50%); width: min(560px, 92vw); background: var(--bg); border: 1px solid var(--hairline); border-radius: var(--radius-frame); box-shadow: var(--shadow-float); padding: 28px; display: grid; gap: 18px; max-height: 80vh; overflow: auto; }
+.toast { position: fixed; z-index: 50; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--panel-raised); border: 1px solid var(--hairline); border-radius: 12px; box-shadow: var(--shadow-float); padding: 12px 18px; max-width: 92vw; font-size: 14px; }
 .toast::before { content: "✓"; color: var(--gold); font-weight: 800; margin-right: 10px; }
 .toast.err { border-color: var(--alert); }
 .toast.err::before { content: "!"; color: var(--alert); }

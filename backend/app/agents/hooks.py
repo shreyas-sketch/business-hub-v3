@@ -48,7 +48,7 @@ async def on_new_lead(owner: dict, business: dict, site: dict | None, lead: dict
     # whose number was read out of an email anyone can write (its proposal goes by email, or waits for a tap).
     by_email = lead.get("source") == "email"
     try:
-        if not by_email and not lead_response and plans.has(owner, "whatsapp_ai") and await jobs.is_on(owner["_id"], "instant_reply"):
+        if not by_email and not lead_response and plans.has(owner, "whatsapp_ai") and await jobs.is_on_for(owner, "instant_reply"):
             from .growth import instant_reply
             patch["instant_reply"] = await instant_reply(owner, business, lead)
     except Exception:

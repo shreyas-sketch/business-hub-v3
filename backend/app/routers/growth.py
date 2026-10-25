@@ -225,7 +225,8 @@ async def chats(ctx: Ctx = Depends(feature("whatsapp_ai"))):
     from ..agents.approvals import owner_whatsapp
     threads = [public(t) async for t in db().wa_threads.find({"ws": ctx.ws}).sort("last_at", -1).limit(200)]
     return {"threads": threads, "connected": bool(await owner_whatsapp(ctx.ws, ctx.owner)),
-            "ai_on": (await jobs.get_settings(ctx.ws, "wa_sales")).get("on", True),
+            "ai_on": jobs.on_for(ctx.owner, "wa_sales", await jobs.get_settings(ctx.ws, "wa_sales")),
+            "opt_in": jobs.needs_opt_in(ctx.owner, "wa_sales"),
             "waiting": sum(1 for t in threads if t.get("needs_person"))}
 
 
@@ -259,7 +260,7 @@ async def chat_patch(tid: str, body: ThreadPatch, ctx: Ctx = Depends(feature("wh
 
 @router.post("/chats-ai")
 async def chats_ai_switch(body: StaffPatch, ctx: Ctx = Depends(feature("whatsapp_ai", "owner"))):
-    await jobs.save_settings(ctx.ws, "wa_sales", {"on": body.on})
+    await jobs.save_settings(ctx.ws, "wa_sales", {"on": body.on, "opted_in": body.on})   # the owner's own choice (jobs.OPT_IN)
     return {"on": body.on}
 
 

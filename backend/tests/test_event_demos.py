@@ -78,8 +78,9 @@ async def test_every_demo_works_for_an_event_account_and_the_paid_part_closes_wh
     # Data · the next 30 days of cash, with a what-if
     today = now().astimezone(IST).date()
     money = {"payment_terms_days": 15, "bank_balance": 60000, "bank_balance_on": today.isoformat(), "gst_rate": 18, "safety_buffer": 0,
-             "fixed_costs": [{"name": "Shop rent", "amount": 30000, "day": min(today.day + 3, 28), "kind": "rent"},
-                             {"name": "Salaries", "amount": 45000, "day": min(today.day + 5, 28), "kind": "salary"}]}
+             # 3 and 5 days from today, across a month end too (clamping at the 28th put both before the payment late in a month)
+             "fixed_costs": [{"name": "Shop rent", "amount": 30000, "day": (today + timedelta(days=3)).day, "kind": "rent"},
+                             {"name": "Salaries", "amount": 45000, "day": (today + timedelta(days=5)).day, "kind": "salary"}]}
     assert (await asha.put("/api/knowledge/money", json=money)).status_code == 200
     due = await asha.post("/api/money", json={"customer": "Test customer", "amount": 40000, "due_date": (today + timedelta(days=4)).isoformat()})
     assert due.status_code == 200

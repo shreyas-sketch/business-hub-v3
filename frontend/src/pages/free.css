@@ -69,7 +69,10 @@
   .fr-ways { grid-template-columns: 1fr; }
   .fr-checks { grid-template-columns: 1fr; }
   .fr-q { grid-template-columns: 1fr; }
-  .fr-seg button { padding: 8px 10px; }
+  /* phones: each choice its own pill, a finger wide and tall, wrapping instead of scrolling out of sight */
+  .fr-seg { display: flex; flex-wrap: wrap; gap: 8px; border: 0; border-radius: 0; overflow: visible; }
+  .fr-seg button, .fr-seg button:last-child { min-height: 44px; padding: 0 16px; border: 1px solid var(--ink-line); border-radius: 999px; font-size: 12px; }
+  .fr-seg button[aria-pressed="true"] { border-color: var(--aqua); }
   .fr-kit { grid-template-columns: 1fr; }
   .fr-card-frame { height: 520px; }
   .progress.five { grid-template-columns: 1fr 1fr; }

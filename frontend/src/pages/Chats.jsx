@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ago, api, localPhone } from "../api.js";
 import { Busy, FormError, Sheet, Switch, canAct, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Pill } from "../v2.jsx";
+import TemplatePicker from "../components/Templates.jsx";
 import "./growth.css";
 
 const POLL_MS = 20000;
@@ -129,6 +130,7 @@ function Conversation({ id, tick, connected, aiOnAll, onBack, onChanged }) {
               reload();
               onChanged();
             }}>Send reply</Busy>
+            <TemplatePicker name={t.name || ""} onUse={(m) => setText(m)} className="btn ghost" />
             <span className="small muted">Goes from your own WhatsApp number.</span>
           </div>
         </div>
@@ -198,7 +200,9 @@ export default function Chats() {
         <>
           {!data.connected && <NotConnected owner={owner} />}
           {data.connected && !data.ai_on && (
-            <p className="small muted">AI replies are switched off for every chat. Customers wait for your team until you switch them back on.</p>
+            <p className="small muted">{data.opt_in
+              ? "On your plan, AI replies stay off until you switch them on. Then the AI answers every customer on your number, 24×7 — each reply uses an AI run."
+              : "AI replies are switched off for every chat. Customers wait for your team until you switch them back on."}</p>
           )}
           {!data.threads.length ? (
             <Empty>{data.connected

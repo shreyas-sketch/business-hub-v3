@@ -36,7 +36,7 @@ from ..agents.approvals import create_approval, link_hosts
 from ..ai import proposal_tasks
 from ..ai.tasks import profile_text
 from ..config import settings
-from ..context import Ctx, feature
+from ..context import Ctx, feature, get_ctx
 from ..db import IST, db, now
 from ..security import normalise_phone
 from ..services import notify, run_ai, track
@@ -234,7 +234,7 @@ def _status(lead: dict, approvals: dict) -> str:
     if lead.get("status") in ("contacted", "won", "lost") or (lead.get("stage") or "identification") != "identification":
         return "in_pipeline"
     p = lead.get("proposal") or {}
-    if p.get("status") == "sent" or approvals.get(p.get("approval_id")) == "sent":
+    if p.get("status") == "sent" or approvals.get(p.get("approval_id")) == "sent" or lead.get("template_reply"):
         return "proposal_sent"
     return "new"
 
@@ -264,7 +264,8 @@ async def list_inquiries(channel: str = "", status: str = "", ctx: Ctx = Depends
                       "channel_label": CHANNELS.get(x.get("source", "website"), (x.get("source") or "").title()), "message": x.get("message", ""),
                       "created_at": x["created_at"].isoformat(), "status": st, "stage": x.get("stage", "identification"), "proposal": p or None,
                       "replies": [{"at": r["at"].isoformat(), "from": r.get("from", ""), "text": r.get("text", "")} for r in (x.get("replies") or [])[-3:]],
-                      "verified": x.get("sender_verified"), "attachments": x.get("attachments") or [], "followups": follow.get(x["_id"])})
+                      "verified": x.get("sender_verified"), "attachments": x.get("attachments") or [], "followups": follow.get(x["_id"]),
+                      "template_reply": {"at": x["template_reply"]["at"].isoformat(), "text": x["template_reply"].get("text", "")} if x.get("template_reply") else None})
     counts = {k: sum(1 for i in items if i["status"] == k) for k in ("new", "proposal_sent", "in_pipeline")}
     return {"items": items[:200], "counts": counts, "channels": CHANNELS}
 
@@ -406,6 +407,52 @@ async def whatsapp_tap(lead_id: str, ctx: Ctx = Depends(feature("inquiry_desk", 
         raise HTTPException(400, "This inquiry has no WhatsApp proposal.")
     out = await appr.decide(ctx.ws, aid, ctx.actor, "own")
     return {"link": out["link"]}
+
+
+# ───────────────────────── ready messages (no AI) ─────────────────────────
+@router.get("/wa-templates")
+async def wa_templates(name: str = "", ctx: Ctx = Depends(get_ctx)):
+    """The 20 ready WhatsApp messages, filled with the customer's first name and this business's details."""
+    from .. import wa_templates as wt
+    from ..day1 import first_name
+    from ..sites import site_url
+    b = await db().businesses.find_one({"owner_id": ctx.ws}, {"name": 1, "city": 1}) or {}
+    site = await db().sites.find_one({"owner_id": ctx.ws}, {"slug": 1, "status": 1}) or {}
+    values = {"name": first_name(name) if name.strip() else "", "business": b.get("name") or "our business",
+              "owner": first_name(ctx.owner.get("name") or ""), "city": (b.get("city") or "").strip(),
+              "website": site_url(site["slug"]) if site.get("status") == "live" and site.get("slug") else ""}
+    return {"groups": wt.GROUPS, "templates": wt.filled(values)}
+
+
+class TemplateSentIn(BaseModel):
+    template: str = Field(max_length=40)
+    text: str = Field(min_length=2, max_length=3000)
+
+
+@router.post("/inquiries/{lead_id}/template")
+async def template_sent(lead_id: str, body: TemplateSentIn, ctx: Ctx = Depends(feature("inquiry_desk", "manager"))):
+    """The owner sent a ready message from their own WhatsApp: the inquiry counts as answered, and the AI proposal still
+    waiting in the Send list is withdrawn so the customer doesn't get two first replies."""
+    from .. import wa_templates as wt
+    from ..agents.approvals import expire
+    from urllib.parse import quote
+
+    from .hub import wa_digits
+    if body.template not in wt.IDS:
+        raise HTTPException(400, "Pick one of the ready messages")
+    lead = await _lead(ctx, lead_id)
+    if not lead.get("phone"):
+        raise HTTPException(400, "This inquiry has no WhatsApp number.")
+    at = now()
+    p = lead.get("proposal") or {}
+    if p.get("approval_id"):
+        await expire({"ws": ctx.ws, "_id": p["approval_id"]}, "You sent a ready message instead")
+    patch = {"template_reply": {"id": body.template, "text": body.text, "at": at, "by": ctx.actor}, "updated_at": at}
+    if not lead.get("first_action_at"):
+        patch["first_action_at"] = at
+    await db().leads.update_one({"_id": lead_id}, {"$set": patch})
+    await track("inquiry_template_sent", ctx.ws, template=body.template)
+    return {"link": f"https://wa.me/{wa_digits(lead['phone'])}?text={quote(body.text)}"}
 
 
 # ───────────────────────── email in: inquiries and replies ─────────────────────────

@@ -57,6 +57,7 @@ function UploadBox({ onRead, small }) {
 }
 
 function Picture({ s }) {
+  const { me } = useHub();
   const max = Math.max(...s.by_category.map((c) => c.amount), 1);
   return (
     <div className="stack">
@@ -68,6 +69,10 @@ function Picture({ s }) {
               <span className="small"><span className="money">in {whole(m.in)}</span> · <span>out {whole(m.out)}</span></span></div>
           ))}
         </div>
+        {me.features?.gst_setaside && (
+          <p className="small muted">Each month's money from customers also goes into <Link to="/gst">GST set-aside</Link> (just the monthly total), for a month
+            with no invoices in the hub. It stays after the 24 hours; “Delete it now” removes it too.</p>
+        )}
       </div>
       <div className="panel">
         <span className="label">Where it went</span>

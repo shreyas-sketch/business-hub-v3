@@ -14,7 +14,12 @@ their CA. Two periods are shown: last month (its payment usually falls due this 
                      the shared customer_key) or a total within ₹1. A number alone is not enough: the hub's INV-0001 style
                      is common in Tally sheets too, and skipping a different sale would make the estimate too low.
     bills GST        expenses dated in the month that are approved and gst_claimable
-    estimate         max(0, sales − credit notes + uploaded − bills); when the bills are bigger, the difference is shown as
+    bank statement   the month's money in marked "From customers" on uploaded bank statements (routers/bankreader.py keeps
+                     only those monthly totals, per account). Their GST is worked out at the business's usual GST rate
+                     (Knowledge Hub, money.gst_rate, 18% when not set) as GST included: received × rate / (100 + rate). Used
+                     ONLY for a month with no hub invoices and no uploaded sales with GST — otherwise the same sales would
+                     be counted twice — and then shown with a note that receipts can include advances and sales without GST
+    estimate         max(0, sales − credit notes + uploaded + bank − bills); when the bills are bigger, the difference is shown as
                      carry_forward and is NOT taken off the next month (keeping more aside is the safer mistake)
 Sums are in paise; the API shows rupees.
 
@@ -56,7 +61,8 @@ SOURCE = "gst_setaside"
 VOID = {"cancelled", "canceled", "void", "voided", "draft", "deleted"}   # never counted as a sale or a credit note
 CAP = 20000                                                              # documents read per collection per request
 PERIOD = re.compile(r"^20\d\d-(0[1-9]|1[0-2])$")
-UPLOAD_HINT = "Sales made outside the hub aren't counted — upload your sales sheet on Customer risk or Getting paid."
+UPLOAD_HINT = ("Sales made outside the hub aren't counted — upload your sales sheet on Customer risk or Getting paid, or your bank "
+               "statement on Bank statement.")
 
 
 def today() -> date:
@@ -155,7 +161,7 @@ def _periods(t: date) -> list[dict]:
 async def _numbers(ws: str, periods: list[dict]) -> tuple[dict[str, dict], list[str]]:
     blank = {"sales": 0, "invoices": 0, "gateway_invoices": 0, "credit": 0, "credit_notes": 0, "uploaded": 0, "upload_rows": 0,
              "upload_rows_no_gst": 0, "upload_rows_duplicate": 0, "bills": 0, "bills_count": 0, "bills_no_gst": 0,
-             "bills_not_claimable": 0, "bills_waiting": 0}
+             "bills_not_claimable": 0, "bills_waiting": 0, "bank_in": 0, "bank_rows": 0, "bank_accounts": 0, "bank_short": []}
     out = {p["key"]: dict(blank) for p in periods}
     capped: list[str] = []
 
@@ -222,6 +228,18 @@ async def _numbers(ws: str, periods: list[dict]) -> tuple[dict[str, dict], list[
         o["uploaded"] += _as_paise(r["gst"])
         o["upload_rows"] += 1
 
+    # bank statements: the month's money from customers (totals only; see routers/bankreader.py)
+    async for m in db().bank_months.find({"ws": ws, "period": {"$in": [p["key"] for p in periods]}}).limit(200):
+        o = out[m["period"]]
+        o["bank_in"] += int(m.get("receipts") or 0)
+        o["bank_rows"] += int(m.get("count") or 0)
+        o["bank_accounts"] += 1
+        first = date.fromisoformat(m["period"] + "-01")
+        last = month_bounds(first)[1] - timedelta(days=1)
+        if _day(m.get("start")) and _day(m.get("end")) and ((_day(m["start"]) - first).days > 6 or (last - _day(m["end"])).days > 6):
+            o["bank_short"].append(f"{_day(m['start']).day}–{_day(m['end']).strftime('%d %b')}"
+                                   + (f" (account ending {m['account_last4']})" if m.get("account_last4") else ""))
+
     # bills: only approved ones marked as GST bills count
     seen = 0
     async for e in db().expenses.find({"ws": ws, "date": {"$gte": first_day, "$lt": end_day}},
@@ -244,6 +262,40 @@ async def _numbers(ws: str, periods: list[dict]) -> tuple[dict[str, dict], list[
     if seen >= CAP:
         capped.append("bills")
     return out, capped
+
+
+def _gst_rate(b: dict) -> float:
+    try:
+        r = float(((b.get("money") or {}).get("gst_rate")))
+    except (TypeError, ValueError):
+        return 18.0
+    return r if 0 <= r <= 28 else 18.0
+
+
+def _bank_gst(n: dict, rate: float) -> dict:
+    """The GST in a month's money from customers on the bank statement (GST included), and how much of it is counted:
+    all of it when nothing else in the hub shows that month's sales, else none (the same sales would count twice)."""
+    gst = int(round(n["bank_in"] * rate / (100 + rate))) if n["bank_in"] > 0 and rate > 0 else 0
+    other = n["invoices"] or n["upload_rows"]
+    return {"gst": gst, "used": 0 if other else gst}
+
+
+def _bank_notes(p: dict, n: dict, bank: dict, rate: float) -> list[str]:
+    if not n["bank_accounts"]:
+        return []
+    month = p["first"].strftime("%B")
+    got = _money(n["bank_in"])
+    if not n["bank_in"]:
+        return [f"Your bank statement for {month} shows no money from customers, so nothing was added from it."]
+    if not bank["used"]:
+        return [f"Your bank statement shows {got} from customers in {month}. It isn't added here, because your invoices"
+                f"{' and uploaded sales' if n['upload_rows'] else ''} already count that month's sales (counting both would count them twice)."]
+    out = [f"Sales GST for {month} is worked out from your bank statement: {got} received from customers"
+           f" ({_n(n['bank_rows'], 'payment', 'payments')}), with {rate:g}% GST included, is about {_money(bank['gst'])} of GST. "
+           "Payments can include advances, old dues and sales without GST, so check the figure with your CA."]
+    if n["bank_short"]:
+        out.append(f"The statement covers only {', '.join(n['bank_short'])} of {month}. Upload the full month for a better estimate.")
+    return out
 
 
 # ───────────────────────── which GST payment, and when ─────────────────────────
@@ -315,7 +367,7 @@ def _period_notes(p: dict, n: dict, carry: int, registered, scheme, due: dict | 
     notes = []
     if not p["complete"]:
         notes.append("This month isn't over yet, so the estimate will grow as you invoice and add bills.")
-    if not n["invoices"]:
+    if not n["invoices"] and not n["bank_in"]:
         notes.append(f"No invoices in the hub {when}.")
     if n["bills_no_gst"]:
         k = n["bills_no_gst"]
@@ -354,7 +406,8 @@ def _period_notes(p: dict, n: dict, carry: int, registered, scheme, due: dict | 
 async def _compute(ctx: Ctx) -> tuple[dict, dict[str, dict]]:
     """The page, and the compliance item behind each period (for the cash-flow actions)."""
     ws, t = ctx.ws, today()
-    b = await db().businesses.find_one({"owner_id": ws}, {"identity": 1}) or {}
+    b = await db().businesses.find_one({"owner_id": ws}, {"identity": 1, "money": 1}) or {}
+    rate = _gst_rate(b)
     identity = b.get("identity") or None
     registered = identity.get("gst_registered") if identity and isinstance(identity.get("gst_registered"), bool) else None
     scheme = (identity.get("gst_scheme") or "monthly") if registered else None
@@ -362,7 +415,7 @@ async def _compute(ctx: Ctx) -> tuple[dict, dict[str, dict]]:
     nums, capped = await _numbers(ws, periods)
     sources = {"invoices": sum(n["invoices"] for n in nums.values()), "gateway_invoices": sum(n["gateway_invoices"] for n in nums.values()),
                "credit_notes": sum(n["credit_notes"] for n in nums.values()), "uploads": sum(n["upload_rows"] for n in nums.values()),
-               "bills": sum(n["bills_count"] for n in nums.values())}
+               "bills": sum(n["bills_count"] for n in nums.values()), "bank_months": sum(1 for n in nums.values() if n["bank_accounts"])}
     has_cf = ctx.has("cash_flow") and ctx.has("compliance_calendar")
     base = {"label": LABEL, "today": t.isoformat(), "registered": registered, "scheme": scheme, "sources": sources, "can_cash_flow": has_cf}
     capped_note = [f"Only the first {CAP:,} records were read for: {', '.join(capped)}, so these numbers are incomplete — ask your CA."] if capped else []
@@ -388,7 +441,8 @@ async def _compute(ctx: Ctx) -> tuple[dict, dict[str, dict]]:
     out, items = [], {}
     for p in periods:
         n = nums[p["key"]]
-        net = n["sales"] - n["credit"] + n["uploaded"] - n["bills"]
+        bank = _bank_gst(n, rate)
+        net = n["sales"] - n["credit"] + n["uploaded"] + bank["used"] - n["bills"]
         est, carry = max(0, net), max(0, -net)
         due, item = None, None
         if registered:
@@ -397,22 +451,24 @@ async def _compute(ctx: Ctx) -> tuple[dict, dict[str, dict]]:
                 due, item = await _due(ws, rule, p["first"], t)
         row = {"period": p["key"], "period_label": p["first"].strftime("%B %Y"), "complete": p["complete"],
                "sales_gst": _rs(n["sales"]), "credit_notes_gst": _rs(n["credit"]), "uploaded_sales_gst": _rs(n["uploaded"]),
-               "net_sales_gst": _rs(n["sales"] - n["credit"] + n["uploaded"]), "bills_gst": _rs(n["bills"]),
+               "net_sales_gst": _rs(n["sales"] - n["credit"] + n["uploaded"] + bank["used"]), "bills_gst": _rs(n["bills"]),
+               "bank_received": _rs(n["bank_in"]), "bank_sales_gst": _rs(bank["gst"]), "bank_used": bool(bank["used"]), "bank_rate": rate,
                "bills_count": n["bills_count"], "bills_without_gst_marked": n["bills_no_gst"],
                "estimate": _rs(est), "estimate_rounded": _whole(est), "carry_forward": _rs(carry),
                "counts": {"invoices": n["invoices"], "gateway_invoices": n["gateway_invoices"], "credit_notes": n["credit_notes"],
                           "uploads": n["upload_rows"], "uploads_without_gst": n["upload_rows_no_gst"],
                           "uploads_already_in_hub": n["upload_rows_duplicate"], "bills": n["bills_count"],
-                          "bills_not_claimable": n["bills_not_claimable"], "bills_waiting": n["bills_waiting"]},
+                          "bills_not_claimable": n["bills_not_claimable"], "bills_waiting": n["bills_waiting"],
+                          "bank_receipts": n["bank_rows"], "bank_accounts": n["bank_accounts"]},
                "due": due, "days_left": (date.fromisoformat(due["date"]) - t).days if due else None}
         row.update(_cash_flow(row, item, _whole(est), has_cf))
-        row["notes"] = _period_notes(p, n, carry, registered, scheme, due)
+        row["notes"] = _bank_notes(p, n, bank, rate) + _period_notes(p, n, carry, registered, scheme, due)
         out.append(row)
         if item:
             items[p["key"]] = item
 
     notes = []
-    if not any(n["upload_rows"] + n["upload_rows_no_gst"] + n["upload_rows_duplicate"] for n in nums.values()):
+    if not any(n["upload_rows"] + n["upload_rows_no_gst"] + n["upload_rows_duplicate"] + n["bank_accounts"] for n in nums.values()):
         notes.append(UPLOAD_HINT)
     # an estimate this page put on a GST item that no longer matches either month (e.g. after switching to QRMP)
     if registered:

@@ -74,12 +74,12 @@ async def _safe_reply(owner, conn, thread_id):
 
 
 async def reply(owner: dict, conn: dict, thread_id: str) -> dict:
-    from .agents.jobs import get_settings, record
+    from .agents.jobs import get_settings, on_for, record
     ws = owner["_id"]
     t = await db().wa_threads.find_one({"_id": thread_id})
     if not t or not t.get("ai_on", True) or t.get("needs_person"):
         return {"replied": False, "why": "person"}
-    if not (await get_settings(ws, "wa_sales")).get("on", True):
+    if not on_for(owner, "wa_sales", await get_settings(ws, "wa_sales")):
         return {"replied": False, "why": "off"}
     day_start = now().astimezone(IST).replace(hour=0, minute=0, second=0, microsecond=0)
     if await db().wa_messages.count_documents({"thread_id": thread_id, "dir": "out", "by": "ai", "at": {"$gte": day_start}}) >= settings.ai_replies_per_chat_per_day:

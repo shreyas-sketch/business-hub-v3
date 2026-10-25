@@ -115,6 +115,7 @@ function Breakdown({ p }) {
         <li><span>Invoices in the hub ({c.invoices}{c.gateway_invoices ? `, ${c.gateway_invoices} from Razorpay` : ""})</span><span>{paise(p.sales_gst)}</span></li>
         {(p.credit_notes_gst > 0 || c.credit_notes > 0) && <li><span>Credit notes ({c.credit_notes})</span><span>−{paise(p.credit_notes_gst)}</span></li>}
         <li><span>Uploaded sales with GST ({c.uploads})</span><span>{paise(p.uploaded_sales_gst)}</span></li>
+        {p.bank_received > 0 && <li><span>{p.bank_used ? `From customers on your bank statement: ${paise(p.bank_received)} with ${p.bank_rate}% GST included` : "Bank statement (not added: your invoices count this month)"}</span><span>{p.bank_used ? paise(p.bank_sales_gst) : "—"}</span></li>}
         <li className="sum"><span>GST on your sales</span><span>{paise(p.net_sales_gst)}</span></li>
         <li><span>Approved GST bills in Expenses ({p.bills_count})</span><span>−{paise(p.bills_gst)}</span></li>
         <li className="sum"><span>Estimate</span><span>{paise(p.estimate)}</span></li>
@@ -166,6 +167,11 @@ function Counted({ s, f }) {
           <span className="small muted"> {plural(s.uploads, "sale", "sales")} with GST.</span>
           {f.customer_risk && <> <Link to="/customer-risk">Customer risk</Link></>}
           {f.getting_paid && <> · <Link to="/getting-paid">Getting paid</Link></>}
+        </li>
+        <li>
+          <b>Money from customers on your bank statement</b>, for a month with no invoices or uploaded sales: the GST in it at your usual GST rate.
+          <span className="small muted"> {plural(s.bank_months || 0, "month", "months")} from statements.</span>
+          {f.bank_reader && <> <Link to="/bank-statement">Bank statement</Link></>}
         </li>
         <li>
           <b>Bills marked as GST bills in Expenses</b>, once approved — the GST you can claim back.
