@@ -135,6 +135,7 @@ async def test_followups_cancelled_when_won_or_lost(client):
 
 async def test_followup_drafted_then_tapped_to_send_or_sent_from_the_owners_number(client):
     c, uid, site = await owner_on("9834000400", "program")
+    await quiet(c, *QUIET)   # only the follow-ups: on the 25th the content calendar would write next month's posts too
     lead = await inquiry(client, site)
     js = await followup_jobs(lead["_id"])
     runs_before = (await c.get("/api/me")).json()["runs"]["used"]
@@ -188,6 +189,7 @@ async def test_followup_drafted_then_tapped_to_send_or_sent_from_the_owners_numb
 
 async def test_followup_skipped_when_lead_already_closed_or_deleted(client):
     c, uid, site = await owner_on("9834000500", "program")
+    await quiet(c, *QUIET)   # only the follow-ups: on the 25th the content calendar would write next month's posts too
     a = await inquiry(client, site, "Neha Joshi", "98340 00501")
     b = await inquiry(client, site, "Rahul Mehta", "98340 00502")
     await db().leads.update_one({"_id": a["_id"]}, {"$set": {"status": "won"}})  # changed without the hook
@@ -455,6 +457,7 @@ async def test_busy_ai_retries_the_job_later(client, monkeypatch):
     from app.ai import agent_tasks
     from app.ai.provider import AIError
     c, uid, site = await owner_on("9834001400", "program")
+    await quiet(c, *QUIET)   # only the follow-ups: on the 25th the content calendar would write next month's posts too
     lead = await inquiry(client, site)
     job = (await followup_jobs(lead["_id"]))[0]
 

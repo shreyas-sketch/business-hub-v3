@@ -170,6 +170,7 @@ hr.rule { border: 0; border-top: 1px solid var(--hairline); margin: 4px 0; width
 .tabs button.on { color: var(--gold); font-weight: 700; border-bottom-color: var(--gold); }
 .swatch { width: 30px; height: 30px; border: 1px solid var(--hairline); border-radius: 8px; cursor: pointer; padding: 0; }
 .swatch.on { outline: 1px solid var(--gold); outline-offset: 3px; }
+@media (pointer: coarse), (max-width: 640px) { .swatch { width: 44px; height: 44px; } }
 
 /* ── Data ── */
 table.t { width: 100%; border-collapse: collapse; }

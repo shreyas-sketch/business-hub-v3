@@ -294,7 +294,7 @@ function Pack() {
             <div className="ev-site" style={{ "--brand": colors?.primary || "#1F4E79" }}>
               <div className="ev-site-hero"><span className="small">{b.name}</span><b>{run.website.headline}</b><span>{run.website.subheadline}</span><i>{run.website.cta}</i></div>
               {run.website.offers?.length > 0 && <ul className="ev-list">{run.website.offers.slice(0, 4).map((o) => <li key={o.name}><span>{o.name}</span>{o.price ? <b>{o.price}</b> : null}</li>)}</ul>}
-              <p className="small muted">With an inquiry form and a Chat on WhatsApp button. It goes live at your-name.employz.ai with one tap after you save.</p>
+              <p className="small muted">In your brand's colours, with your prices, an inquiry form and a WhatsApp button. It goes live with one tap after you save, at its own address to share.</p>
             </div>
           )}
         </Card>

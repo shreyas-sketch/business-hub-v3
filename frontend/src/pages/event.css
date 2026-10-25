@@ -40,10 +40,11 @@
 .ev-kv dt { color: var(--grey); }
 .ev-kv dd { margin: 0; }
 .ev-site { display: grid; gap: 10px; }
-.ev-site-hero { background: var(--brand); color: #fff; padding: 18px; display: grid; gap: 6px; }
-.ev-site-hero b { font: 700 22px/1.2 var(--head); }
+/* a small picture of the real website: the brand's signboard and its WhatsApp button */
+.ev-site-hero { background: var(--brand); color: #fff; padding: 20px; display: grid; gap: 8px; border-radius: 12px; }
+.ev-site-hero b { font: 700 22px/1.15 var(--head); letter-spacing: -.01em; }
 .ev-site-hero span { font-size: 14px; opacity: .92; }
-.ev-site-hero i { font-style: normal; justify-self: start; background: #fff; color: #14171C; padding: 7px 12px; font-size: 13px; font-weight: 500; margin-top: 4px; }
+.ev-site-hero i { font-style: normal; justify-self: start; background: #25D366; color: #073B1E; padding: 10px 16px; border-radius: 999px; font-size: 13px; font-weight: 600; margin-top: 6px; }
 .ev-ideas { margin: 0; padding-left: 20px; display: grid; gap: 10px; }
 .ev-ideas li { display: grid; gap: 2px; }
 .ev-ideas b { font-weight: 500; }

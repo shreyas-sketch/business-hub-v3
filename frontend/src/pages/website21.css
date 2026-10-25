@@ -18,7 +18,7 @@
 .lm-body { display: grid; gap: 8px; min-width: 0; }
 .lm-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; }
 .lm-form { display: grid; gap: 10px; }
-.lm-file { font-size: 13px; max-width: 100%; }
+.lm-file { font-size: 13px; max-width: 100%; min-height: 44px; }
 @media (max-width: 640px) {
   .wp-cols { grid-template-columns: 1fr; }
   .lm-item { grid-template-columns: 64px 1fr; }

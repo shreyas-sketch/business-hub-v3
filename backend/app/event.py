@@ -443,7 +443,9 @@ async def build_ai(run: dict) -> bool:
         if facts:
             drafted = await _ai(rid, "knowledge", lambda: onboard_tasks.brain_from_site(_Facts(facts)), _draft)
         elif (inp.get("about") or "").strip():
-            text = f"Business name: {inp.get('business_name', '')}. City: {inp.get('city', '')}. {inp.get('about', '')}"
+            # what they sell first, in their words, then who and where: read as the owner would say it, not as form labels
+            about = inp.get("about", "").strip().rstrip(".")
+            text = f"{about}. We are {inp.get('business_name', '').strip()}" + (f", in {inp['city'].strip()}." if (inp.get("city") or "").strip() else ".")
             drafted = await _ai(rid, "knowledge", lambda: onboard_tasks.brain_from_words(text), _draft)
         else:
             drafted = None

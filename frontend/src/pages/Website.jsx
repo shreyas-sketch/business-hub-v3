@@ -253,7 +253,7 @@ export default function Website() {
   return (
     <Sheet kicker="Systems · Website" id="SY-01" pillar="Systems" step={2}
       title={live ? <>Your website is <em>live</em>.</> : <>Check it, then go <em>live</em>.</>}
-      sub={live ? "Every inquiry from the form lands in Leads and alerts you on WhatsApp." : "Edit anything on the left. The preview on the right is exactly what customers will see."}
+      sub={live ? "Every inquiry from the form lands in Leads and alerts you on WhatsApp." : "Edit anything here. The preview shows exactly what customers will see."}
       actions={<>
         <Busy className="btn ghost sm" run={async () => { await save(); toast("Saved"); }}>Save</Busy>
         {live
