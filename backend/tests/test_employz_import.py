@@ -286,6 +286,26 @@ async def test_pick_the_pipeline_for_new_hub_leads_fills_the_5_stage_ids(client,
     conn = await connections.get(uid, "employz")
     assert conn["pipeline_id"] == "pipeA" and conn["stage_identification"] == "sA1" and conn["stage_close"] == "sA5"
     assert (await c.post("/api/employz/push-pipeline", json={"pipeline_id": "nopeXYZ"})).status_code == 404
+    # a pipeline whose stage names don't match: the owner picks a stage for each step; won/lost are never suggested
+    fake.pipes.append({"id": "pipeC", "name": "Sales coordinator", "stages": [{"id": f"sC{i}", "name": n, "position": i} for i, n in enumerate(
+        ["New Lead", "Customer Contacted", "Lead Qualified", "Site Visit Booked", "Follow Up", "Lead Closed Lost", "Lead Closed Won"])]})
+    d = (await c.get("/api/employz/remote-pipelines")).json()
+    assert d["saved"]["close"] == "sA5" and list(d["steps"]) == ["identification", "logic", "pain", "vision", "close"]
+    pc = next(p for p in d["pipelines"] if p["id"] == "pipeC")
+    assert pc["suggested"] == {"identification": "sC0"}                      # not "Lead Closed Lost" or "Won" for Close
+    r = await c.post("/api/employz/push-pipeline", json={"pipeline_id": "pipeC", "stages": {"identification": "sC0"}})
+    assert r.status_code == 400                                              # all 5 steps, or nothing is saved
+    assert (await c.post("/api/employz/push-pipeline", json={"pipeline_id": "pipeC", "stages": {
+        "identification": "sC0", "logic": "sC1", "pain": "sC2", "vision": "sC3", "close": "sA5"}})).status_code == 400   # another pipeline's stage
+    mine = {"identification": "sC0", "logic": "sC1", "pain": "sC2", "vision": "sC3", "close": "sC4"}
+    r = (await c.post("/api/employz/push-pipeline", json={"pipeline_id": "pipeC", "stages": mine})).json()
+    assert r["missing"] == [] and r["stages"]["close"] == "Follow Up"
+    conn = await connections.get(uid, "employz")
+    assert conn["pipeline_id"] == "pipeC" and {k: conn[f"stage_{k}"] for k in mine} == mine
+    # matched by name only (no choice sent): what didn't match is cleared, never left from the old pipeline
+    await c.post("/api/employz/push-pipeline", json={"pipeline_id": "pipeB"})
+    conn = await connections.get(uid, "employz")
+    assert conn["pipeline_id"] == "pipeB" and conn["stage_logic"] == "" and conn["stage_close"] == ""
 
 
 async def test_one_run_at_a_time_a_refused_token_needs_attention_and_disconnect_purges_later(client, fake, caplog):

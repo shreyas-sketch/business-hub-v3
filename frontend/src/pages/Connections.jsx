@@ -113,8 +113,13 @@ export function EmployzImport() {
   const [pipes, setPipes] = useState(null);
   const [pipesErr, setPipesErr] = useState("");
   const [pick, setPick] = useState("");
+  const [map, setMap] = useState({});           // hub step → Employz.ai stage id
+  const [remote, setRemote] = useState(null);
   const [err, setErr] = useState("");
-  const loadPipes = () => api("/employz/remote-pipelines").then((r) => { setPipes(r.pipelines); setPick(r.selected || ""); setPipesErr(""); })
+  // a pipeline's steps start from what's saved for it, else from the stages whose names match
+  const startMap = (r, id) => (id && id === r?.selected ? r.saved : (r?.pipelines || []).find((p) => p.id === id)?.suggested) || {};
+  const choose = (id, r = remote) => { setPick(id); setMap(startMap(r, id)); };
+  const loadPipes = () => api("/employz/remote-pipelines").then((r) => { setRemote(r); setPipes(r.pipelines); choose(r.selected || "", r); setPipesErr(""); })
     .catch((e) => setPipesErr(e.message || "Employz.ai couldn't be read just now."));
   useEffect(() => { loadPipes(); }, []);
   useEffect(() => {                          // while an import runs, its progress refreshes on its own
@@ -130,18 +135,35 @@ export function EmployzImport() {
         <span className="label">Where new hub leads go</span>
         {pipesErr ? <p className="small" style={{ color: "var(--grey)" }}>{pipesErr}</p> : !pipes ? <Loading /> : (
           <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-            <select className="select" value={pick} onChange={(e) => setPick(e.target.value)} aria-label="Pipeline for new leads">
+            <select className="select" value={pick} onChange={(e) => choose(e.target.value)} aria-label="Pipeline for new leads">
               <option value="">Choose a pipeline…</option>
               {pipes.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.stages.length} stages</option>)}
             </select>
-            <Busy className="btn" disabled={!pick} onError={setErr} run={async () => {
-              const r = await api("/employz/push-pipeline", { method: "POST", body: { pipeline_id: pick } });
-              toast(r.missing.length ? `Saved — ${r.missing.length} of the 5 stages didn't match by name` : `New leads go to ${r.pipeline.name}`,
-                r.missing.length ? "err" : "ok");
-            }}>Use this pipeline</Busy>
           </div>
         )}
-        {chosen && <span className="hint">Stages: {chosen.stages.map((s) => s.name).join(" → ")}</span>}
+        {chosen && (
+          <div className="stack" style={{ gap: 8 }}>
+            <span className="hint">As an inquiry moves through the hub's 5 steps, its opportunity moves to the stage you pick here.</span>
+            <div className="ez-steps">
+              {Object.entries(remote?.steps || {}).map(([k, name], i) => (
+                <label key={k} className="ez-step">
+                  <span>{i + 1} · {name}</span>
+                  <select className="select" value={map[k] || ""} aria-label={`Stage for ${name}`} onChange={(e) => setMap({ ...map, [k]: e.target.value })}>
+                    <option value="">Pick a stage…</option>
+                    {chosen.stages.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
+                  </select>
+                </label>
+              ))}
+            </div>
+            <div className="row">
+              <Busy className="btn" disabled={Object.keys(remote?.steps || {}).some((k) => !map[k])} onError={setErr} run={async () => {
+                const r = await api("/employz/push-pipeline", { method: "POST", body: { pipeline_id: pick, stages: map } });
+                setRemote((x) => ({ ...x, selected: pick, saved: map }));
+                toast(`New leads go to ${r.pipeline.name}`);
+              }}>Use this pipeline</Busy>
+            </div>
+          </div>
+        )}
       </div>
       <div className="stack" style={{ gap: 6 }}>
         <div className="row between">
