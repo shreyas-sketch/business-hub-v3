@@ -300,7 +300,7 @@ function Pack() {
 
         <Card area="Lead" title="Your new website" step={s.website}>
           {run.website && (
-            <div className="ev-site" style={{ "--brand": colors?.primary || "#1F4E79" }}>
+            <div className="ev-site" style={{ "--brand": run.website.accent || colors?.primary || "#1F4E79", "--on-brand": run.website.on_accent || "#fff" }}>
               <div className="ev-site-hero"><span className="small">{b.name}</span><b>{run.website.headline}</b><span>{run.website.subheadline}</span><i>{run.website.cta}</i></div>
               {run.website.offers?.length > 0 && <ul className="ev-list">{run.website.offers.slice(0, 4).map((o) => <li key={o.name}><span>{o.name}</span>{o.price ? <b>{o.price}</b> : null}</li>)}</ul>}
               {run.competitors?.some((x) => x.read) && <p className="small">Written to stand out from {run.competitors.filter((x) => x.read).map((x) => x.host).join(", ")}.</p>}

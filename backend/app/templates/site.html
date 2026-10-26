@@ -15,15 +15,31 @@
 {% if preview %}<meta name="robots" content="noindex">{% endif %}
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="{{ theme.fonts_url }}" rel="stylesheet">
-{#- One page, five looks (site_looks.py): signboard (shops), bazaar (food), care (clinics), works (manufacturing), atelier
-    (design and studios). Each has its own hero, services layout, texture and section edges; variant 0/1 swaps the picture side
-    and the pattern. Colours come worked out from the server (public.site_theme), so every phone shows the same page. -#}
+{#- One page put together from parts (site_looks.design_of): d.hero, the first screen (.hs .hb .hc .hw .ha .hl); d.services,
+    the services layout; d.finish, how the sections below are styled (the body's look-* class); and the font pairing (theme).
+    `look` is the kind of business the page speaks for: it picks the wording ("Our menu", "Book a visit"). Variant 0/1 swaps
+    the picture side and the pattern. Colours come worked out from the server (public.site_theme), so every phone shows the
+    same page. -#}
 {% set what = (industry or "").split(".")[0] %}
 {% set initial = (name or "?")[:1]|upper %}
 {% set about_photo = photos.gallery[0] if photos.gallery else none %}
 {% set gallery_rest = photos.gallery[1:] if photos.gallery|length > 1 else [] %}
 {% set offers = c.offers or [] %}
 {% set why_more = c.why and (c.why|selectattr("text")|list|length > 0 or c.why|length > 3) %}
+{% set words_for = {
+  "bazaar": {"nav": "Menu", "k": "Our menu", "h": "What we make, and what it costs", "l": "", "card": "Order with us", "steps": "Ordering is simple",
+             "contact": "Order, or ask us anything", "bar": "Send an inquiry", "panel": "What we make"},
+  "care": {"nav": "Services", "k": "Treatments and services", "h": "How we can help", "l": "Ask us anything before you book — we'll tell you what's involved and what it costs.",
+           "card": "Book a visit", "steps": "Your visit, step by step", "contact": "Book a visit, or ask us first", "bar": "Book a visit", "panel": "Treatments"},
+  "works": {"nav": "Services", "k": "Capabilities", "h": "What we make and supply", "l": "Send a drawing, a sample or a quantity — we reply with a clear quote and a delivery date.",
+            "card": "Send your requirement", "steps": "From your drawing to delivery", "contact": "Send us your requirement", "bar": "Send an inquiry", "panel": "What we make and do"},
+  "atelier": {"nav": "Services", "k": "Services", "h": "What we do", "l": "", "card": "Talk to us", "steps": "From your first message to the finished job",
+              "contact": "Tell us what you need", "bar": "Send an inquiry", "panel": "What we do"},
+  "launch": {"nav": "Services", "k": "What we offer", "h": "Pick what you need", "l": "Ask us anything before you decide. You get a clear answer and the price.",
+             "card": "Talk to us", "steps": (c.steps|length) ~ " steps. The right order.", "contact": "Tell us what you need", "bar": "Send an inquiry", "panel": "What we offer"},
+  "signboard": {"nav": "Services", "k": "Services and prices", "h": "What we do, and what it costs", "l": "Every job starts with a clear quote: what's included, the price, and when it's done.",
+                "card": "Talk to us", "steps": "From your first message to the finished job", "contact": "Tell us what you need", "bar": "Send an inquiry", "panel": "What we offer"}} %}
+{% set wd = words_for.get(look, words_for["signboard"]) %}
 <style>
 :root{
   --p:{{ theme.primary }};--on-p:{{ theme.on_primary }};--pt:{{ theme.text }};--glow:{{ theme.glow }};--deep:{{ theme.deep }};--on-deep:{{ theme.on_deep }};--second:{{ theme.second }};
@@ -31,6 +47,7 @@
   --r:{{ theme.radius }};--pill:{{ theme.pill }};
   --head:"{{ theme.head_font }}",Georgia,system-ui,sans-serif;--body:"{{ theme.body_font }}",system-ui,-apple-system,"Segoe UI",sans-serif;
   --gut:clamp(18px,5vw,56px);--max:1200px;--bar:0px;
+  --pop:{{ theme.pop_colour }};--on-pop:#0F1236;--k:var(--ink);
   /* textures, drawn in the brand's own colours */
   --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
   --print:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='{{ theme.p_url }}' stroke-width='1.3' opacity='.55'%3E%3Cpath d='M28 6l8 14-8 14-8-14z'/%3E%3Ccircle cx='28' cy='20' r='2.4' fill='{{ theme.p_url }}'/%3E%3Cpath d='M0 42h56M0 50h56' stroke-dasharray='2 5'/%3E%3C/g%3E%3Ccircle cx='0' cy='0' r='3' fill='{{ theme.s_url }}' opacity='.5'/%3E%3Ccircle cx='56' cy='0' r='3' fill='{{ theme.s_url }}' opacity='.5'/%3E%3C/svg%3E");
@@ -39,7 +56,7 @@
   --dots:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Ccircle cx='2' cy='2' r='1.4' fill='{{ theme.p_url }}' opacity='.28'/%3E%3C/svg%3E");
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html{font-synthesis:none;scroll-behavior:smooth;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{margin:0;font:400 17px/1.65 var(--body);color:var(--ink);background:var(--page);-webkit-font-smoothing:antialiased;overflow-x:hidden;padding-bottom:var(--bar)}
 img{display:block;max-width:100%}
 a{color:inherit}
@@ -238,9 +255,9 @@ footer .fname{font:700 22px/1.2 var(--head);color:#fff}footer a{color:rgba(255,2
 .arch .art-panel span{position:absolute;bottom:22%;font-weight:600;font-size:15px;background:var(--page);color:var(--ink);padding:8px 16px;border-radius:999px}
 .look-bazaar .promises{background:var(--p);color:var(--on-p);border:0}
 .look-bazaar .promises li+li{border-color:rgba(255,255,255,.25)}.look-bazaar .promises svg{color:inherit}
-.look-bazaar section.plain{background:var(--page)}
-.look-bazaar .menu-card{background:var(--page);border-radius:var(--r);padding:clamp(24px,4vw,56px);box-shadow:inset 0 0 0 2px var(--p),inset 0 0 0 8px var(--page),inset 0 0 0 9px var(--tint)}
-.look-bazaar .menu-card .sec-head{text-align:center;margin-left:auto;margin-right:auto;justify-items:center}
+section.plain{background:var(--page)}
+.menu-card{background:var(--page);border-radius:var(--r);padding:clamp(24px,4vw,56px);box-shadow:inset 0 0 0 2px var(--p),inset 0 0 0 8px var(--page),inset 0 0 0 9px var(--tint)}
+.menu-card .sec-head{text-align:center;margin-left:auto;margin-right:auto;justify-items:center}
 .look-bazaar h2{font-weight:400}
 .look-bazaar .why .cols div{background:var(--page);text-align:center;justify-items:center;border-radius:var(--r)}
 .look-bazaar .why .cols svg{width:56px;height:56px;padding:12px;border-radius:50%;background:var(--soft);box-shadow:0 0 0 2px var(--p) inset}
@@ -358,7 +375,6 @@ footer .fname{font:700 22px/1.2 var(--head);color:#fff}footer a{color:rgba(255,2
 
 /* ═════════ LAUNCH — coaches, trainers, fitness, brands, events, agencies: chunky type, outlined cards with offset shadows,
    a moving ticker, crossed-out problems and a sticky booking bar ═════════ */
-.look-launch{--pop:{{ theme.pop_colour }};--on-pop:#0F1236;--k:var(--ink)}
 body.look-launch{background:var(--soft)}
 .look-launch h1,.look-launch h2,.look-launch h3{font-weight:800;letter-spacing:-.025em}
 .look-launch h2{font-size:clamp(34px,4.8vw,64px);line-height:1}
@@ -448,7 +464,7 @@ body.look-launch{background:var(--soft)}
 .dock.show{transform:translate(-50%,0)}
 .dock b{display:block;font:800 18px/1.15 var(--head);color:var(--k)}.dock small{font-size:13px;color:var(--muted)}
 .dock .btn.pop{min-height:48px;font-size:16px;box-shadow:none}
-.look-launch .float-wa{display:none}
+.hero-launch .float-wa{display:none}
 
 @media (max-width:980px){
   nav.links{display:none}
@@ -493,7 +509,7 @@ body.look-launch{background:var(--soft)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
-<body class="look-{{ look }} v{{ variant % 2 }} f{{ variant // 2 }}">
+<body class="look-{{ d.finish }} hero-{{ d.hero }} svc-{{ d.services }} v{{ variant % 2 }} f{{ variant // 2 }}">
 {% set wa_icon %}<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.5 3.5A11.8 11.8 0 0 0 1.9 17.6L.5 23.5l6-1.6a11.8 11.8 0 0 0 14-18.4Zm-8.4 18a9.8 9.8 0 0 1-5-1.4l-.4-.2-3.6.9 1-3.5-.2-.4a9.8 9.8 0 1 1 8.2 4.6Zm5.4-7.3c-.3-.1-1.8-.9-2-1s-.5-.1-.7.1-.8 1-1 1.2-.4.2-.7.1a8 8 0 0 1-2.4-1.5 9 9 0 0 1-1.6-2c-.2-.3 0-.5.1-.6l.5-.6.3-.5v-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6a1.1 1.1 0 0 0-.8.4 3.3 3.3 0 0 0-1 2.5 5.8 5.8 0 0 0 1.2 3.1 13.2 13.2 0 0 0 5.1 4.5c1.9.8 2.6.9 3.6.7a3 3 0 0 0 2-1.4 2.5 2.5 0 0 0 .2-1.4c-.1-.1-.3-.2-.6-.4Z"/></svg>{% endset %}
 {% set tick %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke-width="1.8"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>{% endset %}
 {% set pin %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg>{% endset %}
@@ -508,13 +524,13 @@ body.look-launch{background:var(--soft)}
 
 <header class="top"><div class="wrap">
   <a class="brand" href="#top">{% if logo %}<img class="logo" src="{{ logo }}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">{% else %}<span class="mono" aria-hidden="true">{{ initial }}</span>{% endif %}<b>{{ name }}</b></a>
-  <nav class="links" aria-label="On this page">{% if offers %}<a href="#services">{% if look == "bazaar" %}Menu{% else %}Services{% endif %}</a>{% endif %}{% if c.about %}<a href="#about">About</a>{% endif %}{% if c.faq %}<a href="#faq">Questions</a>{% endif %}<a href="#contact">Contact</a></nav>
+  <nav class="links" aria-label="On this page">{% if offers %}<a href="#services">{{ wd.nav }}</a>{% endif %}{% if c.about %}<a href="#about">About</a>{% endif %}{% if c.faq %}<a href="#faq">Questions</a>{% endif %}<a href="#contact">Contact</a></nav>
   {% if whatsapp_link %}<a class="btn wa sm" href="{{ whatsapp_link }}" target="_blank" rel="noopener">{{ wa_icon }}WhatsApp us</a>{% else %}<a class="btn primary sm" href="#contact">Send an inquiry</a>{% endif %}
 </div></header>
 
 <main id="top">
-{# ───────────── the first screen, one per look ───────────── #}
-{% if look == "bazaar" %}
+{# ───────────── the first screen: d.hero ───────────── #}
+{% if d.hero == "bazaar" %}
 <section class="hb" style="padding:0"><div class="wrap">
   <div>
     <div class="stamp" aria-hidden="true"><svg viewBox="0 0 132 132"><defs><path id="ring" d="M66 66m-54 0a54 54 0 1 1 108 0a54 54 0 1 1-108 0"/></defs><text font-size="11.5" font-weight="600" letter-spacing="2.6" fill="{{ theme.text }}"><textPath href="#ring">{{ (name ~ (" · " ~ city if city else "") ~ " · ")|upper|truncate(52, true, "") }}</textPath></text></svg><b>{{ initial }}</b></div>
@@ -525,8 +541,8 @@ body.look-launch{background:var(--soft)}
   <figure class="arch">{% if photos.hero %}<img src="{{ photos.hero.src }}" alt="{{ photos.hero.alt or name }}" fetchpriority="high">{{ credit(photos.hero) }}
     {% else %}<div class="art-panel" role="img" aria-label="{{ name }}"><b>{{ initial }}</b>{% if city %}<span>{{ city }}</span>{% endif %}</div>{% endif %}</figure>
 </div></section>
-{{ edge("scallop", theme.primary) if c.why else "" }}
-{% elif look == "care" %}
+{{ edge("scallop", theme.primary) if c.why and d.finish == "bazaar" else "" }}
+{% elif d.hero == "care" %}
 <section class="hc" style="padding:0"><div class="wrap">
   <div>
     {{ where_line() }}
@@ -537,17 +553,17 @@ body.look-launch{background:var(--soft)}
   <div class="visit">
     {% if photos.hero %}<img src="{{ photos.hero.src }}" alt="{{ photos.hero.alt or name }}" fetchpriority="high">{{ credit(photos.hero) }}{% endif %}
     <div class="{% if photos.hero %}card{% else %}art-panel{% endif %}">
-      <h3>Book a visit</h3>
+      <h3>{{ wd.card }}</h3>
       <ul>
         {% if whatsapp_link %}<li>{{ wa_icon }}Message us on WhatsApp — we reply quickly</li>{% endif %}
         {% if city %}<li>{{ pin }}{{ city }}</li>{% endif %}
         {% for o in offers[:2] %}<li>{{ leaf }}{{ o.name }}{% if o.price %} · {{ o.price }}{% endif %}</li>{% endfor %}
       </ul>
-      {% if whatsapp_link %}<a class="btn primary" href="{{ whatsapp_link }}" target="_blank" rel="noopener">Book on WhatsApp</a>{% else %}<a class="btn primary" href="#contact">Ask for a time</a>{% endif %}
+      {% if whatsapp_link %}<a class="btn primary" href="{{ whatsapp_link }}" target="_blank" rel="noopener">{% if look == "care" %}Book on WhatsApp{% else %}Chat on WhatsApp{% endif %}</a>{% else %}<a class="btn primary" href="#contact">{% if look == "care" %}Ask for a time{% else %}Send an inquiry{% endif %}</a>{% endif %}
     </div>
   </div>
 </div></section>
-{% elif look == "works" %}
+{% elif d.hero == "works" %}
 <section class="hw" style="padding:0"><div class="wrap">
   <div>
     {{ where_line() }}
@@ -557,13 +573,13 @@ body.look-launch{background:var(--soft)}
   </div>
   {% if photos.hero %}<figure class="marks"><img src="{{ photos.hero.src }}" alt="{{ photos.hero.alt or name }}" fetchpriority="high">{{ credit(photos.hero) }}</figure>
   {% else %}<div class="art-panel frame" role="img" aria-label="What {{ name }} makes">
-    <h3>What we make and do</h3>
+    <h3>{{ wd.panel }}</h3>
     {% for o in offers[:5] %}<div class="r"><b>{{ "%s%d"|format("ABCDEFGH"[loop.index0 // 9], loop.index0 % 9 + 1) }}</b><span>{{ o.name }}</span><span>{{ o.price or "On quote" }}</span></div>{% endfor %}
     {% if not offers %}<div class="r"><b>A1</b><span>{{ what[:80] or name }}</span><span>{{ city }}</span></div>{% endif %}
   </div>{% endif %}
 </div></section>
 <div class="tape" aria-hidden="true"></div>
-{% elif look == "atelier" %}
+{% elif d.hero == "atelier" %}
 <section class="ha" style="padding:0"><div class="wrap">
   {{ where_line() }}
   <h1 class="hero-h1">{{ c.headline }}</h1>
@@ -573,7 +589,7 @@ body.look-launch{background:var(--soft)}
     {% else %}<div class="art-panel frame" role="img" aria-label="{{ name }}"><b>{{ name }}</b></div>{% endif %}
   </div>
 </div></section>
-{% elif look == "launch" %}
+{% elif d.hero == "launch" %}
 {% set words = (offers|map(attribute="name")|list)[:6] if offers else [] %}
 <section class="hl" style="padding:0"><div class="wrap">
   <div>
@@ -612,43 +628,45 @@ body.look-launch{background:var(--soft)}
 
 {% if c.why %}<div class="promises"><div class="wrap"><ul style="--n:{{ [c.why|length, 3]|min }}">{% for w in c.why[:3] %}<li>{{ tick }}<span>{{ w.title }}</span></li>{% endfor %}</ul></div></div>{% endif %}
 {% if proof %}<div class="proofline"><div class="wrap"><p>{{ proof }}</p></div></div>{% endif %}
-{% if look == "launch" and c.pains %}<section class="pains" id="pains"><div class="wrap">
+{% set pains_on = c.pains and "launch" in (d.hero, d.finish) %}
+{% if pains_on %}<section class="pains" id="pains"><div class="wrap">
   <div><h2>Sound familiar?</h2><ul class="strike">{% for x in c.pains[:4] %}<li>{{ x }}</li>{% endfor %}</ul></div>
   <div class="verdict">That's where <b>{{ name }}</b> comes in.{% if whatsapp_link %}<br><a class="btn pop" href="{{ whatsapp_link }}" target="_blank" rel="noopener"><span>Talk to us</span><span class="go" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>{% endif %}</div>
 </div></section>{% endif %}
 
-{# ───────────── services, one layout per look ───────────── #}
+{# ───────────── services: d.services, in the kind of business's words ───────────── #}
 {% if offers %}
-{% if look == "bazaar" %}
+{% set head %}<div class="sec-head"><span class="kicker">{{ wd.k }}</span><h2>{{ wd.h }}</h2>{% if wd.l %}<p class="lede">{{ wd.l }}</p>{% endif %}</div>{% endset %}
+{% if d.services == "menu" %}
 <section id="services" class="plain"><div class="wrap"><div class="menu-card">
-  <div class="sec-head"><span class="kicker">Our menu</span><h2>What we make, and what it costs</h2></div>
+  {{ head }}
   <div class="menu">{% for o in offers %}<article><div class="line"><h3>{{ o.name }}</h3><span class="dots"></span>{{ price(o) }}</div>{% if o.description %}<p>{{ o.description }}</p>{% endif %}{{ ask(o) }}</article>{% endfor %}</div>
 </div></div></section>
-{% elif look == "care" %}
+{% elif d.services == "tiles" %}
 <section id="services" class="tiles-wrap"><div class="wrap">
-  <div class="sec-head"><span class="kicker">Treatments and services</span><h2>How we can help</h2><p class="lede">Ask us anything before you book — we'll tell you what's involved and what it costs.</p></div>
+  {{ head }}
   <div class="tiles">{% for o in offers %}{% set op = photos.offers.get(o.name) %}<article>{% if op %}<img src="{{ op.thumb or op.src }}" alt="" loading="lazy" style="width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:calc(var(--r) * .7)">{% else %}<span class="ico">{{ leaf }}</span>{% endif %}<h3>{{ o.name }}</h3>{% if o.description %}<p>{{ o.description }}</p>{% endif %}<div class="foot">{{ price(o) }}{{ ask(o) }}</div></article>{% endfor %}</div>
 </div></section>
-{% elif look == "works" %}
+{% elif d.services == "spec" %}
 <section id="services"><div class="wrap">
-  <div class="sec-head"><span class="kicker">Capabilities</span><h2>What we make and supply</h2><p class="lede">Send a drawing, a sample or a quantity — we reply with a clear quote and a delivery date.</p></div>
+  {{ head }}
   <table class="spec"><thead><tr><th>Code</th><th>Product or service</th><th>Details</th><th style="text-align:right">Price</th></tr></thead><tbody>
   {% for o in offers %}<tr><td class="code">{{ "%s%d"|format("ABCDEFGH"[loop.index0 // 9], loop.index0 % 9 + 1) }}</td><td class="name">{{ o.name }}</td><td class="det">{{ o.description }}</td><td class="pr">{{ price(o) }} {{ ask(o) }}</td></tr>{% endfor %}
   </tbody></table>
 </div></section>
-{% elif look == "launch" %}
+{% elif d.services == "cards" %}
 <section id="services"><div class="wrap">
-  <div class="sec-head"><span class="kicker">What we offer</span><h2>Pick what you need</h2><p class="lede">Ask us anything before you decide. You get a clear answer and the price.</p></div>
+  {{ head }}
   <div class="lcards">{% for o in offers %}{% set op = photos.offers.get(o.name) %}<article>{% if op %}<img src="{{ op.thumb or op.src }}" alt="" loading="lazy">{% endif %}<span class="n">{{ "%02d"|format(loop.index) }}</span><h3>{{ o.name }}</h3>{% if o.description %}<p>{{ o.description }}</p>{% endif %}<div class="foot">{{ price(o) }}{{ ask(o) }}</div></article>{% endfor %}</div>
 </div></section>
-{% elif look == "atelier" %}
+{% elif d.services == "index" %}
 <section id="services"><div class="wrap">
-  <div class="sec-head"><span class="kicker">Services</span><h2>What we do</h2></div>
+  {{ head }}
   <div class="index">{% for o in offers %}<article><h3>{{ o.name }}</h3><p>{{ o.description }}</p><div class="end">{{ price(o) }}{{ ask(o) }}</div></article>{% endfor %}</div>
 </div></section>
 {% else %}
 <section id="services"><div class="wrap">
-  <div class="sec-head"><span class="kicker">Services and prices</span><h2>What we do, and what it costs</h2><p class="lede">Every job starts with a clear quote: what's included, the price, and when it's done.</p></div>
+  {{ head }}
   <div class="board">{% for o in offers %}{% set op = photos.offers.get(o.name) %}<article class="row {% if op %}has-photo{% endif %}">{% if op %}<img src="{{ op.thumb or op.src }}" alt="" loading="lazy">{% endif %}<h3>{{ o.name }}</h3>{% if o.description %}<p>{{ o.description }}</p>{% endif %}<div class="end">{{ price(o) }}{{ ask(o) }}</div></article>{% endfor %}</div>
 </div></section>
 {% endif %}
@@ -678,7 +696,7 @@ body.look-launch{background:var(--soft)}
 </div></section>{% endif %}
 
 {% if c.steps %}<section class="how"><div class="wrap">
-  <div class="sec-head"><span class="kicker">How it works</span><h2>{% if look == "care" %}Your visit, step by step{% elif look == "bazaar" %}Ordering is simple{% elif look == "works" %}From your drawing to delivery{% elif look == "launch" %}{{ c.steps|length }} steps. The right order.{% else %}From your first message to the finished job{% endif %}</h2></div>
+  <div class="sec-head"><span class="kicker">How it works</span><h2>{{ wd.steps }}</h2></div>
   <ol class="steps">{% for s in c.steps %}<li><h3>{{ s.title }}</h3><p>{{ s.text }}</p></li>{% endfor %}</ol>
 </div></section>{% endif %}
 
@@ -687,11 +705,11 @@ body.look-launch{background:var(--soft)}
   <div>{% for f in c.faq %}<details {% if loop.first %}open{% endif %}><summary>{{ f.q }}</summary><p>{{ f.a }}</p></details>{% endfor %}</div>
 </div></section>{% endif %}
 
-{% if look == "care" %}{{ edge("wave", theme.soft) }}{% elif look == "bazaar" %}{{ edge("scallop", theme.deep) }}{% endif %}
+{% if d.finish == "care" %}{{ edge("wave", theme.soft) }}{% elif d.finish == "bazaar" %}{{ edge("scallop", theme.deep) }}{% endif %}
 <section class="contact" id="contact"><div class="wrap">
   <div>
     <span class="kicker" style="color:inherit;opacity:.8">Contact</span>
-    <h2 style="margin-top:12px">{% if look == "care" %}Book a visit, or ask us first{% elif look == "bazaar" %}Order, or ask us anything{% elif look == "works" %}Send us your requirement{% else %}Tell us what you need{% endif %}</h2>
+    <h2 style="margin-top:12px">{{ wd.contact }}</h2>
     <p class="lede" style="margin-top:14px">Send a few details and {{ name }} replies{% if whatsapp_link %} on WhatsApp{% endif %} with a clear answer and a price.</p>
     <div class="ways">
       {% if whatsapp_link %}<a href="{{ whatsapp_link }}" target="_blank" rel="noopener">{{ wa_icon }}<span><small>Fastest</small><b>Chat on WhatsApp</b></span></a>{% endif %}
@@ -721,10 +739,10 @@ body.look-launch{background:var(--soft)}
 {% if whatsapp_link %}<a class="float-wa" href="{{ whatsapp_link }}" target="_blank" rel="noopener" aria-label="Chat with {{ name }} on WhatsApp"><svg width="30" height="30" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M20.5 3.5A11.8 11.8 0 0 0 1.9 17.6L.5 23.5l6-1.6a11.8 11.8 0 0 0 14-18.4Zm-8.4 18a9.8 9.8 0 0 1-5-1.4l-.4-.2-3.6.9 1-3.5-.2-.4a9.8 9.8 0 1 1 8.2 4.6Zm5.4-7.3c-.3-.1-1.8-.9-2-1s-.5-.1-.7.1-.8 1-1 1.2-.4.2-.7.1a8 8 0 0 1-2.4-1.5 9 9 0 0 1-1.6-2c-.2-.3 0-.5.1-.6l.5-.6.3-.5v-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6a1.1 1.1 0 0 0-.8.4 3.3 3.3 0 0 0-1 2.5 5.8 5.8 0 0 0 1.2 3.1 13.2 13.2 0 0 0 5.1 4.5c1.9.8 2.6.9 3.6.7a3 3 0 0 0 2-1.4 2.5 2.5 0 0 0 .2-1.4c-.1-.1-.3-.2-.6-.4Z"/></svg></a>{% endif %}
 <nav class="actionbar {% if not whatsapp_link %}one{% endif %}" aria-label="Contact {{ name }}">
   {% if whatsapp_link %}<a class="btn wa" href="{{ whatsapp_link }}" target="_blank" rel="noopener">{{ wa_icon }}WhatsApp</a>{% endif %}
-  <a class="btn primary" href="#contact">{% if look == "care" %}Book a visit{% else %}Send an inquiry{% endif %}</a>
+  <a class="btn primary" href="#contact">{{ wd.bar }}</a>
 </nav>
-{% if look == "launch" and whatsapp_link %}<div class="dock" id="ldock"><div><b>{{ name }}</b><small>{{ c.cta or "Get a quote on WhatsApp" }}</small></div><a class="btn pop" href="{{ whatsapp_link }}" target="_blank" rel="noopener"><span>WhatsApp us</span><span class="go" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a></div>{% endif %}
-{% if look == "launch" %}<script>
+{% if d.hero == "launch" and whatsapp_link %}<div class="dock" id="ldock"><div><b>{{ name }}</b><small>{{ c.cta or "Get a quote on WhatsApp" }}</small></div><a class="btn pop" href="{{ whatsapp_link }}" target="_blank" rel="noopener"><span>WhatsApp us</span><span class="go" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a></div>{% endif %}
+{% if d.hero == "launch" or pains_on %}<script>
 (function(){
   var calm=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
   var r=document.getElementById("lrot");

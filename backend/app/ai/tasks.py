@@ -3,6 +3,8 @@ The five AI jobs in this release, mapped to the 4321 program (Structure → Syst
 Rules every job follows: use only facts the owner gave; never invent prices, numbers, years, awards,
 client names or testimonials; write for Indian business owners in plain language.
 """
+import re
+
 from ..text import greeting_name
 from .provider import complete
 
@@ -97,25 +99,39 @@ def _niche_list() -> str:
     return ", ".join(NICHES)
 
 
+def _design_menu() -> str:
+    from ..site_looks import design_menu
+    return design_menu()
+
+
 NICHE_WORDS = (("dental", ("dental", "dentist", "orthodont", "teeth")), ("clinic", ("clinic", "doctor", "hospital", "physio", "diagnostic", "skin", "eye care")),
-               ("wellness", ("wellness", "ayurved", "therapy", "spa")), ("salon_beauty", ("salon", "beauty", "makeup", "parlour")),
-               ("bakery_sweets", ("bakery", "cake", "sweets", "mithai", "farsan")), ("restaurant_cafe", ("restaurant", "cafe", "café", "cloud kitchen", "dhaba")),
+               # before food and events: a gaming cafe or an esports night is gaming
+               ("gaming", ("gaming", "game", "esports", "e sports", "arcade", "playstation", "ps5", "xbox", "lan party", "vr arena")),
+               ("wellness", ("wellness", "ayurved", "therapy", " spa ")),   # " spa ": a whole word, not "spare parts" ("salon_beauty", ("salon", "beauty", "makeup", "parlour")),
+               ("bakery_sweets", ("bakery", "cake", "patisserie", "dessert", "sweets", "mithai", "farsan")), ("restaurant_cafe", ("restaurant", "cafe", "café", "cloud kitchen", "dhaba")),
                ("catering", ("catering", "caterer", "tiffin")), ("interiors", ("interior", "modular", "wardrobe", "furnish")),
                ("architecture", ("architect",)), ("real_estate", ("real estate", "property", "realty", "builder")),
                ("fashion_jewellery", ("fashion", "boutique", "jewel", "saree", "apparel")), ("wedding", ("wedding", "bridal")),
-               ("photography_events", ("photograph", "event")), ("coaching_education", ("coach", "academy", "tuition", "classes", "training", "course", "school")),
-               ("fitness_yoga", ("fitness", "gym", "yoga", "zumba")), ("agency_marketing", ("agency", "marketing", "advertis", "digital")),
+               ("photography_events", ("photograph", "event")),
+               # before coaching: a yoga studio's "courses" don't make it a tuition class
+               ("fitness_yoga", ("fitness", "gym", "yoga", "zumba")), ("coaching_education", ("coach", "academy", "tuition", "classes", "training", "course", "school")),
+               ("agency_marketing", ("agency", "marketing", "advertis", "digital")),
                ("travel", ("travel", "tour", "holiday")), ("it_software", ("software", "app development", " it ", "saas")),
                ("professional_services", ("chartered", "accountant", "legal", "lawyer", "advocate", "consult", "tax")),
-               ("manufacturing", ("manufactur", "factory", "plant", "production")), ("engineering", ("engineering", "fabricat", "machining", "industrial")),
+               # no bare "plant": "plant-based" and "implant" are not factories
+               ("manufacturing", ("manufactur", "factory", "production")), ("engineering", ("engineering", "fabricat", "machining", "industrial")),
                ("auto_repair", ("garage", "car repair", "auto", "service centre")), ("construction", ("construction", "contractor", "civil")),
-               ("d2c_brand", ("brand", "d2c", "skincare", "online store")), ("trading_wholesale", ("wholesale", "trader", "trading", "distributor", "dealer", "supplier")),
-               ("retail_shop", ("shop", "store", "retail", "mart")), ("home_services", ("plumb", "electric", "pest", "cleaning", "repair", "ac service")))
+               # shops and dealers before brands: an electronics "online store" is a shop, not a D2C label
+               ("trading_wholesale", ("wholesale", "trader", "trading", "distributor", "dealer", "supplier")),
+               ("retail_shop", ("shop", "store", "retail", "mart", "showroom")), ("d2c_brand", ("brand", "d2c", "skincare")),
+               ("home_services", ("plumb", "electric", "pest", "cleaning", "repair", "ac service")))
 
 
 def guess_niche(p: dict) -> str:
-    """The niche from the words of what the business does (the test AI; and the real AI's answer when it gives none)."""
+    """The niche from the words of what the business does: the test AI's answer, and the look's when the real AI gave none
+    (see site_looks.niche_for)."""
     text = f" {p.get('industry', '')} {p.get('name', '')} {' '.join(o.get('name', '') for o in p.get('offers') or [])} ".lower()
+    text = re.sub(r"[^\w]+", " ", text)   # punctuation to spaces, so " spa " and " it " also match at a comma or full stop
     return next((k for k, words in NICHE_WORDS if any(w in text for w in words)), "other")
 
 
@@ -163,6 +179,8 @@ Also:
  "niche": the ONE kind of business this is, from: {_niche_list()}
  "pains": [] up to 4 short problems their customers have before they find this business (max 8 words each), ONLY if the profile
           says them; else an empty list. Never invent.
+ "design": {{the page's parts that fit THIS business best — its kind, its customers and its mood; pages for the same kind of
+            business should not all look alike. {_design_menu()}}}
 Include only the offers listed in the profile.{brief(rivals)}""", mock, 4000)
 
 

@@ -642,6 +642,17 @@ def preview_completeness(run: dict) -> dict:
     return knowledge.completeness(b, {}, 0)
 
 
+def card_colour(profile: dict, design: dict, website: dict) -> dict:
+    """The website card's colour: the one the saved page will open in. Without a brand colour of its own that's a colour of its
+    kind of business (picked from the address it will get), so two clinics in a row on a shared screen don't match."""
+    from . import site_looks
+    from .routers.hub import _slugify
+    accent = ((design or {}).get("colors") or {}).get("primary") or "#1F4E79"
+    if accent.upper() == "#1F4E79":     # the starter colour: the page goes by its kind of business (routers/public.member_site)
+        accent = site_looks.niche_colour({"slug": _slugify(profile.get("name") or "business"), "content": website}, 0, profile)
+    return {"accent": accent, "on_accent": bk.text_on(accent)}
+
+
 def view(run: dict) -> dict:
     """Everything the link holder may see. It's built from their own public website and GST number; no phone or email is kept
     on a pack before it's saved."""
@@ -663,7 +674,8 @@ def view(run: dict) -> dict:
                    "fonts": design.get("fonts")} if design else None,
         "brand": {"options": brand.get("options") or [], "pick": brand.get("pick", 0)},
         "ideas": [{k: x.get(k) for k in ("channel", "title", "why", "first_step")} for x in run.get("ideas") or []],
-        "website": {k: website.get(k) for k in ("headline", "subheadline", "cta", "about", "offers", "why")} if website else None,
+        "website": {**{k: website.get(k) for k in ("headline", "subheadline", "cta", "about", "offers", "why")}, **card_colour(p, design, website)}
+        if website else None,
         "competitors": rivals.public(run.get("competitors")),
         "completeness": preview_completeness(run) if p else None,
         # the website couldn't be read: one line about the business lets the AI write the rest
