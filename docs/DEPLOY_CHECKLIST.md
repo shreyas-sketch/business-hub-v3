@@ -45,6 +45,15 @@ end). Prices and plan limits change, so recheck before you buy. **New in v2.2: s
    development, no sending key is set, and the database is empty or one it made (or `SEED_DEMO_WIPE` names it on purpose). Run it
    only against a separate demo database.
 
+## 0.6 New in v2.3 (the 6-engine build) — read before you deploy
+
+1. **Read `docs/V23_ENGINES_HANDOFF.md`** first: what owners see, how access and payment work, the team's event checklist.
+2. **No new packages and no manual migration.** The first start applies the v2.3 setup once (engine menu, hidden features,
+   Membership at ₹1,999 / ₹19,999). Check Admin → Features & plans says "Applied".
+3. **Optional new settings**: the "WhatsApp tool" (section 4.5). Leave them out and the hub keeps using AiSensy as before.
+4. **Before the event**: Admin → Onboarding → Links members see (community link, support email, Razorpay links), and
+   Admin → Live event → the event's settings and **Day 1**.
+
 ## 1. MongoDB Atlas M10
 
 1. Create the cluster on **AWS, Singapore (ap-southeast-1)** — the same city as the Railway servers, so every database call
@@ -120,6 +129,27 @@ Connections → WhatsApp) gets this template approved on their own WhatsApp Busi
 
 Until it's set, Lead Response can't be switched on, and the owner's page says why. If the template is removed later, the plain
 instant reply answers new inquiries instead, and the owner is told.
+
+## 4.5 v2.3 — the "WhatsApp tool" (any WhatsApp service)
+
+Owners and the team now see "WhatsApp tool", never a service's name, except in the service picker.
+
+**The hub's own number** (login codes and owner alerts) — pick the service with `WHATSAPP_PROVIDER`:
+
+- `aisensy` (default): nothing changes; section 4 above still applies.
+- `wati`: set `WATI_API_URL` and `WATI_API_TOKEN`. Create the same templates as in section 4 in Wati, with numbered
+  variables ({{1}}, {{2}}…), and put their names in the `AISENSY_*_CAMPAIGN` settings. Wati doesn't carry the Day-1
+  report's image header from here: use a text template for `AISENSY_REPORT_CAMPAIGN`.
+- `interakt`: set `INTERAKT_API_KEY` (and `WHATSAPP_TEMPLATE_LANGUAGE` if your templates aren't `en`). Same templates and
+  names as above.
+- `meta`: set `WHATSAPP_HUB_PHONE_NUMBER_ID` and `WHATSAPP_HUB_ACCESS_TOKEN`. Same templates and names.
+
+**An owner's own number** (Admin → owner → Connections, or the owner's Connections page): pick the service, fill in the
+fields it asks for, and paste the webhook address into that service's webhook setting.
+
+**Untested until a real account is connected:** Wati, Interakt and Meta-direct were written from their public API
+documents and checked only against fake servers. Before switching a live hub, send yourself a login code, an owner alert
+and (for an owner's number) a test message from Connections → "Test the connection", and send one message to the number.
 
 ## 5. MSG91 — SMS when WhatsApp can't deliver the login code
 

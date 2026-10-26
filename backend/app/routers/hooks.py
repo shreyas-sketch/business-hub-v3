@@ -2,8 +2,9 @@
 Webhooks from the owner's own accounts. Each connection has its own secret address (/api/hooks/<kind>/<token>), so a
 message can only reach the owner it belongs to.
 
-- WhatsApp (AiSensy direct webhooks or Meta): customer messages → WhatsApp chats and the AI reply. GET answers Meta's
-  verification handshake (hub.verify_token = the token in the address).
+- WhatsApp (the owner's WhatsApp tool: AiSensy direct webhooks, Meta, Wati or Interakt — v2.3): customer messages → WhatsApp
+  chats and the AI reply. GET answers Meta's verification handshake (hub.verify_token = the token in the address). Wati and
+  Interakt don't sign their webhooks here, so — like AiSensy — the secret address is what keeps them to their owner.
 - ElevenLabs post-call: the call's transcript and summary → the call record, a note on the lead, and its score.
 - Employz.ai (a workflow's webhook action): an opportunity moved stage, or was won or lost → the hub's lead follows.
 """

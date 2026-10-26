@@ -153,7 +153,7 @@ function NotConnected({ owner }) {
   return (
     <div className="panel active">
       <span className="label">Your WhatsApp number isn't connected yet</span>
-      <p className="small">Our team connects your own WhatsApp Business number (through AiSensy) as part of your setup. Once it's connected, every
+      <p className="small">Our team connects your own WhatsApp Business number (through its WhatsApp tool) as part of your setup. Once it's connected, every
         customer chat shows here, the AI replies within seconds, day and night, and your team can reply from this page.</p>
       {owner ? <div><Link className="btn sm" to="/connections">See connections</Link></div>
         : <p className="small muted">Ask the business owner to finish the connection.</p>}

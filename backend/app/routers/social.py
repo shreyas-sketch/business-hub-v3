@@ -24,8 +24,9 @@ from .membership import ist_day, ist_midnight
 
 router = APIRouter(prefix="/api/social")
 PLATFORMS = ["Instagram", "Facebook", "LinkedIn", "WhatsApp Status", "Google"]
-REF = re.compile(r"^(cal:20\d\d-\d\d:20\d\d-\d\d-\d\d|week:[0-9W-]{6,10}:\d{1,2}|out:[A-Za-z0-9_]{6,40}:\d{1,2}(-\d{1,2})?)$")
-SOURCE_FEATURE = {"cal": "content_calendar", "week": "week", "out": "tool_content"}
+REF = re.compile(r"^(cal:20\d\d-\d\d:20\d\d-\d\d-\d\d|week:[0-9W-]{6,10}:\d{1,2}|out:[A-Za-z0-9_]{6,40}:\d{1,2}(-\d{1,2})?|sm:[a-f0-9]{32})$")
+# sm: a post on the v2.3 Social media page (routers/socialmedia.py)
+SOURCE_FEATURE = {"cal": "content_calendar", "week": "week", "out": "tool_content", "sm": "social_media"}
 FEATURES = tuple(SOURCE_FEATURE.values())
 
 
@@ -36,6 +37,10 @@ def _can_see(ctx: Ctx) -> None:
 
 async def _source_post(ws: str, ref: str) -> dict | None:
     """The post this ref points to, if it is in this workspace."""
+    if ref.startswith("sm:"):
+        sm = await db().sm_posts.find_one({"_id": ref[3:], "owner_id": ws})
+        return {"hook": (sm["fields"].get("headline") or sm["fields"].get("title") or sm["fields"].get("greeting") or sm["caption"])[:140],
+                "caption": sm["caption"]} if sm else None
     kind, a, b = ref.split(":", 2)
     if kind == "cal":
         cal = await db().calendars.find_one({"_id": f"{ws}:{a}"})
@@ -120,6 +125,7 @@ async def summary(ws: str, t: date | None = None) -> dict:
     if cal:
         created += len(cal.get("posts") or [])
     created += sum([len(x.get("posts") or []) async for x in db().weeks.find({"ws": ws, "start": {"$gte": month_start.isoformat()}}, {"posts": 1})])
+    created += await db().sm_posts.count_documents({"owner_id": ws, "month": t.strftime("%Y-%m")})   # v2.3 Social media page
     nxt = next(({"date": p["date"], "hook": p.get("hook", ""), "occasion": p.get("occasion", "")}
                 for p in (cal or {}).get("posts") or [] if p["date"] >= t.isoformat() and not p.get("posted")), None)
     return {"week": len(week), "month": len(month), "by_platform": by_platform, "streak_weeks": streak, "created_month": created, "next": nxt}

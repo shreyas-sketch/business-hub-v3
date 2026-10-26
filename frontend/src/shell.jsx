@@ -11,6 +11,15 @@ const PATHS = {
   "AI team": "M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c.8-3.6 3.3-5.5 6.5-5.5s5.7 1.9 6.5 5.5M16 4.3a3.5 3.5 0 0 1 0 6.4M18 14.8c1.9.8 3 2.6 3.5 5.2",
   Grow: "M3 17l6-6 4 4 8-8M15 7h6v6",
   Admin: "M12 3l8 3v6c0 4.8-3.4 8-8 9-4.6-1-8-4.2-8-9V6z",
+  // v2.3: the 6 engines, More and Account
+  "Lead engine": "M3 5h18l-7 8v6l-4 2v-8z",
+  "Sales engine": "M3 17l6-6 4 4 8-8M15 7h6v6",
+  "Conversion engine": "M4 4h16l-6 7v5l-4 4v-9z",
+  "Operations engine": "M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zM12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1",
+  "Brand engine": "M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z",
+  "Data engine": "M12 3c4.4 0 8 1.3 8 3s-3.6 3-8 3-8-1.3-8-3 3.6-3 8-3zM4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6",
+  More: "M5 12h.01M12 12h.01M19 12h.01",
+  Account: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c.9-4 4-6 8-6s7.1 2 8 6",
   search: "M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15zM21 21l-5.2-5.2",
   inbox: "M3 13.5h5l1.5 2.5h5l1.5-2.5h5M5.2 5h13.6L21 13.5V19a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5.5z",
   menu: "M4 7h16M4 12h16M4 17h16",
@@ -30,6 +39,7 @@ const ADMIN_ITEMS = [
   ["Live event", "/admin/event", "The event link, its QR and the room's numbers"], ["Day-1 reports", "/admin/day1", "The ₹99 webinar report"],
   ["Manage member calls", "/admin/calls", "Schedule member calls"], ["Manage recordings", "/admin/recordings", "Add and edit recordings"],
   ["Compliance rules", "/admin/compliance", "The rules behind every compliance date"], ["Email", "/admin/email", "Sending, bounces and the email set-up"],
+  ["Onboarding", "/admin/onboarding", "Mark paid, setup checklists, calls and links members see"], ["Engine Audit", "/admin/audit", "Everyone's Engine Audit"],
 ];
 
 /** Every page this person can see, flat: [{label, path, group, what, locked, tier_name}]. Admin pages first for admins. */

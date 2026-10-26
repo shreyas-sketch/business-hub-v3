@@ -2,11 +2,16 @@
 Talking to the owner's own accounts. Every function returns a small result dict and never raises for a network problem,
 so an agent can record what happened and carry on.
 
-WhatsApp (owner's number)
+WhatsApp (owner's number, through their "WhatsApp tool")
     AiSensy:  approved templates through AiSensy's campaign API (each template is a "campaign" in the owner's AiSensy);
               free-form replies inside the 24-hour window through AiSensy's project API (AISENSY_PROJECT_API_BASE,
               header X-AiSensy-Project-API-Pwd, Meta Cloud API message format).
     Meta:     the WhatsApp Cloud API directly (graph.facebook.com/<version>/<phone number id>/messages).
+    Wati:     <api_url>/api/v1/sendTemplateMessage?whatsappNumber= (template) and /api/v1/sendSessionMessage/<number>
+              ?messageText= (reply), Bearer token; incoming messages arrive as {"eventType": "message", "waId", "senderName", "text"}.
+    Interakt: https://api.interakt.ai/v1/public/message/ with "Authorization: Basic <secret key>", type Template or Text;
+              incoming messages arrive as {"type": "message_received", "data": {"customer": …, "message": …}}.
+    Wati and Interakt (v2.3) are written from their public API documents and are UNTESTED until a real account is connected.
 Employz.ai (GoHighLevel API v2)
     contacts/upsert, opportunities (create, move stage). Header Version: 2021-07-28, Bearer private integration token.
 ElevenLabs
@@ -25,6 +30,7 @@ import httpx
 
 from .config import settings
 from .db import db, now
+from .messaging import bearer, split_number, wati_parameters
 
 log = logging.getLogger("integrations")
 TRANSPORT: httpx.AsyncBaseTransport | None = None   # tests set a MockTransport
@@ -67,11 +73,22 @@ async def wa_template(ws: str, conn: dict, to: str, template: str, params: list,
                                      "components": [{"type": "body", "parameters": [{"type": "text", "text": _param(p)} for p in params]}]}}
                 r = await c.post(f"{settings.whatsapp_graph_base}/{conn.get('phone_number_id')}/messages",
                                  headers={"Authorization": f"Bearer {conn.get('access_token')}"}, json=body)
+            elif conn.get("provider") == "wati":
+                r = await c.post(f"{_wati_base(conn)}/api/v1/sendTemplateMessage", params={"whatsappNumber": digits(to)},
+                                 headers={"Authorization": bearer(conn.get("api_token", ""))},
+                                 json={"template_name": template, "broadcast_name": f"hub-{kind or template}"[:60],
+                                       "parameters": wati_parameters([_param(p) for p in params])})
+            elif conn.get("provider") == "interakt":
+                cc, number = split_number(digits(to))
+                r = await c.post(settings.interakt_api_url, headers={"Authorization": f"Basic {conn.get('api_key', '')}"},
+                                 json={"countryCode": cc, "phoneNumber": number, "type": "Template", "callbackData": (kind or template)[:60],
+                                       "template": {"name": template, "languageCode": conn.get("language") or "en",
+                                                    "bodyValues": [_param(p) for p in params]}})
             else:
                 r = await c.post(AISENSY_CAMPAIGN_URL, json={"apiKey": conn.get("api_key"), "campaignName": template, "destination": digits(to),
                                                              "userName": _param(user_name or "there")[:60],
                                                              "templateParams": [_param(p) for p in params], "source": "action-hub"})
-        ok = r.status_code in (200, 201)
+        ok = r.status_code in (200, 201) and not _refused(r)
         if not ok:
             log.warning("owner WhatsApp template %s failed: %s %s", template, r.status_code, r.text[:200])
         return {"sent": ok, "via": "owner-whatsapp", "id": _msg_id(r) if ok else None,
@@ -94,12 +111,19 @@ async def wa_text(ws: str, conn: dict, to: str, text: str) -> dict:
             if conn.get("provider") == "meta":
                 r = await c.post(f"{settings.whatsapp_graph_base}/{conn.get('phone_number_id')}/messages",
                                  headers={"Authorization": f"Bearer {conn.get('access_token')}"}, json=body)
+            elif conn.get("provider") == "wati":
+                r = await c.post(f"{_wati_base(conn)}/api/v1/sendSessionMessage/{digits(to)}", params={"messageText": text[:4000]},
+                                 headers={"Authorization": bearer(conn.get("api_token", ""))})
+            elif conn.get("provider") == "interakt":
+                cc, number = split_number(digits(to))
+                r = await c.post(settings.interakt_api_url, headers={"Authorization": f"Basic {conn.get('api_key', '')}"},
+                                 json={"countryCode": cc, "phoneNumber": number, "type": "Text", "data": {"message": text[:4000]}})
             else:
                 if not (conn.get("project_id") and conn.get("project_password")):
                     return {"sent": False, "via": "owner-whatsapp", "error": "Add the AiSensy project id and password to send chat replies."}
                 r = await c.post(f"{settings.aisensy_project_api_base}/project/{conn['project_id']}/messages",
                                  headers={"X-AiSensy-Project-API-Pwd": conn["project_password"]}, json=body)
-        ok = r.status_code in (200, 201)
+        ok = r.status_code in (200, 201) and not _refused(r)
         if not ok:
             log.warning("owner WhatsApp text failed: %s %s", r.status_code, r.text[:200])
         return {"sent": ok, "via": "owner-whatsapp", "id": _msg_id(r) if ok else None,
@@ -107,6 +131,19 @@ async def wa_text(ws: str, conn: dict, to: str, text: str) -> dict:
     except httpx.HTTPError as e:
         log.warning("owner WhatsApp error: %s", type(e).__name__)
         return {"sent": False, "via": "owner-whatsapp", "error": "WhatsApp couldn't be reached. Try again in a minute."}
+
+
+def _wati_base(conn: dict) -> str:
+    return str(conn.get("api_url") or "").strip().rstrip("/")
+
+
+def _refused(r: httpx.Response) -> bool:
+    """Wati and Interakt answer 200 with {"result": false} when they don't accept a message."""
+    try:
+        d = r.json()
+    except ValueError:
+        return False
+    return isinstance(d, dict) and d.get("result") is False
 
 
 def _msg_id(r: httpx.Response) -> str | None:
@@ -140,6 +177,22 @@ def parse_inbound(payload: dict) -> list[dict]:
                         f"[{typ}]")
                 out.append({"from": str(m.get("from", "")), "name": names.get(m.get("from"), ""), "text": str(text or "")[:4000],
                             "id": str(m.get("id", ""))[:120], "type": typ})
+    # Wati: one message per call; "owner": true is a message the business itself sent (not a customer)
+    if not out and payload.get("waId") and payload.get("eventType") in ("message", None) and not payload.get("owner"):
+        typ = str(payload.get("type") or "text")
+        text = payload.get("text") if typ == "text" else (((payload.get("buttonReply") or {}).get("text")) or f"[{typ}]")
+        out.append({"from": str(payload.get("waId")), "name": str(payload.get("senderName") or "")[:80], "text": str(text or "")[:4000],
+                    "id": str(payload.get("whatsappMessageId") or payload.get("id") or "")[:120], "type": typ})
+    # Interakt: {"type": "message_received", "data": {"customer": {...}, "message": {...}}}
+    if not out and payload.get("type") == "message_received" and isinstance(payload.get("data"), dict):
+        cust = payload["data"].get("customer") or {}
+        m = payload["data"].get("message") or {}
+        if m.get("chat_message_type", "CustomerMessage") == "CustomerMessage":
+            ctype = str(m.get("message_content_type") or "Text")
+            phone = cust.get("channel_phone_number") or (str(cust.get("country_code") or "").lstrip("+") + str(cust.get("phone_number") or ""))
+            out.append({"from": str(phone or ""), "name": str(((cust.get("traits") or {}).get("name")) or "")[:80],
+                        "text": str(m.get("message") if ctype.lower() == "text" else f"[{ctype.lower()}]")[:4000],
+                        "id": str(m.get("id") or "")[:120], "type": ctype.lower()})
     if not out and (payload.get("phone") or payload.get("from")) and (payload.get("text") or payload.get("message")):
         out.append({"from": str(payload.get("phone") or payload.get("from")), "name": str(payload.get("name") or "")[:80],
                     "text": str(payload.get("text") or payload.get("message"))[:4000], "id": str(payload.get("id") or "")[:120], "type": "text"})
@@ -148,7 +201,7 @@ def parse_inbound(payload: dict) -> list[dict]:
 
 def meta_signature_ok(app_secret: str, header: str, body: bytes) -> bool:
     if not app_secret:
-        return True   # AiSensy and setups without an app secret rely on the secret webhook address
+        return True   # WhatsApp tools without an app secret (AiSensy, Wati, Interakt) rely on the secret webhook address
     expected = "sha256=" + hmac.new(app_secret.encode(), body, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, header or "")
 

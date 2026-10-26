@@ -58,7 +58,7 @@ function DraftBox({ onDraft, initial = "" }) {
           onDraft(r);
           refresh();
         }}>Draft the quotation</Busy>
-        <span className="hint">Drafting uses 1 AI run.{me.features?.company_brain ? " Rates come from your Company Brain where it has them." : ""} Nothing is saved until you press Save.</span>
+        <span className="hint">Drafting uses 1 AI token.{me.features?.company_brain ? " Rates come from your Company Brain where it has them." : ""} Nothing is saved until you press Save.</span>
       </div>
     </div>
   );
@@ -284,7 +284,7 @@ function InvoiceEditor({ onClose, onSaved }) {
               gst_mode: "", due_in_days: d.due_in_days, paid_already: d.paid_already });
             toast(d.missing_rates ? `Drafted. ${d.missing_rates} ${d.missing_rates === 1 ? "line needs" : "lines need"} a rate` : "Drafted. Check it, then make the invoice");
           }}>Fill the invoice</Busy>
-          <span className="hint">Uses 1 AI run. Only the rates you say are used — a missing one stays empty for you to add.</span>
+          <span className="hint">Uses 1 AI token. Only the rates you say are used — a missing one stays empty for you to add.</span>
         </div>
       </div>
 
@@ -358,7 +358,7 @@ function InvoiceEditor({ onClose, onSaved }) {
   );
 }
 
-/** Payments through the owner's own Razorpay become invoices on their own. Shown to owners who have it. */
+/** Payments through the owner's own payment gateway become invoices on their own. Shown to owners who have it. */
 function GatewayLine() {
   const { me } = useHub();
   const owner = canAct(me, "owner");
@@ -368,9 +368,9 @@ function GatewayLine() {
   return (
     <div className="notice small inv-gw">
       {c.connected
-        ? <span>Razorpay is connected: <b>{g.invoices_30d}</b> {g.invoices_30d === 1 ? "payment" : "payments"} became invoices and <b>{g.matched_30d}</b> paid an amount you were owed, in the last 30 days{g.credit_notes_30d ? `; ${g.credit_notes_30d} refunds became credit notes` : ""}.</span>
-        : <span>Connect your own Razorpay and every payment becomes a GST invoice on its own; a refund becomes a credit note.</span>}
-      <Link className="btn sm" to="/connections">{c.connected ? "Connection" : "Connect Razorpay"}</Link>
+        ? <span>Your payment gateway is connected: <b>{g.invoices_30d}</b> {g.invoices_30d === 1 ? "payment" : "payments"} became invoices and <b>{g.matched_30d}</b> paid an amount you were owed, in the last 30 days{g.credit_notes_30d ? `; ${g.credit_notes_30d} refunds became credit notes` : ""}.</span>
+        : <span>Connect your payment gateway and every payment becomes a GST invoice on its own; a refund becomes a credit note.</span>}
+      <Link className="btn sm" to="/connections">{c.connected ? "Connection" : "Connect payment gateway"}</Link>
     </div>
   );
 }
@@ -381,7 +381,7 @@ function CreditNoteRow({ cn }) {
       <div className="row between" style={{ alignItems: "flex-start" }}>
         <div className="stack rb-wrap" style={{ gap: 2 }}>
           <span><b>{cn.number}</b> · {cn.customer?.name}</span>
-          <span className="small muted">{cn.against ? `Against ${cn.against} · ` : ""}{cn.source === "gateway" ? "a refund through Razorpay · " : ""}{day(cn.created_at)}</span>
+          <span className="small muted">{cn.against ? `Against ${cn.against} · ` : ""}{cn.source === "gateway" ? "a refund through your payment gateway · " : ""}{day(cn.created_at)}</span>
         </div>
         <span className="money" style={{ fontFamily: "var(--head)", fontSize: 20 }}>−{rs(cn.totals?.total)}</span>
       </div>
@@ -476,7 +476,7 @@ function InvoiceRow({ inv, from, reload }) {
       <div className="row between" style={{ alignItems: "flex-start" }}>
         <div className="stack rb-wrap" style={{ gap: 2 }}>
           <span><b>{inv.number}</b> · {inv.customer?.name}</span>
-          <span className="small muted">{from ? `From ${from} · ` : ""}{inv.source === "gateway" ? "a payment through Razorpay · " : ""}{inv.due_date ? `due ${day(inv.due_date)}` : ""}{inv.status === "paid" && inv.paid_at ? `${inv.due_date ? " · " : ""}paid ${day(inv.paid_at)}` : ""}{inv.part_paid && inv.status !== "paid" ? ` · ${rs(inv.part_paid)} received so far` : ""}{inv.refunded ? ` · ${rs(inv.refunded)} refunded` : ""}{emailed ? ` · emailed ${day(inv.email.at)}` : ""}</span>
+          <span className="small muted">{from ? `From ${from} · ` : ""}{inv.source === "gateway" ? "a payment through your payment gateway · " : ""}{inv.due_date ? `due ${day(inv.due_date)}` : ""}{inv.status === "paid" && inv.paid_at ? `${inv.due_date ? " · " : ""}paid ${day(inv.paid_at)}` : ""}{inv.part_paid && inv.status !== "paid" ? ` · ${rs(inv.part_paid)} received so far` : ""}{inv.refunded ? ` · ${rs(inv.refunded)} refunded` : ""}{emailed ? ` · emailed ${day(inv.email.at)}` : ""}</span>
           {inv.gst_note && <span className="small" style={{ color: "var(--amber)" }}>{inv.gst_note} <Link to="/knowledge">Fill it in</Link></span>}
         </div>
         <div className="row" style={{ gap: 10 }}>
@@ -525,11 +525,11 @@ export default function Quotes() {
   }, []);  // eslint-disable-line react-hooks/exhaustive-deps
   const numberOf = Object.fromEntries((quotes || []).map((q) => [q.id, q.number]));
   const waiting = (quotes || []).filter((q) => q.status === "sent").length;
-  const title = waiting ? <>{waiting} {waiting === 1 ? "quotation is" : "quotations are"} waiting for a <em>yes</em>.</> : <>GST quotations in <em>minutes</em>.</>;
+  const title = waiting ? <>{waiting} {waiting === 1 ? "quotation is" : "quotations are"} waiting for a <em>yes</em>.</> : <>Quotations and invoices in <em>minutes</em>.</>;
   const top = () => window.scrollTo({ top: 0, behavior: "smooth" });
   return (
-    <Sheet kicker="Systems · Quotations & invoices" id="RB-02" pillar="Systems" money title={title}
-      sub="Speak or type what the customer wants; the hub writes the quotation and works out the GST. Send it on WhatsApp, then turn it into an invoice when they say yes."
+    <Sheet kicker="Sales · Invoicing" id="SA-03" pillar="Sales" money title={title}
+      sub="Speak or type what the customer wants; the hub writes the GST quotation. Send it on WhatsApp, then turn it into an invoice the same day they say yes."
       actions={!editing && <>
         <button className="btn" onClick={() => setSettings(!settings)}>Business details</button>
         <button className="btn" onClick={() => { setEditing("invoice"); setSettings(false); }}>New invoice</button>

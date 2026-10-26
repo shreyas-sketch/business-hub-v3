@@ -320,6 +320,37 @@ async def me(user: dict = Depends(current_user)):
         "knowledge_percent": kh,
         "landing": await landing_for(owner, role, kh),
         "program": {"name": settings.program_name, "speakers": settings.speaker_line},
+        **_v23_me(owner),
+    }
+
+
+def _v23_me(owner: dict) -> dict:
+    """v2.3 (OwnerDesk): the engines and their event days, why a feature is closed (a later event day, or members only),
+    the member's access, and the links every member sees (community, support, how to pay)."""
+    trial = plans.event_trial(owner)
+    locks = {}
+    for k, m in plans.META.items():
+        if not m["on"] or plans.has(owner, k):
+            continue
+        if plans.day_locked(owner, k):
+            locks[k] = {"lock": "day", "opens_day": plans.feature_day(k)}
+        elif m.get("paid_only") and plans.rank(plans.effective_plan(owner)) >= plans.rank(m["tier"]):
+            locks[k] = {"lock": "paid"}
+    lite = plans.PLANS["lite"]
+    access_until = (owner.get("access") or {}).get("lite")
+    return {
+        "ui": {"menu": plans.UI.get("menu", "groups")},
+        "engines": plans.engines_for(owner),
+        "feature_locks": locks,
+        "paid": plans.is_paid(owner),
+        "event": {"cohort": trial.get("cohort"), "day": plans.event_day(owner), "until": trial["until"].isoformat()} if trial else None,
+        "membership": {"name": lite["name"], "price_minor": lite["price_minor"], "price_year_minor": lite.get("price_year_minor", 0),
+                       "runs": lite["runs"] + lite.get("extra_runs", 0), "images": lite.get("images", 30),
+                       "paid_until": access_until.isoformat() if hasattr(access_until, "isoformat") else None},
+        "images": {"allowance": plans.monthly_images(owner)},
+        # the community group is for members; support and the payment links are for everyone
+        "links": {**{k: plans.UI.get(k, "") for k in ("support_email", "pay_monthly_link", "pay_yearly_link")},
+                  "community_link": plans.UI.get("community_link", "") if plans.is_paid(owner) else ""},
     }
 
 

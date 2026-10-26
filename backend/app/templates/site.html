@@ -538,7 +538,7 @@ footer .fname{font:700 22px/1.2 var(--head);color:#fff}footer a{color:rgba(255,2
     <div class="sig"><span class="sig-mono" aria-hidden="true">{{ initial }}</span><span><b>{{ name }}</b>{% if city %}<br>{{ city }}{% endif %}</span></div></div>
 </div></section>{% endif %}
 
-{% if guide %}<section style="padding-bottom:0"><div class="wrap"><div class="guide"><div><span class="kicker" style="color:inherit;opacity:.8">Free guide</span><h2 style="margin-top:10px">{{ guide.title }}</h2><p>{{ guide.subtitle or guide.promise }}</p></div><a class="btn" href="{{ base }}/guide">Get the free guide</a></div></div></section>{% endif %}
+{% if guide %}<section style="padding-bottom:0"><div class="wrap"><div class="guide"><div><span class="kicker" style="color:inherit;opacity:.8">Free {{ 'download' if guide.slug else 'guide' }}</span><h2 style="margin-top:10px">{{ guide.title }}</h2><p>{{ guide.subtitle or guide.promise }}</p></div><a class="btn" href="{{ base }}/guide{% if guide.slug %}/{{ guide.slug }}{% endif %}">Get the free {{ 'download' if guide.slug else 'guide' }}</a></div></div></section>{% endif %}
 
 {% if why_more %}<section class="why"><div class="wrap">
   <div class="sec-head"><span class="kicker">Why customers choose us</span><h2>What our customers value most</h2></div>

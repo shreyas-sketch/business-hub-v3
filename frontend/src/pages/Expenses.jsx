@@ -1,11 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api, upload } from "../api.js";
 import { Busy, Field, FormError, Sheet, Switch, canAct, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Num, Pill, Tabs } from "../v2.jsx";
 import "./expenses.css";
+import DataNav from "./DataNav.jsx";
+import ExpenseAnalysis from "./ExpenseAnalysis.jsx";
 
-/* Expenses (v2.2): every company expense in one place — the bill, the GST you can claim back, and where the money went. */
+/* Expenses (v2.2): every company expense in one place — the bill, the GST you can claim back, and where the money went.
+   v2.3: one feature with the bank statement page and the analysis & AI advice ("Expenses & bank statement", Data engine). */
 
 const IST = { timeZone: "Asia/Kolkata" };
 const isoIn = (days = 0) => new Date(Date.now() + days * 864e5).toLocaleDateString("en-CA", IST);
@@ -593,8 +596,15 @@ export default function Expenses() {
   const manager = canAct(me, "manager");
   const owner = canAct(me, "owner");
   const [month, setMonth] = useState(thisMonth);
-  const [tab, setTabState] = useState(() => (manager && pref.get("tab")) || "list");
-  const setTab = (t) => { setTabState(t); pref.set("tab", t); };
+  const [params0, setParams] = useSearchParams();
+  const [tab, setTabState] = useState(() => (manager && (params0.get("tab") || pref.get("tab"))) || "list");
+  const urlTab = params0.get("tab");
+  useEffect(() => {   // the Data links: "Analysis & AI advice" is /expenses?tab=analysis, "Expenses" is /expenses
+    if (!manager) return;
+    if (urlTab && urlTab !== tab) setTabState(urlTab);
+    else if (!urlTab && tab === "analysis") setTabState("list");
+  }, [urlTab]);
+  const setTab = (t) => { setTabState(t); pref.set("tab", t); setParams(t === "analysis" ? { tab: "analysis" } : {}, { replace: true }); };
   const [filters, setFilters] = useState({ category: "", q: "", status: "" });
   const [q, setQ] = useState("");
   useEffect(() => { const t = setTimeout(() => setQ(filters.q.trim()), 300); return () => clearTimeout(t); }, [filters.q]);
@@ -613,10 +623,21 @@ export default function Expenses() {
     reload();
   };
 
-  const tabs = [["list", "List"], ["where", "Where it went"], ["repeat", "Repeating"], ["ca", "For your CA"], ["settings", "Settings"]];
+  const tabs = [["list", "List"], ["where", "Where it went"], ["analysis", "Analysis"], ["repeat", "Repeating"], ["ca", "For your CA"], ["settings", "Settings"]];
+  if (tab === "analysis" && manager) {
+    return (
+      <Sheet kicker="Data · Expenses & bank statement" id="DA-02" pillar="Data" money title={<>Where the money <em>goes</em>, month by month.</>}
+        sub="Spend by month and by category, who you paid the most, money in against money out — and, when you ask, the AI's advice from the totals.">
+        <DataNav />
+        <Tabs tabs={tabs} value={tab} onChange={setTab} />
+        <ExpenseAnalysis />
+      </Sheet>
+    );
+  }
   return (
-    <Sheet kicker="Structure · Expenses" id="ST-13" pillar="Structure" money title={<>Where did the money <em>go</em>?</>}
+    <Sheet kicker="Data · Expenses & bank statement" id="ST-13" pillar="Data" money title={<>Where did the money <em>go</em>?</>}
       sub="Every bill and payment in one place: what you spent, the GST you can claim back, and where it went.">
+      <DataNav />
       <div className="ex-top">
         <div className="ex-month" role="group" aria-label="Month">
           <button className="btn sm ghost" aria-label="Previous month" onClick={() => setMonth(shiftMonth(month, -1))}>‹</button>

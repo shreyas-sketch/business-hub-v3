@@ -6,8 +6,12 @@ the payments they pick into Expenses in one tap.
 How it treats the statement:
 - The file is read in memory (app/bankstatement.py) and never stored. A PDF password is passed to the PDF reader once and
   never stored or logged.
-- No AI and nothing leaves the hub: the transactions are sorted by rules, and by the owner's own corrections, which the
+- Reading and sorting use no AI: the transactions are sorted by rules, and by the owner's own corrections, which the
   hub remembers per payee ("always put Shree Estates under Rent").
+- v2.3, only when the owner taps "Suggest categories with AI" (1 AI token, routers/expenseai.py): the masked payee names
+  of the payments the rules left as "Other" — nothing else: no amounts, dates, balances or account numbers — go to the AI,
+  which suggests a category for each. The owner accepts or changes each suggestion (and it's remembered as above).
+  The AI money advice on the Expenses page never sees statement lines, only totals.
 - Long numbers, e-mail addresses and UPI handles are masked before anything is kept. What is kept — the masked list, so
   the owner can review it and pick what goes into Expenses — is deleted after 24 hours, or at once with "Delete it now".
 - Only the owner sees it (bank statements show salaries and personal payments).

@@ -1,5 +1,6 @@
 """
-Ways to get more leads (v2.1, 3.4) — a panel on Revenue levers. From the Business Brain (industry, city, offers) and the
+Ways to get more leads (v2.1, 3.4) — a panel on Revenue levers; in v2.3 its own page (/lead-ideas, the "lead_ideas" feature in
+the Sales engine). Either feature opens the same ideas, so the API is unchanged. From the Business Brain (industry, city, offers) and the
 owner's current lead sources, the AI picks 5–7 ideas, each with one first step and, where the hub does it, a link to that
 feature. Only channels that fit the business type are offered to the AI, and anything else it returns is dropped.
 
@@ -15,12 +16,26 @@ from ..agents import rhythm
 from ..ai import kit_tasks
 from ..ai.provider import complete
 from ..ai.tasks import RULES, _short, _v, profile_text
-from ..context import Ctx, feature
+from ..context import Ctx, get_ctx
 from ..db import db, now
 from ..services import run_ai, track
 from .hub import profile_of
 
 router = APIRouter(prefix="/api/levers/ideas")
+
+
+def _ideas_ctx():
+    """v2.3: the Ways to get more leads page (lead_ideas) or Revenue levers (as before) — either one opens the ideas."""
+    async def dep(ctx: Ctx = Depends(get_ctx)) -> Ctx:
+        if not (ctx.has("lead_ideas") or ctx.has("revenue_levers")):
+            ctx.require("lead_ideas" if plans.META.get("lead_ideas", {}).get("on") else "revenue_levers")
+        if not ctx.at_least("manager"):
+            raise HTTPException(403, "Ask your manager or the business owner to do this.")
+        return ctx
+    return dep
+
+
+ideas_ctx = _ideas_ctx()
 
 ALL = ("trading", "clinic", "food", "services", "manufacturing")
 # key: (label, hub feature or None, path, business types it fits)
@@ -105,7 +120,7 @@ def _view(doc: dict | None, owner: dict) -> dict | None:
 
 
 @router.get("")
-async def get_ideas(ctx: Ctx = Depends(feature("revenue_levers", "manager"))):
+async def get_ideas(ctx: Ctx = Depends(ideas_ctx)):
     month = rhythm.today_ist().strftime("%Y-%m")
     doc = await db().lead_ideas.find_one({"_id": f"{ctx.ws}:{month}"})
     past = [{"month": d["month"], "ideas": len(d.get("ideas") or []), "tried": sum(1 for x in d.get("ideas") or [] if x.get("tried"))}
@@ -116,7 +131,7 @@ async def get_ideas(ctx: Ctx = Depends(feature("revenue_levers", "manager"))):
 
 
 @router.post("")
-async def make_ideas(ctx: Ctx = Depends(feature("revenue_levers", "manager"))):
+async def make_ideas(ctx: Ctx = Depends(ideas_ctx)):
     """This month's ideas (one AI run). Ideas already ticked as tried are kept."""
     p = await profile_of(ctx.ws)
     if not p.get("industry"):
@@ -141,7 +156,7 @@ class TriedIn(BaseModel):
 
 
 @router.post("/{n}/tried")
-async def tried(n: int, body: TriedIn, ctx: Ctx = Depends(feature("revenue_levers", "manager"))):
+async def tried(n: int, body: TriedIn, ctx: Ctx = Depends(ideas_ctx)):
     key = f"{ctx.ws}:{rhythm.today_ist().strftime('%Y-%m')}"
     doc = await db().lead_ideas.find_one({"_id": key})
     if not doc or not 0 <= n < len(doc.get("ideas") or []):

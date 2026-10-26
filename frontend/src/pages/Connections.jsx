@@ -4,31 +4,32 @@ import { Busy, Copy, Field, FormError, Sheet, useHub, useLoad } from "../ui.jsx"
 import { Loading, Pill } from "../v2.jsx";
 import "./running.css";
 
-const OPTION = { aisensy: "AiSensy", meta: "Meta (WhatsApp Cloud API)", twilio: "Twilio", sip: "SIP trunk", demo: "Demo (test only)" };
+// Option names for select fields. The WhatsApp service names come from the server (view.services), so the card itself only
+// ever says "WhatsApp tool" — whichever service the number runs on.
+const OPTION = { twilio: "Cloud phone number", sip: "SIP trunk", demo: "Demo (test only)" };
 
 const WHAT = {
-  whatsapp: "Your Sales Executive replies, and reminders and campaigns go out, from your own WhatsApp Business number.",
-  employz: "Every inquiry lands in your Employz.ai pipeline, and moves when you move it in the hub.",
-  voice: "The AI Telecaller calls new leads from this ElevenLabs agent and phone number.",
-  tally: "Read sales and money owed from Tally on your office computer.",
+  whatsapp: "Connect the WhatsApp tool your business number runs on. Replies, reminders and follow-ups can then go out from your own number.",
+  employz: "Every inquiry lands in your CRM's pipeline, and moves when you move it in the hub.",
+  voice: "The AI Telecaller calls new leads from your voice agent and its phone number.",
+  tally: "Read sales and money owed from the accounting software on your office computer.",
   email: "Send emails from your own address.",
   calendar: "The booking link your AI staff share when a customer wants a meeting.",
-  razorpay: "Every payment a customer makes through your own Razorpay becomes a GST invoice on its own — or marks the matching amount in Money owed paid. A refund becomes a credit note.",
+  razorpay: "Every payment a customer makes through your payment gateway becomes a GST invoice on its own — or marks the matching amount in Money owed paid. A refund becomes a credit note.",
 };
 
+// Where to paste the webhook address. The steps name the service only once it's picked (like the WhatsApp tool's picker).
 const HOOK_HINT = {
-  whatsapp: "Paste this as the webhook in AiSensy, or as the callback URL in your Meta app (the verify token is the last part of the address).",
-  voice: "Paste this as the post-call webhook in ElevenLabs, so every call comes back here with its summary.",
-  employz: "Paste this into the webhook step of an Employz.ai workflow, so deals you move there move here too.",
-  razorpay: "In Razorpay → Account & Settings → Webhooks, add this address with the events payment.captured and refund.processed, and type the same webhook secret as above. Try it in test mode first: a test payment shows up as an invoice here.",
+  whatsapp: "Paste this as the webhook address in your WhatsApp tool, so customer messages come into your hub. For Meta, it's the callback URL and the verify token is the last part of the address.",
+  voice: "Paste this as the post-call webhook in your voice agent service, so every call comes back here with its summary.",
+  employz: "Paste this into the webhook step of a workflow in your CRM, so deals you move there move here too.",
+  razorpay: "In your payment gateway's webhook settings (usually Account & Settings → Webhooks), add this address with the events payment.captured and refund.processed, and type the same webhook secret as above. Try it in test mode first: a test payment shows up as an invoice here.",
 };
 
-// WhatsApp: hide the other provider's fields so the form stays short.
-const HIDE = {
-  whatsapp: {
-    aisensy: ["phone_number_id", "access_token", "app_secret", "language"],
-    meta: ["api_key", "project_id", "project_password"],
-  },
+// WhatsApp tool: only the fields the chosen service needs (view.service_fields), so the form stays short.
+const onlyFor = (view, vals) => {
+  const allowed = view.service_fields?.[vals.provider || ""];
+  return allowed ? view.fields.filter((f) => allowed.includes(f.key)) : view.kind === "whatsapp" ? view.fields.filter((f) => f.key === "provider") : view.fields;
 };
 
 const fromView = (view) => Object.fromEntries(view.fields.map((f) => [f.key, f.type === "secret" ? "" : String(f.value ?? "")]));
@@ -40,8 +41,8 @@ export function ConnectionForm({ view, onSaved, children }) {
   const [err, setErr] = useState("");
   const set = (k) => (e) => setVals({ ...vals, [k]: e.target.value });
   const changed = view.fields.filter((f) => (f.type === "secret" ? vals[f.key].trim() !== "" : vals[f.key] !== String(f.value ?? "")));
-  const hidden = HIDE[view.kind]?.[vals.provider || "aisensy"] || [];
-  const shown = view.fields.filter((f) => !hidden.includes(f.key));
+  const shown = onlyFor(view, vals);
+  const names = view.services || OPTION;
   return (
     <div className="stack">
       <div className="grid2">
@@ -52,8 +53,8 @@ export function ConnectionForm({ view, onSaved, children }) {
               {f.type === "select" ? (
                 <select className="select" value={vals[f.key]} onChange={set(f.key)}>
                   <option value="">Choose…</option>
-                  {(f.options || []).map((o) => <option key={o} value={o}>{OPTION[o] || o}</option>)}
-                  {vals[f.key] && !(f.options || []).includes(vals[f.key]) && <option value={vals[f.key]}>{OPTION[vals[f.key]] || vals[f.key]}</option>}
+                  {(f.options || []).map((o) => <option key={o} value={o}>{names[o] || OPTION[o] || o}</option>)}
+                  {vals[f.key] && !(f.options || []).includes(vals[f.key]) && <option value={vals[f.key]}>{names[vals[f.key]] || OPTION[vals[f.key]] || vals[f.key]}</option>}
                 </select>
               ) : f.type === "secret" ? (
                 <input className="input" type="password" autoComplete="new-password" maxLength={2000} value={vals[f.key]} onChange={set(f.key)}
@@ -167,7 +168,8 @@ function Panel({ c, reload }) {
   );
 }
 
-/** Connections your plan doesn't include yet: one quiet line per plan, not a wall of locked forms. */
+/** Connections your plan doesn't include yet: one quiet line per plan, not a wall of locked forms. With the v2.3 engine
+    menu, only the ones the Membership itself opens are listed (spec §14: show only the connections the plan uses). */
 function Later({ locked }) {
   const { me, upgrade } = useHub();
   const RANK = ["free", "lite", "program", "running", "growth", "office"];
@@ -190,16 +192,20 @@ function Later({ locked }) {
 }
 
 export default function Connections() {
+  const { me } = useHub();
   const [list, reload] = useLoad("/connections");
+  const engines = !!me?.menu?.[0]?.section;   // v2.3: the engine menu is on
   const open = (list || []).filter((c) => c.available);
-  const locked = (list || []).filter((c) => !c.available);
+  const locked = (list || []).filter((c) => !c.available && (!engines || ["free", "lite"].includes(me.feature_tiers?.[c.feature])));
+  // v2.3 spec §14 "change connections column": each connection is named by its category (CRM, Payment gateway, WhatsApp
+  // tool…), not the software company; the company only shows as the choice in its picker (app/connections.py SERVICES).
   const done = open.filter((c) => c.connected).length;
   const title = !list ? <>Your own accounts, <em>connected</em>.</>
     : done && done === open.length ? <>All your accounts are <em>connected</em>.</>
     : <>{done} of {open.length} {open.length === 1 ? "account" : "accounts"} <em>connected</em>.</>;
   return (
     <Sheet kicker="Systems · Connections" id="GM-04" pillar="Systems" title={title}
-      sub="Your hub works from your own accounts — your payment gateway, and on higher plans your WhatsApp number, CRM and voice agent. Our team can set these up for you; you can also add or change the details here.">
+      sub="Your hub works from your own accounts — your payment gateway, your WhatsApp tool and your CRM. Our team can set these up for you; you can also add or change the details here.">
       <p className="small muted">Keys, tokens and passwords are stored encrypted and are never shown again after you save them. Leave a saved one empty to keep it.</p>
       {!list ? <Loading /> : (
         <div className="stack" style={{ gap: 16 }}>

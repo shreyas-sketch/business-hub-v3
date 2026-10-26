@@ -475,6 +475,8 @@ async def _closed(ctx: Ctx, q: dict, status: str) -> None:
             upd = {"status": result, "updated_at": now(), "won_at": now() if result == "won" else None,
                    **({"value": q["totals"]["total"]} if result == "won" else {})}
             await db().leads.update_one({"_id": lead["_id"]}, {"$set": upd})
+            from .. import crm   # v2.3: the deal's history in the CRM says why it closed
+            await crm.on_lead_patched(ctx.ws, lead, upd, ctx.actor, ctx.user.get("name", ""))
             await hooks.on_lead_status(ctx.owner, {**lead, **upd}, result)
 
 

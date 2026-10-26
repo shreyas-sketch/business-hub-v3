@@ -10,7 +10,8 @@ expenses {_id, ws, date "YYYY-MM-DD", amount (paise, the bill total including GS
 expense_settings {_id: ws, kind (industry kind key), budgets {category: rupees a month}, custom [{key, label}] (≤10)}
 
 The GST set-aside and the bank reader read `expenses` with exactly these field names. Money is stored in paise; the
-API takes and returns rupees. Everything is computed with find() + Python (no aggregation), so it runs on MongoDB 3.6+.
+API takes and returns rupees. v2.3: the analysis and the owner's opt-in AI money advice (totals only, salaries only when
+ticked) live in routers/expenseai.py and app/expense_ai.py. Everything is computed with find() + Python (no aggregation), so it runs on MongoDB 3.6+.
 """
 import csv
 import hashlib
