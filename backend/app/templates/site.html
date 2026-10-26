@@ -213,10 +213,10 @@ footer .fname{font:700 22px/1.2 var(--head);color:#fff}footer a{color:rgba(255,2
 /* ═════════ SIGNBOARD — shops and traders: the brand colour as a painted shop sign, a price board ═════════ */
 .hs{background:var(--p);color:var(--on-p);position:relative;overflow:hidden}
 .hs:after{content:"";position:absolute;right:-12vw;top:-30%;width:58vw;height:160%;background:var(--deep);opacity:.2;transform:skewX(-14deg);pointer-events:none}
-/* variant 2: a white page with the brand colour as a tall panel holding the picture */
-.v1 .hs{background:var(--page);color:var(--ink)}
-.v1 .hs:after{right:0;left:auto;top:0;width:41%;height:100%;transform:none;background:var(--p);opacity:1}
-.v1 .hs .where{color:var(--pt);opacity:1}.v1 .hs .hero-sub{color:var(--muted);opacity:1}
+/* light: a white page with the brand colour as a tall panel holding the picture */
+.tone-light .hs:after{right:0;left:auto;top:0;width:41%;height:100%;transform:none;background:var(--p);opacity:1}
+.tone-light.v1 .hs:after{left:0;right:auto}.v1 .hs .wrap>div:first-child{order:2}.tone-light.lay-centre .hs:after{display:none}
+.tone-light .hs .where{color:var(--pt);opacity:1}.tone-light .hs .hero-sub{color:var(--muted);opacity:1}
 .hs .wrap{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:clamp(32px,5vw,72px);align-items:center;padding-top:clamp(48px,7vw,96px);padding-bottom:clamp(48px,7vw,96px)}
 
 .where{display:inline-flex;align-items:center;gap:10px;font-weight:600;font-size:15px;opacity:.92}.where i{width:9px;height:9px;border-radius:50%;background:currentColor;opacity:.75}
@@ -302,13 +302,13 @@ section.plain{background:var(--page)}
 .hw{background:#0F1318 var(--grid);background-size:120px 120px;color:#F2F4F7;position:relative;overflow:hidden}
 .hw .wrap{position:relative;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:clamp(32px,5vw,72px);align-items:center;padding-top:clamp(48px,7vw,104px);padding-bottom:clamp(48px,7vw,104px)}
 .v1 .hw .wrap>div:first-child{order:2}
-/* variant 2: light drafting paper, the brand's grid on white, ink text */
-.v1 .hw{background:#F7F8FA var(--grid);background-size:120px 120px;color:var(--ink)}
-.v1 .hw .where{color:var(--muted)}.v1 .hw .hero-sub{color:var(--muted)}.v1 .hw .btn.ghost{color:var(--ink)}
-.v1 .hw .art-panel{background:var(--page);border-color:var(--line);box-shadow:0 30px 60px -40px rgba(0,0,0,.4)}
-.v1 .hw .art-panel h3,.v1 .hw .art-panel .r span:last-child{color:var(--muted)}.v1 .hw .art-panel .r{border-color:var(--line)}
-.v1 .hw .art-panel .r b{color:var(--pt)}
-.v1.look-works .promises{background:var(--page);color:var(--ink);border-bottom:1px solid var(--line)}.v1.look-works .promises li+li{border-color:var(--line)}
+/* light: drafting paper, the brand's grid on white, ink text */
+.tone-light .hw{background:#F7F8FA var(--grid);background-size:120px 120px;color:var(--ink)}
+.tone-light .hw .where,.tone-light .hw .hero-sub{color:var(--muted)}.tone-light .hw .btn.ghost{color:var(--ink)}
+.tone-light .hw .art-panel{background:var(--page);border-color:var(--line);box-shadow:0 30px 60px -40px rgba(0,0,0,.4)}
+.tone-light .hw .art-panel h3,.tone-light .hw .art-panel .r span:last-child{color:var(--muted)}.tone-light .hw .art-panel .r{border-color:var(--line)}
+.tone-light .hw .art-panel .r b{color:var(--pt)}
+.tone-light.look-works .promises{background:var(--page);color:var(--ink);border-bottom:1px solid var(--line)}.tone-light.look-works .promises li+li{border-color:var(--line)}
 .hw .where{color:#AEB7C2;font-family:var(--head);letter-spacing:.04em;font-size:16px}
 .hw .where i{border-radius:0;background:var(--p);opacity:1}
 .hw h1{font-size:clamp(44px,6.6vw,88px);line-height:.98;letter-spacing:-.01em;text-transform:none}
@@ -466,6 +466,34 @@ body.look-launch{background:var(--soft)}
 .dock .btn.pop{min-height:48px;font-size:16px;box-shadow:none}
 .hero-launch .float-wa{display:none}
 
+/* ═════════ each niche's own first screen: its look's hero in a tone (light, colour, dark) and a layout (picture right,
+   picture left = .v1, centred), so no two niches open alike ═════════ */
+.tone-light :is(.hs,.hl){background-color:var(--page);color:var(--ink)}   /* the others are light already */
+.tone-colour .hero{background-color:var(--p);color:var(--on-p)}
+.tone-dark .hero{background-color:#0F1318;color:#F2F4F7}
+.tone-colour .hero :is(h1,.hero-sub,.where),.tone-dark .hero :is(h1,.hero-sub,.where){color:inherit;opacity:1}
+.tone-colour .hero .hero-sub,.tone-dark .hero .hero-sub{opacity:.86}
+.tone-colour .hb:before,.tone-dark .hb:before{display:none}
+.tone-colour .hc:before{background:rgba(255,255,255,.1)}.tone-dark .hc:before{background:rgba(255,255,255,.05)}
+.tone-colour .hc .where i,.tone-dark .hc .where i{background:currentColor}
+.tone-colour .hw{background-image:none}
+.tone-colour .ha:before,.tone-dark .ha:before{opacity:.06}
+.tone-colour .ha .art-panel{background:rgba(255,255,255,.14)}.tone-dark .ha .art-panel{background:rgba(255,255,255,.07)}
+.tone-colour .ha .where i{background:currentColor}
+.tone-light .hl .chips span{background:var(--soft);border-color:var(--line)}
+.lay-centre .hero .wrap{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center}
+.lay-centre .hero .wrap>*{max-width:820px}
+.lay-centre .hero .hero-sub{margin-left:auto;margin-right:auto}
+.lay-centre .hero :is(.ctas,.chips){justify-content:center}
+.lay-centre .hero :is(.art-panel,.visit,.card){text-align:left}
+.lay-centre .hero :is(.frame,.marks,.visit){width:min(560px,100%)}
+.lay-centre .stamp{margin-left:auto;margin-right:auto}
+.lay-centre .arch{width:min(340px,100%)}
+.lay-centre .lframe{max-width:400px}
+.lay-centre .ha h1{margin-left:auto;margin-right:auto;max-width:18ch}
+.lay-centre .ha .below{grid-template-columns:minmax(0,1fr);justify-items:center}
+.lay-centre .ha .below>*{width:min(640px,100%)}
+
 @media (max-width:980px){
   nav.links{display:none}
   .hl .wrap,.pains .wrap{grid-template-columns:minmax(0,1fr)}.v1 .hl .wrap>div:first-child{order:0}
@@ -481,7 +509,7 @@ body.look-launch{background:var(--soft)}
   .visit img+.card{position:relative;left:auto;bottom:auto;width:auto;margin:-40px 16px 0}
   .look-works .steps li:after{display:none}
   .v1 .ha h1{margin-left:0;text-align:left}
-  .v1 .hs:after{width:100%;height:10px;top:auto;bottom:0}
+  .tone-light .hs:after{width:100%;height:10px;top:auto;bottom:0;left:0}
 }
 @media (max-width:640px){
   :root{--bar:calc(76px + env(safe-area-inset-bottom))}
@@ -509,7 +537,7 @@ body.look-launch{background:var(--soft)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
-<body class="look-{{ d.finish }} hero-{{ d.hero }} svc-{{ d.services }} v{{ variant % 2 }} f{{ variant // 2 }}">
+<body class="look-{{ d.finish }} hero-{{ d.hero }} svc-{{ d.services }} tone-{{ d.tone }} lay-{{ d.layout }} v{{ 1 if d.layout == "left" else 0 }}">
 {% set wa_icon %}<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.5 3.5A11.8 11.8 0 0 0 1.9 17.6L.5 23.5l6-1.6a11.8 11.8 0 0 0 14-18.4Zm-8.4 18a9.8 9.8 0 0 1-5-1.4l-.4-.2-3.6.9 1-3.5-.2-.4a9.8 9.8 0 1 1 8.2 4.6Zm5.4-7.3c-.3-.1-1.8-.9-2-1s-.5-.1-.7.1-.8 1-1 1.2-.4.2-.7.1a8 8 0 0 1-2.4-1.5 9 9 0 0 1-1.6-2c-.2-.3 0-.5.1-.6l.5-.6.3-.5v-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6a1.1 1.1 0 0 0-.8.4 3.3 3.3 0 0 0-1 2.5 5.8 5.8 0 0 0 1.2 3.1 13.2 13.2 0 0 0 5.1 4.5c1.9.8 2.6.9 3.6.7a3 3 0 0 0 2-1.4 2.5 2.5 0 0 0 .2-1.4c-.1-.1-.3-.2-.6-.4Z"/></svg>{% endset %}
 {% set tick %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke-width="1.8"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>{% endset %}
 {% set pin %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg>{% endset %}
@@ -531,7 +559,7 @@ body.look-launch{background:var(--soft)}
 <main id="top">
 {# ───────────── the first screen: d.hero ───────────── #}
 {% if d.hero == "bazaar" %}
-<section class="hb" style="padding:0"><div class="wrap">
+<section class="hb hero" style="padding:0"><div class="wrap">
   <div>
     <div class="stamp" aria-hidden="true"><svg viewBox="0 0 132 132"><defs><path id="ring" d="M66 66m-54 0a54 54 0 1 1 108 0a54 54 0 1 1-108 0"/></defs><text font-size="11.5" font-weight="600" letter-spacing="2.6" fill="{{ theme.text }}"><textPath href="#ring">{{ (name ~ (" · " ~ city if city else "") ~ " · ")|upper|truncate(52, true, "") }}</textPath></text></svg><b>{{ initial }}</b></div>
     <h1 class="hero-h1">{{ c.headline }}</h1>
@@ -543,7 +571,7 @@ body.look-launch{background:var(--soft)}
 </div></section>
 {{ edge("scallop", theme.primary) if c.why and d.finish == "bazaar" else "" }}
 {% elif d.hero == "care" %}
-<section class="hc" style="padding:0"><div class="wrap">
+<section class="hc hero" style="padding:0"><div class="wrap">
   <div>
     {{ where_line() }}
     <h1 class="hero-h1">{{ c.headline }}</h1>
@@ -564,7 +592,7 @@ body.look-launch{background:var(--soft)}
   </div>
 </div></section>
 {% elif d.hero == "works" %}
-<section class="hw" style="padding:0"><div class="wrap">
+<section class="hw hero" style="padding:0"><div class="wrap">
   <div>
     {{ where_line() }}
     <h1 class="hero-h1">{{ c.headline }}</h1>
@@ -580,7 +608,7 @@ body.look-launch{background:var(--soft)}
 </div></section>
 <div class="tape" aria-hidden="true"></div>
 {% elif d.hero == "atelier" %}
-<section class="ha" style="padding:0"><div class="wrap">
+<section class="ha hero" style="padding:0"><div class="wrap">
   {{ where_line() }}
   <h1 class="hero-h1">{{ c.headline }}</h1>
   <div class="below">
@@ -591,7 +619,7 @@ body.look-launch{background:var(--soft)}
 </div></section>
 {% elif d.hero == "launch" %}
 {% set words = (offers|map(attribute="name")|list)[:6] if offers else [] %}
-<section class="hl" style="padding:0"><div class="wrap">
+<section class="hl hero" style="padding:0"><div class="wrap">
   <div>
     {{ where_line() }}
     <h1 class="hero-h1">{{ c.headline }}{% if words %}<span class="rotline"><span class="rot" id="lrot" data-words="{{ words|tojson|forceescape }}"><span>{{ words[0] }}</span></span></span>{% endif %}</h1>
@@ -609,7 +637,7 @@ body.look-launch{background:var(--soft)}
 {% set tick_words = ((offers|map(attribute="name")|list) + ((c.why or [])|map(attribute="title")|list))[:8] %}
 {% if tick_words %}<div class="tickwrap"><div class="ticker" aria-hidden="true"><div class="lane">{% for _ in range(2) %}{% for t in tick_words %}<span>{{ t }}</span>{% endfor %}{% for t in tick_words %}<span>{{ t }}</span>{% endfor %}{% endfor %}</div></div></div>{% endif %}
 {% else %}
-<section class="hs" style="padding:0"><div class="wrap">
+<section class="hs hero" style="padding:0"><div class="wrap">
   <div>
     {{ where_line() }}
     <h1 class="hero-h1">{{ c.headline }}</h1>

@@ -6,7 +6,7 @@ import json
 import re
 
 from .provider import complete
-from .tasks import RULES, _design_menu, _first, _niche_list, _v, guess_niche, profile_text
+from .tasks import RULES, _first, _niche_list, _v, guess_niche, profile_text
 
 SECTIONS = {
     "headline": "the big line at the top (max 10 words)",
@@ -168,7 +168,5 @@ JSON: {{
  "faq": [{{"q": "...", "a": "..."}}] (2-4 items, only questions the facts above can answer),
  "niche": "the ONE kind of business this is, from: {_niche_list()}",
  "pains": ["up to 4 short problems their customers have before they find this business, max 8 words each, ONLY from the owner's
-           answers (their pain points) or their own website; an empty list if not given. Never invent."],
- "design": {{the page's parts that fit THIS business best — its kind, its customers and its mood; pages for the same kind of
-            business should not all look alike. {_design_menu()}}}
+           answers (their pain points) or their own website; an empty list if not given. Never invent."]
 }}""", lambda: mock_site_from_inputs(p, brand, inp, own_site, comp), 4000)

@@ -99,11 +99,6 @@ def _niche_list() -> str:
     return ", ".join(NICHES)
 
 
-def _design_menu() -> str:
-    from ..site_looks import design_menu
-    return design_menu()
-
-
 NICHE_WORDS = (("dental", ("dental", "dentist", "orthodont", "teeth")), ("clinic", ("clinic", "doctor", "hospital", "physio", "diagnostic", "skin", "eye care")),
                # before food and events: a gaming cafe or an esports night is gaming
                ("gaming", ("gaming", "game", "esports", "e sports", "arcade", "playstation", "ps5", "xbox", "lan party", "vr arena")),
@@ -181,8 +176,6 @@ Also:
  "niche": the ONE kind of business this is, from: {_niche_list()}
  "pains": [] up to 4 short problems their customers have before they find this business (max 8 words each), ONLY if the profile
           says them; else an empty list. Never invent.
- "design": {{the page's parts that fit THIS business best — its kind, its customers and its mood; pages for the same kind of
-            business should not all look alike. {_design_menu()}}}
 Include only the offers listed in the profile.{brief(rivals)}""", mock, 4000)
 
 

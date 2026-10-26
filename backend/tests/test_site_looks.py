@@ -1,5 +1,5 @@
-"""Website looks: each kind of business gets its own layout (not the same page in another colour), the owner can pick another,
-and the colours stay legible on every look."""
+"""Website looks: every niche gets its own design (not the same page in another colour), businesses of one niche still differ,
+nobody has to pick a look, and the colours stay legible on every look."""
 from app import site_looks
 from app import brand_kit as bk
 from app.routers.public import site_theme
@@ -32,9 +32,8 @@ async def test_owners_get_no_look_to_pick_the_page_is_put_together_for_them(clie
     r = await client.put("/api/site", json={**body, "look": "atelier"})      # an older app still sending one: ignored
     assert r.status_code == 200 and "look" not in r.json()
     assert (await client.get(f"/s/{site['slug']}")).text.split("<body")[1][:120] == before.split("<body")[1][:120]
-    allowed = site_looks.parts_for(site_looks.look_of({"slug": site["slug"], "content": got["content"]}, {**PROFILE})[0],
-                                   got["content"].get("niche", ""))
-    assert any(f'class="look-{f} hero-{h} svc-{v} ' in before for f in allowed["finish"] for h in allowed["hero"] for v in allowed["services"])
+    d = site_looks.design_of({"slug": site["slug"], "content": got["content"]}, {**PROFILE})
+    assert f'class="look-{d["finish"]} hero-{d["hero"]} svc-{d["services"]} ' in before
 
 
 async def test_brand_colour_reads_on_white_and_on_dark_panels(client):
@@ -50,9 +49,9 @@ def test_the_ai_niche_picks_the_look_and_unknown_services_dont_all_match():
     assert site_looks.look_of({"slug": "a", "content": {"niche": "bakery_sweets"}}, {})[0] == "bazaar"
     assert site_looks.look_of({"slug": "a", "content": {"niche": "made-up"}}, {"industry": "Dental clinic"})[0] == "care"
     assert site_looks.auto_look({"industry": "Business coaching for founders"}) == "launch"
-    # a service the words don't place: some Signboard, some Launch — a room of them doesn't all look the same
-    looks = {site_looks.auto_look({"industry": "Astrology and vastu advice"}, "", f"biz-{i}") for i in range(12)}
-    assert looks == {"signboard", "launch"}
+    # a business nothing places gets the "other" design, its own too
+    assert site_looks.niche_for({}, {"industry": "Astrology and vastu advice"}) == "other"
+    assert site_looks.auto_look({"industry": "Astrology and vastu advice"}) == site_looks.OTHER_LOOK
 
 
 async def test_variants_change_the_fonts_and_a_page_without_a_brand_colour_gets_its_niches(client):
@@ -113,65 +112,52 @@ def test_the_event_card_opens_in_the_colour_the_page_will():
     assert gold["accent"] == "#D3B982" and gold["on_accent"] != "#FFFFFF"     # a light brand colour keeps dark text on it
 
 
-def test_pages_are_put_together_from_parts_so_one_kind_of_business_varies():
-    clinics = [site_looks.design_of({"slug": f"smile-{i}", "content": {"niche": "dental"}}, {}) for i in range(40)]
-    allowed = site_looks.parts_for("care", "dental")
-    for d in clinics:
-        assert d["voice"] == "care" and d["hero"] in allowed["hero"] and d["services"] in allowed["services"]
-        assert d["finish"] in allowed["finish"] and d["fonts"] in site_looks.FINISH_FONTS[d["finish"]]   # weights it can carry
-    combos = {(d["hero"], d["services"], d["finish"], d["fonts"]) for d in clinics}
-    assert len(combos) > 10                                                            # not one page in six colours
-    assert {d["hero"] for d in clinics} == set(allowed["hero"])
-    # never a part that doesn't suit: no menu for a clinic, no spec table for a bakery
-    assert all(d["services"] != "menu" for d in clinics)
-    cakes = [site_looks.design_of({"slug": f"cake-{i}", "content": {"niche": "bakery_sweets"}}, {}) for i in range(30)]
-    assert all(d["services"] != "spec" and d["voice"] == "bazaar" for d in cakes)
-    # the same page stays the same on every visit
+def test_every_niche_has_its_own_design_and_pages_of_one_niche_still_differ():
+    designs = {}
+    for niche in site_looks.NICHES:
+        pages = [site_looks.design_of({"slug": f"biz-{i}", "content": {"niche": niche}}, {}) for i in range(40)]
+        own = {(d["hero"], d["tone"], d["layout"], d["services"], d["finish"]) for d in pages}
+        assert len(own) == 1, niche                                    # one design per niche, always...
+        hero, tone, layout, *_ = own.pop()
+        designs.setdefault((hero, tone, layout), []).append(niche)
+        assert all(d["fonts"] in site_looks.FINISH_FONTS[d["finish"]] for d in pages)    # fonts its finish can carry
+        looks = {(d["fonts"], site_looks.niche_colour({"slug": f"biz-{i}", "content": {"niche": niche}})) for i, d in enumerate(pages)}
+        assert len(looks) >= 8, niche                                   # ...and two of one niche still differ
+    clash = {k: v for k, v in designs.items() if len(v) > 1}
+    assert not clash, clash                                             # ...and no two niches even open alike
+    assert set(site_looks.NICHE_FIRST) == set(site_looks.NICHES)
+    assert set(site_looks.NICHE_DESIGN) == set(site_looks.NICHES)
+    # a design suits its kind: no menu for a clinic, no spec table for a bakery
+    assert site_looks.NICHE_DESIGN["dental"][0] != "menu" and site_looks.NICHE_DESIGN["bakery_sweets"][0] != "spec"
     one = {"slug": "smile-dental", "content": {"niche": "dental"}}
-    assert site_looks.design_of(one, {}) == site_looks.design_of(one, {})
-
-
-def test_the_ai_picks_parts_that_suit_but_never_the_first_screen():
-    picked = {"slug": "x", "content": {"niche": "gaming", "design": {"hero": "works", "services": "spec", "finish": "works", "fonts": "oswald"}}}
-    d = site_looks.design_of(picked, {})
-    assert (d["hero"], d["services"], d["finish"], d["fonts"]) == ("launch", "spec", "works", "oswald")   # the hero is gaming's own
-    # a pick that doesn't suit the business (a menu for a gaming arena) or fonts the finish can't carry fall back
-    odd = {"slug": "x", "content": {"niche": "gaming", "design": {"services": "menu", "finish": "launch", "fonts": "serif"}}}
-    d = site_looks.design_of(odd, {})
-    assert d["services"] in ("cards", "spec") and d["fonts"] in site_looks.FINISH_FONTS["launch"]
-    # only real parts are kept from the AI's answer, and the first screen isn't its to pick
-    assert site_looks.design_choices({"hero": "care", "services": "Tiles", "finish": "neon", "fonts": 3}) == {"services": "tiles"}
+    assert site_looks.design_of(one, {}) == site_looks.design_of(one, {})     # the same page on every visit
 
 
 def test_two_kinds_of_business_never_open_alike():
-    """A design studio and a machine shop were getting the same first screen and services layout."""
+    """A design studio and a machine shop were getting the same page; now every niche is placed and gets its own."""
     kinds = {"Interior design studio": "interiors", "Graphic design and branding studio": "design_studio",
              "Precision machined components manufacturer": "manufacturing", "Dental clinic": "dental",
-             "Bakery and sweets": "bakery_sweets", "Mobile phone shop": "retail_shop", "Business coaching": "coaching_education"}
+             "Bakery and sweets": "bakery_sweets", "Mobile phone shop": "retail_shop", "Business coaching": "coaching_education",
+             "Ayurveda wellness centre": "wellness", "Physiotherapy clinic": "clinic", "Gaming cafe": "gaming"}
     from app.ai.tasks import guess_niche
-    heroes = {}
+    seen = {}
     for industry, niche in kinds.items():
         assert guess_niche({"industry": industry}) == niche, industry
-        pages = {(d["hero"]) for d in (site_looks.design_of({"slug": f"b{i}", "content": {"niche": niche}}, {}) for i in range(60))}
-        assert len(pages) == 1, industry                   # one first screen per kind...
-        heroes.setdefault(pages.pop(), set()).add(site_looks.NICHES[niche])
-    assert all(len(v) == 1 for v in heroes.values())       # ...and no two kinds share one
-    studio = {(d["hero"], d["services"]) for d in (site_looks.design_of({"slug": f"s{i}", "content": {"niche": "interiors"}}, {}) for i in range(60))}
-    works = {(d["hero"], d["services"]) for d in (site_looks.design_of({"slug": f"s{i}", "content": {"niche": "manufacturing"}}, {}) for i in range(60))}
-    assert not studio & works
+        d = site_looks.design_of({"slug": "same-address", "content": {}}, {"industry": industry})   # placed by its words
+        seen.setdefault((d["hero"], d["tone"], d["layout"]), industry)
+    assert len(seen) == len(kinds)
 
 
-async def test_every_part_renders_with_the_kind_of_business_words(client):
+async def test_every_niche_renders_with_its_kind_of_business_words(client):
     from app.db import db
     await login(client, "9827200010")
     site = await go_live(client)
     got = (await client.get("/api/site")).json()
-    for niche, voice, words, never in (("dental", "care", "Treatments and services", "Our menu"),
-                                       ("bakery_sweets", "bazaar", "Our menu", "Capabilities")):
-        allowed = site_looks.parts_for(voice, niche)
-        for hero in allowed["hero"]:
-            for services in allowed["services"]:
-                content = {**got["content"], "niche": niche, "design": {"hero": hero, "services": services, "finish": allowed["finish"][-1]}}
-                await db().sites.update_one({"slug": site["slug"]}, {"$set": {"content": content, "look": None}})
-                page = (await client.get(f"/s/{site['slug']}")).text
-                assert f'hero-{hero} svc-{services} ' in page and words in page and never not in page, (niche, hero, services)
+    words = {"care": "Treatments and services", "bazaar": "Our menu", "works": "Capabilities", "atelier": "What we do",
+             "launch": "Pick what you need", "signboard": "What we do, and what it costs"}
+    for niche in site_looks.NICHES:
+        await db().sites.update_one({"slug": site["slug"]}, {"$set": {"content": {**got["content"], "niche": niche}}})
+        page = (await client.get(f"/s/{site['slug']}")).text
+        d = site_looks.design_of({"slug": site["slug"], "content": {"niche": niche}}, {**PROFILE})
+        assert f'class="look-{d["finish"]} hero-{d["hero"]} svc-{d["services"]} tone-{d["tone"]} lay-{d["layout"]} ' in page, niche
+        assert words[d["voice"]] in page, niche
