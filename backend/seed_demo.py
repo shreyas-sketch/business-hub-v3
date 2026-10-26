@@ -13,6 +13,8 @@ from datetime import timedelta
 os.environ.setdefault("APP_ENV", "development")  # the demo only runs locally: it reads login codes from the dev outbox
 os.environ.setdefault("APP_URL", "http://localhost:8000")
 os.environ.setdefault("ADMIN_PHONES", "+919999900000")
+# the demo builds every plan's accounts (team, agents…) first; the v2.3 setup then applies itself when the hub next starts
+os.environ["V23_AUTO_APPLY"] = "false"
 import httpx  # noqa: E402
 from asgi_lifespan import LifespanManager  # noqa: E402
 

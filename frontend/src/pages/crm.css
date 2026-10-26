@@ -103,3 +103,8 @@
   .crm-two { grid-template-columns: minmax(0, 1fr); }
   .crm-drawer { padding: 16px; }
 }
+
+/* phones: a removable chip's × gets a finger-sized target without making the chip look bigger */
+@media (pointer: coarse), (max-width: 640px) {
+  .crm-chip.x button { min-width: 32px; min-height: 32px; margin: -8px -8px -8px 0; display: inline-grid; place-items: center; }
+}

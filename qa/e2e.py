@@ -83,7 +83,9 @@ with sync_playwright() as p:
         pg.click("button:has-text('Use this and build my website')"); pg.wait_for_url("**/website")
     check("pick a brand message → website", brand)
     def build_site():
-        pg.click("button:has-text('Build my website')"); expect(pg.locator("text=Check it, then go")).to_be_visible(timeout=8000)
+        pg.click('button[role=radio]:has-text("I don\'t have one yet")')   # v2.3: from the 4 answers (filled from the Knowledge Hub)
+        pg.click("button:has-text('Build my website')"); expect(pg.locator("text=Check it, then go")).to_be_visible(timeout=60000)
+        pg.locator(".pv-scrim").wait_for(); pg.keyboard.press("Escape")     # v2.3: the preview opens by itself after a build
         pg.locator("label:has-text('Headline') input").fill("Motors rewound and back the same day")
         pg.click("button:has-text('Save')"); expect(pg.locator(".toast")).to_contain_text("Saved")
         frame = pg.frame_locator("iframe.preview-frame"); expect(frame.locator("h1")).to_have_text("Motors rewound and back the same day")
@@ -92,7 +94,6 @@ with sync_playwright() as p:
         pg.click("button:has-text('Copy link')"); expect(pg.locator(".toast")).to_contain_text("Copied")
     check("build, edit, save, preview, publish, copy link", build_site)
     def slug_rules():
-        pg.click("summary:has-text('Web address and settings')")       # the settings section is folded at first
         pg.locator("label:has-text('Web address') input").fill("admin"); pg.click("button:has-text('Save')")
         expect(pg.locator(".toast.err")).to_contain_text("web address"); pg.locator("label:has-text('Web address') input").fill("patel-pumps-motors")
     check("reserved web address refused", slug_rules)
@@ -167,7 +168,16 @@ with sync_playwright() as p:
         for _ in range(2): j.click("button:has-text('Next')")
         j.click("button:has-text('Next')"); j.fill("input[placeholder='98200 00000']", "98300 00002"); j.click("button:has-text('Write my brand message')")
         expect(j.locator(".grid3 .panel")).to_have_count(3, timeout=8000); j.locator(".grid3 .panel").first.click()
-        j.click("button:has-text('Use this and build my website')"); j.click("button:has-text('Build my website')")
+        j.click("button:has-text('Use this and build my website')")
+        j.click('button[role=radio]:has-text("I don\'t have one yet")')
+        for q, said in (("about", "Sweets and farsan made fresh every day"), ("products", "Kaju katli, gift boxes, farsan"),
+                        ("audience", "Families and offices in Pune"), ("pain", "Want fresh sweets delivered on time")):
+            box = j.locator(f"label:has-text('{q}') textarea, label:has-text('{q}') input").first
+            if box.count() and not box.input_value().strip():
+                box.fill(said)
+        j.click("button:has-text('Build my website')")
+        expect(j.locator("text=Check it, then go")).to_be_visible(timeout=60000)
+        j.locator(".pv-scrim").wait_for(); j.keyboard.press("Escape")
         j.click("button:has-text('Publish')", timeout=10000); expect(j.locator("h1")).to_contain_text("live", timeout=8000)
         go(j, "Plans & billing"); expect(j.locator(".panel.active").first).to_contain_text("Membership")
     check("badge → join with invite → friend gets Membership trial → goes live", badge_join)

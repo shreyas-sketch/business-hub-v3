@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, waLink } from "../api.js";
+import { api, upload, waLink } from "../api.js";
 import { Busy, Copy, Field, FormError, InviteLine, Locked, Modal, Sheet, useHub, useLoad } from "../ui.jsx";
 import DomainPanel from "../components/DomainPanel.jsx";
 import SharedInputs, { CompetitorNote, FourQuestions, answersOf } from "../components/SharedInputs.jsx";
@@ -190,6 +190,86 @@ function Builder({ onBuilt }) {
   );
 }
 
+/** Phone photos are 5–10 MB: shrink them in the browser (longest side 1800 px, JPEG) before uploading. */
+async function shrink(file) {
+  const img = await new Promise((ok, bad) => {
+    const i = new Image();
+    i.onload = () => ok(i); i.onerror = () => bad(new Error("That file isn't a photo we can read. Try a JPG or PNG."));
+    i.src = URL.createObjectURL(file);
+  });
+  const scale = Math.min(1, 1800 / Math.max(img.naturalWidth, img.naturalHeight));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(img.naturalWidth * scale); canvas.height = Math.round(img.naturalHeight * scale);
+  canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+  URL.revokeObjectURL(img.src);
+  return new Promise((ok) => canvas.toBlob(ok, "image/jpeg", 0.85));
+}
+
+function PhotoThumb({ p, onRemove, tall }) {
+  return (
+    <div style={{ position: "relative", border: "1px solid var(--ink-line)", aspectRatio: tall ? "4 / 3" : "1", overflow: "hidden", background: "var(--ink)" }}>
+      <img src={p.thumb || p.src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+      <span className="small" style={{ position: "absolute", left: 6, bottom: 6, background: "rgba(10,24,38,.8)", padding: "2px 6px", fontSize: 11 }}>
+        {p.kind === "upload" ? "Your photo" : `Stock · ${p.credit}`}
+      </span>
+      <button className="btn sm ghost" style={{ position: "absolute", right: 6, top: 6, minHeight: 28, padding: "0 10px", background: "rgba(10,24,38,.85)" }}
+        onClick={onRemove} aria-label="Remove photo">Remove</button>
+    </div>
+  );
+}
+
+function PhotosPanel({ site, onChange }) {
+  const { toast } = useHub();
+  const [busy, setBusy] = useState("");
+  const ph = site.photos || { hero: null, gallery: [] };
+  const run = async (label, fn) => {
+    setBusy(label);
+    try { await fn(); await onChange(); } catch (e) { if (!e.handled) toast(e.message, "err"); } finally { setBusy(""); }
+  };
+  const send = (slot, files) => run(slot, async () => {
+    for (const f of files) {
+      const form = new FormData();
+      form.append("slot", slot);
+      form.append("file", await shrink(f), "photo.jpg");
+      await upload("/site/photos", form);
+    }
+  });
+  const remove = (slot, index = 0) => run("remove", () => api("/site/photos/remove", { method: "POST", body: { slot, index } }));
+  const room = 6 - ph.gallery.filter((p) => p.kind === "upload").length;
+  return (
+    <div className="panel">
+      <span className="label">Photos</span>
+      <p className="small muted">Real photos of your work, shop or team make the biggest difference. {site.stock_photos ? "Until you add your own, the website uses professional stock photos that match your business." : "Without photos, the website uses designed artwork in your colour."}</p>
+      <span className="label" style={{ marginTop: 6 }}>Main photo</span>
+      {ph.hero ? <PhotoThumb p={ph.hero} tall onRemove={() => remove("hero")} /> : <p className="small muted">No main photo — your website shows designed artwork instead.</p>}
+      <label className="btn sm" style={{ justifySelf: "start", cursor: "pointer" }}>
+        {busy === "hero" ? "Uploading…" : ph.hero?.kind === "upload" ? "Replace main photo" : "Upload main photo"}
+        <input type="file" accept="image/*" hidden disabled={!!busy} onChange={(e) => { const f = [...e.target.files]; e.target.value = ""; if (f.length) send("hero", f.slice(0, 1)); }} />
+      </label>
+      <span className="label" style={{ marginTop: 10 }}>Gallery and about-us photos · up to 6</span>
+      {ph.gallery.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
+          {ph.gallery.map((p, i) => <PhotoThumb key={(p.id || "") + i} p={p} onRemove={() => remove("gallery", i)} />)}
+        </div>
+      )}
+      <div className="row">
+        {room > 0 && (
+          <label className="btn sm" style={{ cursor: "pointer" }}>
+            {busy === "gallery" ? "Uploading…" : "Add photos"}
+            <input type="file" accept="image/*" multiple hidden disabled={!!busy} onChange={(e) => { const f = [...e.target.files].slice(0, room); e.target.value = ""; if (f.length) send("gallery", f); }} />
+          </label>
+        )}
+        {site.stock_photos && (
+          <button className="btn sm ghost" disabled={!!busy} onClick={() => run("stock", async () => { await api("/site/photos/stock", { method: "POST" }); toast("New stock photos found. Your own photos stay."); })}>
+            {busy === "stock" ? "Finding…" : "Find stock photos"}
+          </button>
+        )}
+      </div>
+      <p className="small muted">JPG or PNG. Photos are resized automatically, so phone photos are fine.</p>
+    </div>
+  );
+}
+
 export default function Website() {
   const { me, refresh, toast } = useHub();
   const [site, reload] = useLoad("/site");
@@ -320,6 +400,7 @@ export default function Website() {
           <div className="panel">
             <ListEditor label="Questions customers ask" items={c.faq} setItems={(faq) => setC({ ...c, faq })} max={10} blank={{ q: "", a: "" }} fields={[["q", "Question"], ["a", "Answer", true]]} />
           </div>
+          <PhotosPanel site={site} onChange={async () => { await reload(); setFrame((f) => f + 1); }} />
           <div className="panel">
             <span className="label">Look</span>
             {site.look_looks && (

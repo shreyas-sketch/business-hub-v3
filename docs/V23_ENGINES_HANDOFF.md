@@ -210,3 +210,37 @@ owner site's Google Fonts, which this workspace can't reach.
 - Chirag's two GHL screenshots from the meeting chat (…191102.jpg, …193321.jpg) never arrived. The Pipeline page
   follows GHL's Opportunities layout as described in section 1; if the screenshots differ, match them.
 - The extra-tokens bonus number: set it in Admin → Features & plans → Plans → OwnerDesk Membership.
+
+---
+
+## 8. Merged into main (26 Oct)
+
+This build was merged into main on top of the work done there since 22 Oct (PRs #4–#8). Where the two differ, main's
+version of the hub now does this:
+
+**Kept on, inside the engines** (the setup would otherwise have switched them off):
+- Sales engine: **Win-Back**.
+- Conversion engine: **Lead Response** and **WhatsApp chats**.
+- Operations engine: **GST set-aside** (it also shows last month's GST from an uploaded bank statement).
+- Brand engine: **Content & company research**.
+
+**The WhatsApp tool is open to event accounts too.** WhatsApp chats needs it, and the event attendees were promised
+WhatsApp connections. Brochures and CRM sync still wait for payment.
+
+**Website and Lead magnet:** these are this build's pages. Main adds:
+- the **Look** picker (five website designs: Signboard, Bazaar, Care, Works, Atelier, picked automatically by kind of
+  business). The website template is main's, with this build's "own download page" link for an AI-built lead magnet;
+- on the live-event form, **up to 3 competitor websites**, which the pack's website is written to stand out from.
+
+**Elsewhere:**
+- The sidebar keeps main's design (folding groups, Go to…) with this build's engine menu inside it. Each engine group
+  starts with an "About the … engine" link.
+- Owners see "AI tokens" on every page, including the pages main added.
+- The demo seed now works with the setup. It runs with `V23_AUTO_APPLY=false`, and the setup applies itself when the hub
+  next starts.
+
+**Tests on the merged build:**
+- Backend: 820 passed in both modes, including this build's 64 tests. The date-dependent failures in section 5 are fixed.
+- `qa/pipeline_v23.py`: 24 of 24.
+- `qa/screens_v23.py`: 88 screenshots, 0 problems. A sideways scroll on Admin → Features & plans was fixed.
+

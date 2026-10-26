@@ -34,7 +34,7 @@ async def lifespan(_: FastAPI):
     await asyncio.gather(*(module.ensure_indexes() for module in (*FEATURE_ROUTERS, *V23_ROUTERS, files_store, mailer)
                            if hasattr(module, "ensure_indexes")))
     await plans.load(force=True)
-    if settings.env != "test":   # the first start on v2.3 switches the hub to the OwnerDesk setup (once; tests apply it themselves)
+    if settings.env != "test" and settings.v23_auto_apply:   # the first start on v2.3 switches the hub to the OwnerDesk setup (once; tests apply it themselves)
         from . import v23
         await v23.apply_once()
     scheduler_task = day1_task = event_task = None

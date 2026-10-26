@@ -117,6 +117,9 @@ class Settings:
 
     # Agents
     run_scheduler: bool = os.getenv("RUN_SCHEDULER", "true").lower() in ("1", "true", "yes")
+    # the OwnerDesk v2.3 setup on a hub's first start (app/v23.py). Off only for the demo seed (which builds the old plans'
+    # demo accounts first) and for browser checks of the pre-v2.3 menu.
+    v23_auto_apply: bool = os.getenv("V23_AUTO_APPLY", "true").lower() in ("1", "true", "yes")
     followup_days: tuple = tuple(int(d) for d in os.getenv("FOLLOWUP_DAYS", "1,3,7").split(",") if d.strip().isdigit())
     review_delay_days: int = _int("REVIEW_REQUEST_DELAY_DAYS", 2)
     reminder_gap_days: int = _int("PAYMENT_REMINDER_GAP_DAYS", 3)

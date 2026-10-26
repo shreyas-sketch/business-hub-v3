@@ -8,7 +8,7 @@
 
 /* ── Plan board: one column per plan, one card per feature ── */
 /* The board needs more room than a normal page: on laptop screens it spreads into the page margins. */
-@media (min-width: 901px) and (max-width: 1400px) { .plan-board { margin-inline: calc(28px - var(--gutter)); } }
+@media (min-width: 901px) and (max-width: 1400px) { .plan-board { margin-inline: calc(28px - var(--desk-gutter, var(--gutter))); } }
 .plan-board { display: grid; grid-template-columns: repeat(6, minmax(150px, 1fr)); gap: 10px; overflow-x: auto; padding-bottom: 8px; align-items: start; }
 .plan-col { background: var(--ink-raised); border: 1px solid var(--ink-line); padding: 8px; display: grid; gap: 8px; align-content: start; min-height: 220px; min-width: 0; border-radius: 12px; }
 .plan-col.over { border-color: var(--aqua); box-shadow: inset 0 0 0 1px var(--aqua); }

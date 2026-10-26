@@ -75,3 +75,6 @@ details.panel summary { cursor: pointer; font-weight: 700; }
 .aa-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .aa-rates { display: grid; grid-template-columns: repeat(2, minmax(0, 160px)); gap: 10px; }
 @media (max-width: 900px) { .aa-grid { grid-template-columns: 1fr; } }
+
+/* phones: the Month / Year switch is big enough for a thumb */
+@media (pointer: coarse), (max-width: 640px) { .au-toggle button, .au-totals .au-toggle button { min-height: 40px; min-width: 64px; } }
