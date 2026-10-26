@@ -2,8 +2,9 @@
 their hub address, with a secret they type there and here. Every delivery is signed: X-Razorpay-Signature is the
 HMAC-SHA256 of the raw body with that secret.
 
-Events used: payment.captured (money received) and refund.processed (money given back). refund.created and refund.failed
-are ignored. Razorpay
+Events used: payment.captured (money received), refund.processed (money given back) and invoice.paid / partially_paid /
+expired / cancelled (a Razorpay invoice's status; a paid one carries its payment too). refund.created and refund.failed are
+ignored. Razorpay
 amounts are in paise."""
 import hashlib
 import hmac
@@ -49,7 +50,16 @@ class Razorpay:
                                 currency=_str(pay.get("currency")) or "INR", order_id=_str(pay.get("order_id")), email=_str(pay.get("email")).lower(),
                                 contact=_str(pay.get("contact")), name=_str((pay.get("notes") or {}).get("name") if isinstance(pay.get("notes"), dict) else ""),
                                 notes=_notes(pay.get("notes")), at=_at(pay.get("created_at") or payload.get("created_at")),
-                                event_id=_str(payload.get("id")))
+                                event_id=_str(payload.get("id")), invoice_id=_str(pay.get("invoice_id")))
+        if event in ("invoice.paid", "invoice.partially_paid", "invoice.expired", "invoice.cancelled"):
+            inv = ((body.get("invoice") or {}).get("entity")) or {}
+            if not inv.get("id"):
+                return None
+            return PaymentEvent(kind="invoice", payment_id=_str(pay.get("id")), amount=int(pay.get("amount") or 0) / 100,
+                                currency=_str(pay.get("currency") or inv.get("currency")) or "INR", order_id=_str(pay.get("order_id")),
+                                email=_str(pay.get("email")).lower(), contact=_str(pay.get("contact")), notes=_notes(pay.get("notes")),
+                                at=_at(pay.get("created_at") or inv.get("paid_at")), event_id=_str(payload.get("id")),
+                                invoice_id=_str(inv["id"]), invoice_status=_str(inv.get("status")) or event.split(".", 1)[1])
         # refund.processed only: the money has actually gone back. refund.created can still fail (refund.failed), so it's
         # not acted on; the credit note is unique per refund id either way, so older data issued on "created" isn't doubled
         if event == "refund.processed":

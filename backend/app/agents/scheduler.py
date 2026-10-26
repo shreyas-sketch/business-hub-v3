@@ -139,14 +139,15 @@ async def _safe(coro, what: str):
 async def tick(at: datetime | None = None) -> dict:
     """One pass of the clock. `at` (UTC) lets tests drive time; it defaults to now."""
     at = at or now()
-    from .. import campaigns, employz_import, google_retention
+    from .. import campaigns, employz_import, google_retention, razorpay_invoices
     from . import office
     await plans.load()
     return {"jobs": await run_due_jobs(at), "scheduled": await run_recurring(at),
             "office_resumed": await _safe(office.resume_stale(at), "office resume") or 0,
             "campaign_messages": await _safe(campaigns.tick(at), "campaigns") or 0,
             "google_forgotten": await _safe(google_retention.sweep(at), "Google content sweep") or 0,
-            "employz_syncs": await _safe(employz_import.tick(at), "Employz.ai import") or 0}
+            "employz_syncs": await _safe(employz_import.tick(at), "Employz.ai import") or 0,
+            "razorpay_invoices": await _safe(razorpay_invoices.tick(at), "Razorpay invoices") or 0}
 
 
 async def loop() -> None:

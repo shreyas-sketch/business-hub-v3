@@ -110,7 +110,10 @@ def _render(q: dict, business: dict, qsettings: dict | None, accent: str) -> byt
     text(W - m - 150, y, "Total", 12, "body_bold")
     text(W - m - 4, y, _inr(t.get("total", 0)), 12, "body_bold", right=True)
     y -= 34
-    for label, body in (("How to pay", s.get("payment") or business.get("payment_note")), ("Notes", q.get("notes")), ("Terms", q.get("terms"))):
+    from .razorpay_invoices import pay_url
+    online = pay_url(q)        # its Razorpay invoice's pay link, while it can still be paid
+    how = "\n".join(x for x in (f"Pay online: {online}" if online else "", s.get("payment") or business.get("payment_note") or "") if x)
+    for label, body in (("How to pay", how), ("Notes", q.get("notes")), ("Terms", q.get("terms"))):
         if body and y > 90:
             text(m, y, label.upper(), 8, "body_semi", MUTED)
             y -= 13

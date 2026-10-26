@@ -97,7 +97,7 @@ SPECS: dict[str, dict] = {
     "razorpay": {"label": "Payment gateway", "feature": "gateway_invoicing", "fields": [
         ("provider", "Your payment gateway", "select:razorpay", "The gateway your customers pay you through"),
         ("key_id", "Key id", "text", "Your payment gateway → Account & Settings → API keys. Test keys start with rzp_test_"),
-        ("key_secret", "Key secret", "secret", "Shown once when you create the key"),
+        ("key_secret", "Key secret", "secret", "Shown once when you create the key. Needed for the invoice (and its pay link) made in your payment gateway with each invoice"),
         ("webhook_secret", "Webhook secret", "secret", "The secret you type when you add the webhook below in your payment gateway's webhook settings"),
     ]},
 }

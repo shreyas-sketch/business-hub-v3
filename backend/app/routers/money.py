@@ -171,6 +171,8 @@ async def update_due(due_id: str, body: DuePatch, ctx: Ctx = Depends(money_ctx))
         await track("due_paid", ctx.ws)
         if d.get("invoice_id"):
             await db().quotes.update_one({"_id": d["invoice_id"], "ws": ctx.ws}, {"$set": {"status": "paid", "paid_at": now()}})
+            from .. import razorpay_invoices   # paid another way: its issued Razorpay invoice is cancelled (no paying twice)
+            await razorpay_invoices.paid_elsewhere(ctx.ws, d["invoice_id"])
     elif patch.get("status") == "due" and d.get("invoice_id"):
         await db().quotes.update_one({"_id": d["invoice_id"], "ws": ctx.ws}, {"$set": {"status": "due", "paid_at": None}})
     return _view(await db().dues.find_one({"_id": due_id}), _today())

@@ -351,7 +351,7 @@ def rupees(x: float) -> str:
 DOC_NAME = {"quote": "quotation", "credit_note": "credit note"}
 
 
-def share_text(q: dict, business: str, pdf_url: str | None = None) -> str:
+def share_text(q: dict, business: str, pdf_url: str | None = None, pay_url: str | None = None) -> str:
     lines = [f"{ {'quote': 'Quotation', 'credit_note': 'Credit note'}.get(q['kind'], 'Invoice') } {q['number']} from {business}"]
     for i in q["items"][:12]:
         amount = i.get("amount", round(float(i.get("qty") or 0) * float(i.get("rate") or 0), 2))
@@ -363,6 +363,8 @@ def share_text(q: dict, business: str, pdf_url: str | None = None) -> str:
         lines.append(f"Valid for {q.get('valid_days', 15)} days. Reply YES to confirm.")
     elif q.get("due_date"):
         lines.append(f"Due by {q['due_date']}.")
+    if pay_url:
+        lines.append(f"Pay online: {pay_url}")
     if pdf_url:
         lines.append(f"See the {DOC_NAME.get(q['kind'], 'invoice')} as a PDF: {pdf_url}")
     return "\n".join(lines)
@@ -383,9 +385,11 @@ async def pdf_link(q: dict) -> str:
 async def _qview(q: dict) -> dict:
     b = await db().businesses.find_one({"owner_id": q["ws"]}, {"name": 1}) or {}
     url = await pdf_link(q)
+    from .. import razorpay_invoices
     out = public(q)
     out.pop("share_token", None)
-    text = share_text(q, b.get("name") or "us", url)
+    out["rzp"] = razorpay_invoices.view(q.get("rzp"))
+    text = share_text(q, b.get("name") or "us", url, razorpay_invoices.pay_url(q))
     out["share_text"] = text
     out["pdf_url"] = url
     phone = wa_digits((q.get("customer") or {}).get("phone", ""))
@@ -587,6 +591,8 @@ async def make_invoice(qid: str, body: InvoiceIn, ctx: Ctx = Depends(feature("qu
                                     "invoice_no": number, "invoice_id": inv_id, "status": "due", "paid_at": None, "reminders_sent": 0,
                                     "last_reminded_at": None, "created_by": ctx.actor, "created_at": now(), "updated_at": now()})
     await db().quotes.update_one({"_id": qid}, {"$set": {"invoice_id": inv_id, "status": "accepted", "updated_at": now()}})
+    from .. import razorpay_invoices   # its Razorpay invoice, with the pay link, when Razorpay is connected
+    await razorpay_invoices.queue(ctx.ws, inv_id)
     if q.get("status") != "accepted":
         await _closed(ctx, q, "accepted")
     await track("invoice", ctx.ws)

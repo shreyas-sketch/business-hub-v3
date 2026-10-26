@@ -15,7 +15,7 @@ const WHAT = {
   tally: "Read sales and money owed from the accounting software on your office computer.",
   email: "Send emails from your own address.",
   calendar: "The booking link your AI staff share when a customer wants a meeting.",
-  razorpay: "Every payment a customer makes through your payment gateway becomes a GST invoice on its own — or marks the matching amount in Money owed paid. A refund becomes a credit note.",
+  razorpay: "Every payment a customer makes through your payment gateway becomes a GST invoice on its own — or marks the matching amount in Money owed paid. A refund becomes a credit note. Every invoice also goes to your payment gateway account: with a pay link while it's unpaid, as a record once it's paid.",
 };
 
 // Where to paste the webhook address. The steps name the service only once it's picked (like the WhatsApp tool's picker).
@@ -23,7 +23,7 @@ const HOOK_HINT = {
   whatsapp: "Paste this as the webhook address in your WhatsApp tool, so customer messages come into your hub. For Meta, it's the callback URL and the verify token is the last part of the address.",
   voice: "Paste this as the post-call webhook in your voice agent service, so every call comes back here with its summary.",
   employz: "Paste this into the webhook step of a workflow in your CRM, so deals you move there move here too.",
-  razorpay: "In your payment gateway's webhook settings (usually Account & Settings → Webhooks), add this address with the events payment.captured and refund.processed, and type the same webhook secret as above. Try it in test mode first: a test payment shows up as an invoice here.",
+  razorpay: "In your payment gateway's webhook settings (usually Account & Settings → Webhooks), add this address with the events payment.captured, refund.processed, invoice.paid, invoice.partially_paid, invoice.expired and invoice.cancelled, and type the same webhook secret as above. Try it in test mode first: a test payment shows up as an invoice here.",
 };
 
 // WhatsApp tool: only the fields the chosen service needs (view.service_fields), so the form stays short.

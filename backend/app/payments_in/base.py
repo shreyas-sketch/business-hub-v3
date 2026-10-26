@@ -18,6 +18,8 @@ class PaymentEvent:
     notes: dict = field(default_factory=dict)
     at: datetime | None = None
     event_id: str = ""              # the gateway's own id for this delivery, when it sends one
+    invoice_id: str = ""            # the gateway's invoice this payment paid (Razorpay inv_…), when it paid one
+    invoice_status: str = ""        # kind "invoice": the invoice's new status (paid, partially_paid, expired, cancelled)
 
 
 class Connector(Protocol):

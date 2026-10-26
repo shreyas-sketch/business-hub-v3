@@ -38,7 +38,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field, field_validator
 from pymongo.errors import DuplicateKeyError
 
-from .. import connections, dashboard_cache, invoice_pdf, mailer, plans
+from .. import connections, dashboard_cache, invoice_pdf, mailer, plans, razorpay_invoices as rzp
 from ..agents.jobs import claim
 from ..ai.provider import complete
 from ..ai.tasks import RULES, profile_text
@@ -174,6 +174,7 @@ async def issue_invoice(owner: dict, ws: str, actor: str, customer: dict, items:
         inv["due_id"] = None
     dashboard_cache.bust(ws)
     await track("invoice", ws, source=(extra or {}).get("source", "direct"))
+    await rzp.queue(ws, inv_id)        # its Razorpay invoice: issued while unpaid, a record when already paid
     await maybe_email(owner, inv)
     return inv
 
@@ -463,6 +464,7 @@ async def _after_paid(owner: dict, due: dict, ev: PaymentEvent) -> None:
     if due.get("invoice_id"):
         await db().quotes.update_one({"_id": due["invoice_id"], "ws": ws}, {"$set": {"status": "paid", "paid_at": ev.at or now(),
                                                                                       "paid_via": "gateway", "paid_payment_id": ev.payment_id}})
+        await rzp.paid_elsewhere(ws, due["invoice_id"], ev.invoice_id)   # paid another way: its issued Razorpay invoice is cancelled
     dashboard_cache.bust(ws)
     await track("due_paid", ws, via="gateway")
 
@@ -610,7 +612,24 @@ async def captured(owner: dict, ev: PaymentEvent) -> dict:
         return {"result": "already_invoiced", "number": existing["number"]}
     if await db().dues.find_one({"ws": ws, "$or": [{"gateway_payment_id": ev.payment_id}, {"part_payments.payment_id": ev.payment_id}]}, {"_id": 1}):
         return {"result": "already_matched"}
+    # paid through a Razorpay invoice the hub made: it settles that invoice, by its number
+    hub_inv = await db().quotes.find_one({"ws": ws, "kind": "invoice", "rzp.invoice_id": ev.invoice_id}) if ev.invoice_id else None
+    if hub_inv:
+        ev.notes = {**(ev.notes or {}), "invoice_no": hub_inv["number"]}
     settled = await settle_with_dues(owner, ev)
+    if not settled and hub_inv:
+        # no Money owed entry (not in the plan, or removed): the invoice itself is marked paid — never a second invoice
+        r = await db().quotes.update_one({"_id": hub_inv["_id"], "status": {"$ne": "paid"}},
+                                         {"$set": {"status": "paid", "paid_at": ev.at or now(), "paid_via": "gateway", "paid_payment_id": ev.payment_id}})
+        if not r.modified_count:     # it was already paid (another way) before its Razorpay invoice could be cancelled
+            from ..services import notify
+            await notify(ws, f"Invoice {hub_inv['number']} was paid twice: ₹{ev.amount:,.2f} also came in through its Razorpay pay link "
+                             f"(payment {ev.payment_id}). Refund one of them from your Razorpay dashboard if it's a mistake.")
+            return {"result": "paid_twice", "number": hub_inv["number"]}
+        await rzp.paid_elsewhere(ws, hub_inv["_id"], ev.invoice_id)
+        dashboard_cache.bust(ws)
+        await _payer_customer_safely(ws, ev, (hub_inv.get("customer") or {}).get("name", ""))
+        return {"result": "invoice_paid", "number": hub_inv["number"]}
     if settled:
         due = await db().dues.find_one({"_id": settled.get("due_id")}, {"customer": 1}) if settled.get("due_id") else None
         await _payer_customer_safely(ws, ev, (due or {}).get("customer", ""))
@@ -632,6 +651,8 @@ async def captured(owner: dict, ev: PaymentEvent) -> dict:
         return {"result": "already_invoiced", "number": (existing or {}).get("number", "")}
     extra = {"source": "gateway", "gateway": "razorpay", "gateway_payment_id": ev.payment_id, "gateway_order_id": ev.order_id or None,
              "paid_at": ev.at or now(), **({"gst_note": NO_IDENTITY} if not tax["identity"] else {})}
+    if ev.invoice_id:     # paid through an invoice made in Razorpay itself: that is its Razorpay invoice (no record is added)
+        extra["rzp"] = {"mode": "razorpay", "state": "done", "invoice_id": ev.invoice_id, "status": "paid", "updated_at": now()}
     try:
         inv = await issue_invoice(owner, ws, "gateway", cust, items, tot, mode, due_date=None, paid=True, extra=extra)
     except Exception:
@@ -754,6 +775,11 @@ async def payment_webhook(token: str, request: Request):
     ev = gw.parse(payload)
     if not ev:
         return {"ok": True, "ignored": str((payload or {}).get("event") or "")[:60]}
+    if ev.kind == "invoice":
+        await rzp.on_invoice_event(ws, ev.invoice_id, ev.invoice_status)
+        if not (ev.payment_id and ev.invoice_status in ("paid", "partially_paid")):
+            return {"ok": True, "invoice": ev.invoice_status}
+        ev.kind = "captured"      # its payment, recorded once with payment.captured's (they share one claim below)
     owner = await db().users.find_one({"_id": ws}) or {}
     if not owner or owner.get("disabled") or not plans.has(owner, "gateway_invoicing"):
         # held, not dropped: kept with what's needed to invoice it later, and the owner is told (once per payment)
@@ -803,3 +829,36 @@ async def ensure_indexes() -> None:
     await q.create_index([("ws", 1), ("gateway_refund_id", 1)], sparse=True)
     await db().payment_events.create_index([("ws", 1), ("at", -1)])
     await db().dues.create_index([("ws", 1), ("gateway_payment_id", 1)], sparse=True)
+
+
+# ───────────────────────── Razorpay invoices (app/razorpay_invoices.py) ─────────────────────────
+@router.get("/gateway/razorpay-invoices")
+async def razorpay_invoices_list(ctx: Ctx = Depends(feature("gateway_invoicing", "manager"))):
+    """The business's Razorpay invoices, as last read from Razorpay (every 15 minutes), newest first."""
+    s = await db().rzp_sync.find_one({"_id": ctx.ws}) or {}
+    rows = []
+    async for x in db().rzp_invoices.find({"ws": ctx.ws}).sort("created_at", -1).limit(200):
+        r = {**public(x, "ws"), "id": x["id"]}       # Razorpay's own invoice id
+        r["label"] = rzp.STATUS_LABEL.get(r.get("status") or "", r.get("status") or "")
+        rows.append(r)
+    return {"items": rows, "last_at": s["last_at"].isoformat() if s.get("last_at") else None, "error": s.get("error"),
+            "connected": bool(await rzp._conn(ctx.ws)), "every_minutes": rzp.SYNC_MINUTES}
+
+
+@router.post("/gateway/razorpay-invoices/sync")
+async def razorpay_invoices_sync(ctx: Ctx = Depends(feature("gateway_invoicing", "manager"))):
+    r = await rzp.sync(ctx.ws)
+    if not r.get("ok") and not r.get("busy"):
+        raise HTTPException(400, r.get("error") or "Razorpay couldn't be read just now.")
+    return await razorpay_invoices_list(ctx)
+
+
+@router.post("/invoices/{inv_id}/razorpay")
+async def razorpay_retry(inv_id: str, ctx: Ctx = Depends(feature("gateway_invoicing", "manager"))):
+    """Try again: a Razorpay invoice that couldn't be added (or one made before Razorpay was connected)."""
+    inv = await _doc(ctx.ws, inv_id)
+    if inv.get("kind") != "invoice":
+        raise HTTPException(400, "Only invoices go to Razorpay.")
+    if not await rzp._conn(ctx.ws):
+        raise HTTPException(400, "Add your Razorpay key id and key secret in Connections → Payment gateway first.")
+    return {"rzp": await rzp.retry(ctx.ws, inv_id)}

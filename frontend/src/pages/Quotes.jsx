@@ -368,7 +368,7 @@ function GatewayLine() {
   return (
     <div className="notice small inv-gw">
       {c.connected
-        ? <span>Your payment gateway is connected: <b>{g.invoices_30d}</b> {g.invoices_30d === 1 ? "payment" : "payments"} became invoices and <b>{g.matched_30d}</b> paid an amount you were owed, in the last 30 days{g.credit_notes_30d ? `; ${g.credit_notes_30d} refunds became credit notes` : ""}.</span>
+        ? <span>Your payment gateway is connected: <b>{g.invoices_30d}</b> {g.invoices_30d === 1 ? "payment" : "payments"} became invoices and <b>{g.matched_30d}</b> paid an amount you were owed, in the last 30 days{g.credit_notes_30d ? `; ${g.credit_notes_30d} refunds became credit notes` : ""}. Each invoice also goes to your Razorpay account: with a pay link while it's unpaid, as a record once it's paid.</span>
         : <span>Connect your payment gateway and every payment becomes a GST invoice on its own; a refund becomes a credit note.</span>}
       <Link className="btn sm" to="/connections">{c.connected ? "Connection" : "Connect payment gateway"}</Link>
     </div>
@@ -469,6 +469,66 @@ function QuoteCard({ q, onEdit, onInvoice, reload, showInvoices }) {
   );
 }
 
+const RZP_KIND = { paid: "on", issued: "money", partially_paid: "money", cancelled: "off", expired: "off", draft: "" };
+
+/** Its Razorpay invoice: issued with a pay link while unpaid, a record when it was already paid, cancelled when paid another way. */
+function RazorpayLine({ inv, reload }) {
+  const { toast } = useHub();
+  const r = inv.rzp;
+  if (!r) return null;
+  const what = r.mode === "record" ? "Razorpay record (already paid, not sent to the customer)" : r.mode === "razorpay" ? "Paid through a Razorpay invoice" : "Razorpay invoice";
+  return (
+    <div className="row inv-rzp" style={{ gap: 8 }}>
+      <span className="small muted">{what}{r.invoice_id ? ` · ${r.invoice_id}` : ""}</span>
+      <Pill kind={r.state === "failed" ? "warn" : RZP_KIND[r.status] ?? ""}>{r.label}</Pill>
+      {r.pay_url && <Copy text={r.pay_url} label="Copy pay link" className="btn sm ghost" />}
+      {r.state === "failed" && (
+        <>
+          <span className="small" style={{ color: "var(--amber)" }}>{r.error}</span>
+          <Busy className="btn sm" run={async () => {
+            const x = await api(`/invoices/${inv.id}/razorpay`, { method: "POST" });
+            toast(x.rzp?.state === "failed" ? x.rzp.error || "Still not added" : "Added to Razorpay", x.rzp?.state === "failed" ? "err" : "ok");
+            reload?.();
+          }}>Try again</Busy>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** The business's Razorpay invoices as last read from Razorpay — the hub's own and any made in the Razorpay dashboard. */
+function RazorpayInvoices() {
+  const { toast } = useHub();
+  const [d, reload] = useLoad("/gateway/razorpay-invoices");
+  if (!d) return <Loading />;
+  if (!d.connected) {
+    return <Empty>Add your Razorpay key id and key secret in <Link to="/connections">Connections → Payment gateway</Link>, and every invoice gets its Razorpay invoice with a pay link.</Empty>;
+  }
+  return (
+    <div className="stack">
+      <div className="row between">
+        <span className="small muted">{d.last_at ? `Read from Razorpay ${day(d.last_at)}` : "Not read from Razorpay yet"} · every {d.every_minutes} minutes{d.error ? ` · ${d.error}` : ""}</span>
+        <Busy className="btn sm" run={async () => { await api("/gateway/razorpay-invoices/sync", { method: "POST" }); toast("Read from Razorpay"); reload(); }}>Read now</Busy>
+      </div>
+      {!d.items.length ? <Empty>No Razorpay invoices yet.</Empty> : (
+        <table className="t cards">
+          <thead><tr><th>Razorpay invoice</th><th>Customer</th><th>Amount</th><th>Status</th><th>In the hub</th></tr></thead>
+          <tbody>{d.items.map((x) => (
+            <tr key={x.id}>
+              <td><b>{x.receipt || x.id}</b><div className="small muted">{x.id}{x.created_at ? ` · ${day(x.created_at)}` : ""}</div></td>
+              <td data-l="Customer">{x.customer?.name || "—"}</td>
+              <td data-l="Amount" className="money">{rs(x.amount)}{x.amount_paid && x.amount_paid < x.amount ? <div className="small muted">{rs(x.amount_paid)} paid</div> : null}</td>
+              <td data-l="Status"><Pill kind={RZP_KIND[x.status] ?? ""}>{x.label}</Pill></td>
+              <td data-l="In the hub" className="small">{x.hub_number ? `Invoice ${x.hub_number}` : <span className="muted">Made in Razorpay</span>}
+                {x.short_url && <div><a href={x.short_url} target="_blank" rel="noreferrer">Pay link</a></div>}</td>
+            </tr>
+          ))}</tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
 function InvoiceRow({ inv, from, reload }) {
   const { me, toast } = useHub();
   const overdue = inv.status === "due" && inv.due_date && inv.due_date < todayIso();
@@ -501,6 +561,7 @@ function InvoiceRow({ inv, from, reload }) {
         )}
         {me.features?.money_owed && inv.due_id && <Link className="btn sm ghost" to="/money">{inv.status === "paid" ? "See in Money owed" : "Mark paid in Money owed"}</Link>}
       </div>
+      <RazorpayLine inv={inv} reload={reload} />
     </div>
   );
 }
@@ -617,7 +678,8 @@ export default function Quotes() {
       {!editing && (
         <>
           <Tabs tabs={[["quote", `Quotations${quotes ? ` · ${quotes.length}` : ""}`], ["invoice", `Invoices${invoices ? ` · ${invoices.length}` : ""}`],
-            ...(credits?.length ? [["credit", `Credit notes · ${credits.length}`]] : [])]} value={tab} onChange={setTab} />
+            ...(credits?.length ? [["credit", `Credit notes · ${credits.length}`]] : []),
+            ...(me.features?.gateway_invoicing && canAct(me, "manager") ? [["razorpay", "Razorpay invoices"]] : [])]} value={tab} onChange={setTab} />
           {tab === "quote" && (!quotes ? <Loading /> : !quotes.length ? (
             <div className="empty">
               <h2>No quotations yet.</h2>
@@ -637,6 +699,7 @@ export default function Quotes() {
             <div className="stack">{invoices.map((inv) => <InvoiceRow key={inv.id} inv={inv} from={numberOf[inv.quote_id]} reload={reloadI} />)}</div>
           ))}
           {tab === "credit" && <div className="stack">{(credits || []).map((cn) => <CreditNoteRow key={cn.id} cn={cn} />)}</div>}
+          {tab === "razorpay" && <RazorpayInvoices />}
         </>
       )}
       {invoiceFor && (

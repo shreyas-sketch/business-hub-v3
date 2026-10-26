@@ -108,6 +108,8 @@ class Settings:
     msg91_otp_template_id: str = os.getenv("MSG91_OTP_TEMPLATE_ID", "")
 
     # Payments (Razorpay). Without keys: test checkout on a local machine, "talk to us" on a real deployment.
+    # a business's own Razorpay account (Connections → Payment gateway): its invoices are made and read here (app/razorpay_invoices.py)
+    razorpay_api_base: str = os.getenv("RAZORPAY_API_BASE", "https://api.razorpay.com/v1").rstrip("/")
     razorpay_key_id: str = os.getenv("RAZORPAY_KEY_ID", "")
     razorpay_key_secret: str = os.getenv("RAZORPAY_KEY_SECRET", "")
     razorpay_webhook_secret: str = os.getenv("RAZORPAY_WEBHOOK_SECRET", "")
