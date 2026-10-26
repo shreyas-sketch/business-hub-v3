@@ -9,10 +9,8 @@ import "./admin.css";
 const TIERS = ["free", "lite", "program", "running", "growth", "office"];
 const rank = (t) => Math.max(TIERS.indexOf(t), 0);
 const SOURCE = { purchase: "paid once", subscription: "Membership subscription", trial: "invite trial", admin: "set by the team" };
-// WhatsApp: fields that only apply to one provider are hidden for the other.
-const META_ONLY = ["phone_number_id", "access_token", "app_secret", "language"];
-const AISENSY_ONLY = ["api_key", "project_id", "project_password"];
-const OPTION_NAMES = { aisensy: "AiSensy", meta: "Meta WhatsApp Cloud API", twilio: "Twilio", sip: "SIP trunk", demo: "Demo (test setup)" };
+// WhatsApp tool: the server says which fields each service needs (c.service_fields) and the services' names (c.services).
+const OPTION_NAMES = { twilio: "Twilio", sip: "SIP trunk", demo: "Demo (test setup)" };
 
 /* ── Plan ── */
 function PlanPanel({ o, tierNames, onSaved }) {
@@ -150,8 +148,9 @@ function ConnForm({ uid, c, onSaved }) {
   const [err, setErr] = useState("");
   const [startOpen] = useState(!c.connected && c.available); // open the ones still to set up on this plan; then the admin decides
   useEffect(() => { setV(init()); setErr(""); }, [init]);
-  const provider = v.provider || "aisensy";
-  const hidden = (f) => c.kind === "whatsapp" && (provider === "meta" ? AISENSY_ONLY.includes(f.key) : META_ONLY.includes(f.key));
+  const allowed = c.service_fields?.[v.provider || ""];
+  const hidden = (f) => c.kind === "whatsapp" && (allowed ? !allowed.includes(f.key) : f.key !== "provider");
+  const names = { ...OPTION_NAMES, ...(c.services || {}) };
   const [kind, text] = !c.connected ? ["off", "Not set up"] : c.status === "ok" ? ["on", "Working"] : c.status === "error" ? ["warn", "Test failed"] : ["on", "Saved · not tested"];
   return (
     <details className="panel conn" open={startOpen}>
@@ -178,7 +177,7 @@ function ConnForm({ uid, c, onSaved }) {
               {f.type === "select" ? (
                 <select className="select" value={v[f.key]} onChange={set}>
                   <option value="">Choose…</option>
-                  {[...new Set([...(f.options || []), ...(v[f.key] ? [v[f.key]] : [])])].map((o) => <option key={o} value={o}>{OPTION_NAMES[o] || o}</option>)}
+                  {[...new Set([...(f.options || []), ...(v[f.key] ? [v[f.key]] : [])])].map((o) => <option key={o} value={o}>{names[o] || o}</option>)}
                 </select>
               ) : f.type === "secret" ? (
                 <input className="input mono" type="password" autoComplete="new-password" maxLength={2000} value={v[f.key]} onChange={set}
@@ -223,7 +222,7 @@ function OwnerConnections({ o }) {
   return (
     <div className="stack">
       <span className="label">Connections</span>
-      <p className="small muted">WhatsApp (AiSensy), Employz.ai and the AI Telecaller, set up by the team for this owner. Keys and passwords are never shown again after saving.</p>
+      <p className="small muted">The WhatsApp tool, Employz.ai and the AI Telecaller, set up by the team for this owner. Keys and passwords are never shown again after saving.</p>
       {error ? <FormError msg={error.message} />
         : !list ? <Loading />
         : !list.length ? <Empty>No connections are switched on for anyone. Switch on WhatsApp chats, Employz.ai CRM or AI Telecaller in Features & plans.</Empty>

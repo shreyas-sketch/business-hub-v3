@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { api } from "./api.js";
+import { Link, useLocation } from "react-router-dom";
+import { api, rupees } from "./api.js";
 
 export const HubCtx = createContext(null);
 
@@ -24,8 +24,27 @@ export function useLoad(path, deps = []) {
 }
 
 /** Every view is a blueprint sheet: kicker, one headline with one coloured word, sheet ID, footer rail. */
+/** v2.3: the engine (menu section) and page name for the page on screen, from the server's menu. */
+export function useEnginePlace() {
+  const { me } = useHub() || {};
+  const loc = useLocation();
+  if (me?.ui?.menu !== "engines") return null;
+  const path = loc.pathname;
+  for (const g of me.menu || []) {
+    for (const it of g.items) {
+      if (path === it.path || path.startsWith(`${it.path}/`)) return { group: g.group, section: g.section, label: it.label };
+    }
+  }
+  return null;
+}
+
 export function Sheet({ kicker, title, sub, id, pillar, money, actions, children, step = 0 }) {
   const { me } = useHub() || {};
+  const place = useEnginePlace();
+  if (place) {   // v2.3: "Lead engine · Website" instead of the old pillar names
+    kicker = `${place.group} · ${place.label}`;
+    pillar = place.group;
+  }
   return (
     <div className="sheet">
       <div className="sheet-head">
@@ -102,11 +121,50 @@ const ROLE_RANK = { staff: 0, manager: 1, owner: 2 };
 export const canAct = (me, role = "staff") => ROLE_RANK[me?.workspace?.role || "owner"] >= ROLE_RANK[role];
 
 /** Wraps a whole page: shows what the feature does and which plan unlocks it, or a role message for team members. */
+const ENGINE_OF_DAY = { 1: "Lead and Sales", 2: "Conversion and Operations", 3: "Brand and Data" };
+
+/** v2.3: how to join OwnerDesk Membership — both prices and the way to Plans & billing. */
+export function JoinPanel({ note }) {
+  const { me, nav } = useHub();
+  const m = me?.membership || {};
+  return (
+    <div className="panel active">
+      <span className="label">{m.name || "OwnerDesk Membership"}</span>
+      <div className="row between" style={{ flexWrap: "wrap" }}>
+        <span style={{ fontFamily: "var(--head)", fontSize: 24 }} className="money">
+          {rupees(m.price_minor)}<span className="small">/month</span>
+          {m.price_year_minor ? <span className="small muted"> · or {rupees(m.price_year_minor)}/year</span> : null}
+        </span>
+        {me.workspace?.role === "owner" ? <button className="btn money" onClick={() => nav("/plans")}>How to join</button>
+          : <span className="small muted">Ask the business owner.</span>}
+      </div>
+      {note && <p className="small muted">{note}</p>}
+    </div>
+  );
+}
+
 export function Gate({ feature, role = "staff", children, title, what, kicker = "Locked", id = "L-01" }) {
   const { me, upgrade } = useHub();
   if (!me) return null;
   if (!canAct(me, role)) {
     return <Sheet kicker={kicker} id={id} title={<>Ask the owner for <em>access</em>.</>} sub="This part of the hub is for the business owner or a manager." />;
+  }
+  const why = feature && !me.features?.[feature] ? me.feature_locks?.[feature] : null;
+  if (why?.lock === "day") {   // v2.3: a later day of the live event
+    return (
+      <Sheet kicker={kicker} id={id} title={<>This opens on <em>Day {why.opens_day}</em>.</>}
+        sub={`At the event, the engines open one day at a time. Day ${why.opens_day} opens the ${ENGINE_OF_DAY[why.opens_day] || "next"} engines.`}>
+        {what && <p className="muted">{what}</p>}
+        <p className="small muted">Members of OwnerDesk have every engine open from the start.</p>
+      </Sheet>
+    );
+  }
+  if (feature && !me.features?.[feature] && (why?.lock === "paid" || (me.ui?.menu === "engines" && me.feature_info?.[feature]?.on !== false))) {   // v2.3: one paid plan
+    return (
+      <Sheet kicker={kicker} id={id} money title={title || <>Part of <em>OwnerDesk</em> Membership.</>} sub={what}>
+        <JoinPanel note={why?.lock === "paid" ? "This opens once you join — it isn't part of the event access." : undefined} />
+      </Sheet>
+    );
   }
   if (feature && !me.features?.[feature]) {
     const tier = me.feature_tiers?.[feature] || "lite";

@@ -458,6 +458,80 @@ catalog.register("competitor_watch", {
     "ready": _ready, "group": "own_page"}, weekly_check)
 
 
+# ═════════════════════════ v2.3: the competitor summary (backend only, no page of its own) ═════════════════════════
+# The website given once in the shared inputs (businesses.inputs.competitors) is read here — on demand (one AI token) and
+# once a month — into competitor_summaries. Nothing here touches the `competitors` collection, so the Monday Competitor
+# Watch report and its WhatsApp alert never start just because an owner named a competitor for their website.
+READ_COOLDOWN_MINUTES = 30
+summary_ctx = feature("competitor_watch", "owner")
+
+
+async def refresh_summary(owner: dict, url: str, source: str = "manual") -> dict:
+    """Reads the competitor's website and writes the summary (one AI token). Returns the stored doc (without shingles).
+    A site that can't be read keeps the last good summary and records the reason."""
+    ws = owner["_id"]
+    profile = await db().businesses.find_one({"owner_id": ws}) or {}
+    try:
+        res = await asyncio.wait_for(cw.check_site(url, None), cw.SITE_BUDGET_SECONDS + cw.SITE_GRACE_SECONDS)
+    except asyncio.TimeoutError:
+        res = cw.SiteResult(errors=[cw.SITE_SLOW])
+    at = now()
+    base = {"url": url, "host": cw._host(url), "at_try": at, "source": source}
+    if not res.ok or not res.pages:
+        await db().competitor_summaries.update_one({"_id": ws}, {"$set": {**base, "error": (res.errors or [cw.SITE_DOWN])[0]},
+                                                                  "$setOnInsert": {"status": "failed"}}, upsert=True)
+        return await summary_doc(ws)
+    texts = ["\n".join(p.get("lines", [])) for p in res.pages]
+    shingles = cw.shingles_of(texts)
+    rules = cw.summary_rules(res.pages)
+    summary = await run_ai(owner, "competitor_read", cw.competitor_ai(profile, rules, res.pages), f"Competitor read — {base['host']}",
+                           save_output=False, check=cw.competitor_check(rules, shingles))
+    await db().competitor_summaries.update_one({"_id": ws}, {"$set": {**base, "status": "ok", "summary": summary, "shingles": cw.pack(shingles),
+                                                                      "pages": len(res.pages), "at": at, "error": None, "ai_used": True}},
+                                               upsert=True)
+    await track("competitor_summary", ws, source=source)
+    return await summary_doc(ws)
+
+
+async def summary_doc(ws: str) -> dict | None:
+    d = await db().competitor_summaries.find_one({"_id": ws}, {"shingles": 0})
+    if not d:
+        return None
+    out = public(d)
+    for k in ("at", "at_try"):
+        if isinstance(out.get(k), datetime):
+            out[k] = out[k].isoformat()
+    return out
+
+
+async def monthly_summary(owner: dict, run: dict):
+    ws = owner["_id"]
+    b = await db().businesses.find_one({"owner_id": ws}, {"inputs": 1}) or {}
+    url = ((b.get("inputs") or {}).get("competitors") or [""])[0]
+    if not url:
+        raise Skip("No competitor website given.")
+    d = await db().competitor_summaries.find_one({"_id": ws}, {"at": 1, "url": 1}) or {}
+    if d.get("url") == url and isinstance(d.get("at"), datetime) and (run["at"] - d["at"]).days < cw.SUMMARY_MAX_AGE_DAYS - 2:
+        raise Skip("The competitor was read less than a month ago.")
+    try:
+        doc = await refresh_summary(owner, url, "monthly")
+    except HTTPException as e:
+        raise Skip("No AI tokens left this month." if e.status_code == 402 else "The AI was busy; it will be tried next month.")
+    return f"Competitor read again: {cw._host(url)}" + ("" if (doc or {}).get("status") == "ok" else " (couldn't be read this time)")
+
+
+async def _summary_ready(owners: list[dict]) -> set:
+    ids = [o["_id"] for o in owners]
+    return set(await db().businesses.distinct("owner_id", {"owner_id": {"$in": ids}, "inputs.competitors.0": {"$exists": True}}))
+
+
+catalog.register("competitor_summary", {
+    "name": "Competitor read", "feature": "competitor_watch", "trigger": "schedule",
+    "what": "Once a month, reads the competitor website you gave again, so your website and idea suggestions stay sharp.",
+    "when": "On the 2nd of every month", "schedule": {"every": "month", "day": 2, "at": "07:30", "grace_hours": 48},
+    "ready": _summary_ready, "group": "own_page"}, monthly_summary)
+
+
 # ───────────────────────── Content & company research (Action Program) ─────────────────────────
 def research_view(o: dict | None) -> dict | None:
     return public(o, "ws") if o else None

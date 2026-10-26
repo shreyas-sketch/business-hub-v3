@@ -3,7 +3,10 @@ import { Link } from "react-router-dom";
 import { api, waLink } from "../api.js";
 import { Busy, Copy, Field, FormError, InviteLine, Locked, Modal, Sheet, useHub, useLoad } from "../ui.jsx";
 import DomainPanel from "../components/DomainPanel.jsx";
+import SharedInputs, { CompetitorNote, FourQuestions, answersOf } from "../components/SharedInputs.jsx";
+import SitePreview from "../components/SitePreview.jsx";
 import "./website21.css";
+import "./lead23.css";
 
 const SECTION_LABEL = { headline: "Headline", subheadline: "Line under the headline", cta: "Button text", about: "About us",
   offers: "What you offer", why: "Why customers choose you", steps: "How it works", faq: "Questions customers ask" };
@@ -29,7 +32,7 @@ function PromptEditor({ dirty, onApplied }) {
   const show = (p) => { setPv(p); setFacts(p?.new_facts || []); };
   return (
     <div className="panel wp">
-      <div className="row between"><span className="label">Edit with a prompt</span><span className="small muted">1 AI run</span></div>
+      <div className="row between"><span className="label">Edit with a prompt</span><span className="small muted">1 AI token</span></div>
       <p className="small muted">Say what to change, in your own words. For example: “make the about text warmer” or “add a question about delivery areas”.
         Only the sections you mention change, and only facts from your Knowledge Hub are used.</p>
       <textarea className="textarea" style={{ minHeight: 72 }} maxLength={500} value={text} placeholder="What should change on your page?"
@@ -123,6 +126,70 @@ function ListEditor({ label, items, setItems, fields, max, blank }) {
   );
 }
 
+/** v2.3: the first website — from their own website, or (no website) from 4 quick answers, made to stand out against a
+    competitor. Prompt-to-website: answer, press Build, preview, then publish. */
+function Builder({ onBuilt }) {
+  const { refresh, toast } = useHub();
+  const [d, setD] = useState(null);
+  const [way, setWay] = useState(null);           // "website" | "answers"
+  const [site, setSite] = useState("");
+  const [rival, setRival] = useState("");
+  const [ans, setAns] = useState({});
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    api("/inputs").then((v) => {
+      setD(v); setSite(v.inputs.website_url || ""); setRival(v.inputs.competitor_url || ""); setAns(answersOf(v.inputs));
+      setWay(v.inputs.has_website === false ? "answers" : v.inputs.website_url ? "website" : null);
+    }).catch((e) => setErr(e.message));
+  }, []);
+  if (!d) return err ? <FormError msg={err} /> : null;
+  const firstRead = rival.trim() && !(d.competitor && d.competitor.matches && d.competitor.status === "ok");
+  const build = async () => {
+    setBusy(true); setErr("");
+    try {
+      const body = { competitors: rival.trim() ? [rival.trim()] : [] };
+      if (way === "website") Object.assign(body, { website_url: site.trim(), has_website: true });
+      else Object.assign(body, { website_url: "", has_website: false, ...ans });
+      await api("/inputs", { method: "PUT", body });
+      await api("/inputs/website/build", { method: "POST", body: { source: way } });
+      await refresh(); toast("Your website is ready to check"); onBuilt();
+    } catch (e) { if (!e.handled) setErr(e.message); } finally { setBusy(false); }
+  };
+  const ready = way === "website" ? site.trim().length > 3 : (ans.about || "").trim().length > 2 && ((ans.offers || "").trim() || (ans.audience || "").trim());
+  return (
+    <div className="stack">
+      <div className="ws-ways" role="radiogroup" aria-label="How should we build it?">
+        <button type="button" role="radio" aria-checked={way === "website"} className={`ws-way ${way === "website" ? "on" : ""}`} onClick={() => setWay("website")}>
+          <b>I have a website</b><span className="small muted">We read it and build you a better, faster one, with an inquiry form and WhatsApp.</span>
+        </button>
+        <button type="button" role="radio" aria-checked={way === "answers"} className={`ws-way ${way === "answers" ? "on" : ""}`} onClick={() => setWay("answers")}>
+          <b>I don't have one yet</b><span className="small muted">Answer 4 quick questions and we build it for you in about a minute.</span>
+        </button>
+      </div>
+      {way && (
+        <div className="panel">
+          {way === "website" && (
+            <Field label="Your website" hint="We read your home, about, services and contact pages.">
+              <input className="input" inputMode="url" placeholder="www.yourbusiness.in" value={site} onChange={(e) => setSite(e.target.value)} />
+            </Field>
+          )}
+          {way === "answers" && <FourQuestions data={d} value={ans} onChange={setAns} />}
+          <Field label="A competitor's website (optional, recommended)" hint="So your page stands out. We read their public pages and never copy their words.">
+            <input className="input" inputMode="url" placeholder="www.theirbusiness.in" value={rival} onChange={(e) => setRival(e.target.value)} />
+          </Field>
+          {d.competitor && d.competitor.matches && <CompetitorNote comp={d.competitor} />}
+          <FormError msg={err} />
+          <div className="row">
+            <button className="btn primary ai" disabled={!ready || busy} onClick={build}>{busy ? "Building your website…" : "Build my website"}</button>
+            <span className="small muted">Uses 1 AI token{firstRead ? " (plus 1 to read your competitor's website the first time)" : ""}. Takes about a minute. Nothing goes live until you publish.</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Website() {
   const { me, refresh, toast } = useHub();
   const [site, reload] = useLoad("/site");
@@ -134,6 +201,8 @@ export default function Website() {
   const [building, setBuilding] = useState(false);
   const [guideUrl, setGuideUrl] = useState(null);
   const [qr, setQr] = useState(false);
+  const [preview, setPreview] = useState(false);
+  const [inputsOpen, setInputsOpen] = useState(false);
 
   useEffect(() => {
     if (site?.content) { setC(site.content); setAccent(site.accent); setSlug(site.slug); setShowcase(!!site.showcase); }
@@ -157,13 +226,10 @@ export default function Website() {
   if (site === null) return null;
   if (!site.content) {
     return (
-      <Sheet kicker="Systems · Website" id="SY-01" pillar="Systems" step={2} title={<>Your website, written from your <em>Brain</em>.</>}
-        sub="The AI uses your brand message, your products and why customers choose you. Nothing invented — you can edit every word before it goes live.">
-        <div className="empty">
-          <h2>{building ? "Writing your website…" : "Ready when you are."}</h2>
-          <p className="muted">Uses 1 AI run. Takes about a minute.</p>
-          <button className="btn primary ai" disabled={building} onClick={build}>{building ? "Building…" : "Build my website"}</button>
-        </div>
+      <Sheet kicker="Systems · Website" id="SY-01" pillar="Systems" step={2} title={<>Your website, built in a <em>minute</em>.</>}
+        sub="From your own website, or from 4 quick answers. Nothing invented — you preview it on a computer and a phone, edit every word, then publish.">
+        <Builder onBuilt={async () => { await reload(); setFrame((f) => f + 1); setPreview(true); }} />
+        <p className="small muted">Or <button className="linkbtn small" disabled={building} onClick={build}>{building ? "writing it from your Knowledge Hub…" : "write it straight from your Knowledge Hub"}</button> (1 AI token).</p>
       </Sheet>
     );
   }
@@ -175,6 +241,7 @@ export default function Website() {
       title={live ? <>Your website is <em>live</em>.</> : <>Check it, then go <em>live</em>.</>}
       sub={live ? "Every inquiry from the form lands in Leads and alerts you on WhatsApp." : "Edit anything on the left. The preview on the right is exactly what customers will see."}
       actions={<>
+        <Busy className="btn ghost sm" run={async () => { await save(); setPreview(true); }}>Preview</Busy>
         <Busy className="btn ghost sm" run={async () => { await save(); toast("Saved"); }}>Save</Busy>
         {live
           ? <Busy className="btn ghost sm" run={async () => { await api("/site/unpublish", { method: "POST" }); await reload(); await refresh(); }}>Take offline</Busy>
@@ -225,6 +292,10 @@ export default function Website() {
           )}
         </div>
       )}
+      {preview && (
+        <SitePreview slug={site.slug} live={live} frame={frame} onClose={() => setPreview(false)}
+          actions={!live && <Busy className="btn primary sm" run={async () => { await api("/site/publish", { method: "POST" }); await reload(); await refresh(); setPreview(false); toast("Your website is live"); }}>Publish</Busy>} />
+      )}
       <DomainPanel />
       <PromptEditor dirty={JSON.stringify(c) !== JSON.stringify(site.content)} onApplied={async () => { await reload(); setFrame((f) => f + 1); }} />
       <div className="grid2" style={{ alignItems: "start" }}>
@@ -265,8 +336,20 @@ export default function Website() {
             <p className="small">{site.badge ? "Free websites show a small “Built free with OwnerDesk” badge. When an owner signs up from your badge, you get rewards." : "Badge off — your website shows only your business."}</p>
             {site.badge && <Locked feature="badge_off" what="Remove the badge" />}
           </div>
-          <div className="row">
-            <Busy className="btn ghost sm ai" run={async () => { if (window.confirm("Rewrite the website with AI? This replaces your edits and uses 1 AI run.")) await build(); }}>Rewrite with AI</Busy>
+          <div className="panel">
+            <div className="row between">
+              <span className="label">Build it again</span>
+              <button className="btn sm ghost" onClick={() => setInputsOpen(!inputsOpen)}>{inputsOpen ? "Hide" : "Your website, competitor and answers"}</button>
+            </div>
+            {inputsOpen && <SharedInputs title="What your website is built from" showQuestions="always" />}
+            <div className="row">
+              <Busy className="btn ghost sm ai" run={async () => {
+                if (!window.confirm("Build the website again from your answers? This replaces your edits and uses 1 AI token.")) return;
+                await api("/inputs/website/build", { method: "POST", body: { source: site.built_from === "website" ? "website" : "answers" } });
+                await reload(); setFrame((f) => f + 1); await refresh(); setPreview(true);
+              }}>Build again{site.built_from === "website" ? " from my website" : " from my answers"}</Busy>
+              <Busy className="btn ghost sm" run={async () => { if (window.confirm("Rewrite the website from your Knowledge Hub? This replaces your edits and uses 1 AI token.")) await build(); }}>Rewrite from my Knowledge Hub</Busy>
+            </div>
           </div>
           <InviteLine />
         </div>

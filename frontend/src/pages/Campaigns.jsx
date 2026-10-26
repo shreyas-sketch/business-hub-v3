@@ -249,7 +249,7 @@ export default function Campaigns() {
           {(!data.connected || !data.template) && (
             <div className="panel flat">
               <span className="label">Before it can send</span>
-              <p className="small">Our team connects your WhatsApp number and gets your campaign template approved (through AiSensy). You can write and
+              <p className="small">Our team connects your WhatsApp number and gets your campaign template approved (through your WhatsApp tool). You can write and
                 approve a campaign now; sending starts once both are ready.</p>
               {owner && <div><Link className="btn sm" to="/connections">See connections</Link></div>}
             </div>

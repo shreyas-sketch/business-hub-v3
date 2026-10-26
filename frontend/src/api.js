@@ -17,6 +17,12 @@ function fieldError(e) {
   return field ? `${field.charAt(0).toUpperCase()}${field.slice(1)}: ${msg}` : msg;
 }
 
+/** v2.3: owners see "AI tokens" where older server messages still say "AI runs". */
+export const tokenWords = (text) => String(text || "")
+  .replace(/\bAI runs\b/g, "AI tokens").replace(/\bAI run\b/g, "AI token")
+  .replace(/\bruns left\b/g, "tokens left").replace(/\bYour run was\b/g, "Your token was").replace(/\bthis month's runs\b/g, "this month's tokens")
+  .replace(/\b(\d+) runs\b/g, "$1 tokens").replace(/\b1 run\b/g, "1 token");
+
 export async function api(path, { method = "GET", body } = {}) {
   const res = await fetch(`/api${path}`, {
     method, credentials: "same-origin",
@@ -26,7 +32,7 @@ export async function api(path, { method = "GET", body } = {}) {
   const data = await res.json().catch(() => ({}));
   if (res.status === 402 && data.detail?.code === "runs_exhausted") {
     onLimit(data.detail);
-    const e = new Error(data.detail.message); e.status = 402; e.handled = true; throw e;
+    const e = new Error(tokenWords(data.detail.message)); e.status = 402; e.handled = true; throw e;
   }
   if (res.status === 403 && data.detail?.code === "locked") {
     onLocked(data.detail);
@@ -35,7 +41,7 @@ export async function api(path, { method = "GET", body } = {}) {
   if (!res.ok) {
     const d = data.detail;
     const msg = typeof d === "string" ? d : Array.isArray(d) ? fieldError(d[0]) : d?.message ? d.message : "Something went wrong. Please try again.";
-    const e = new Error(msg); e.status = res.status; throw e;
+    const e = new Error(tokenWords(msg)); e.status = res.status; throw e;
   }
   return data;
 }
@@ -84,7 +90,7 @@ export async function upload(path, form) {
   }
   if (!res.ok) {
     const d = data.detail;
-    const e = new Error(typeof d === "string" ? d : d?.message || "That file couldn't be uploaded. Please try again."); e.status = res.status; e.code = d?.code; throw e;
+    const e = new Error(tokenWords(typeof d === "string" ? d : d?.message || "That file couldn't be uploaded. Please try again.")); e.status = res.status; e.code = d?.code; throw e;
   }
   return data;
 }

@@ -4,9 +4,11 @@ import { ago, api, upload } from "../api.js";
 import { Busy, Field, FormError, Sheet, useHub } from "../ui.jsx";
 import { Empty, Loading, Pill, Tabs } from "../v2.jsx";
 import "./expenses.css";
+import DataNav from "./DataNav.jsx";
 
 /* Bank statement reader (v2.2): upload a statement → money in and out, where it went, repeating payments → Expenses in one tap.
-   The file is never kept; the masked list is kept 24 hours for review. Owner only. */
+   The file is never kept; the masked list is kept 24 hours for review. Owner only.
+   v2.3: part of "Expenses & bank statement" (Data engine); "Suggest categories with AI" sends only the unsorted payees' names. */
 
 const money = (n) => "₹" + new Intl.NumberFormat("en-IN", { minimumFractionDigits: Number(n) % 1 ? 2 : 0, maximumFractionDigits: 2 }).format(Number(n || 0));
 const whole = (n) => "₹" + new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(Math.round(Number(n || 0)));
@@ -51,7 +53,7 @@ function UploadBox({ onRead, small }) {
       <div className="row">
         <Busy className="btn primary" disabled={!file || (needsPw && !password)} onError={(e) => setErr(e.message)} run={read}>Read my statement</Busy>
       </div>
-      <p className="small muted">We read it here and don't keep the file. Long numbers, e-mail and UPI IDs are hidden. The list of payments stays for 24 hours so you can check it, then it's deleted — or delete it yourself any time. No AI reads it.</p>
+      <p className="small muted">We read it here and don't keep the file. Long numbers, e-mail and UPI IDs are hidden. The list of payments stays for 24 hours so you can check it, then it's deleted — or delete it yourself any time. No AI reads it — unless you tap “Suggest categories with AI”, and then only the names of the payees we couldn't sort go to the AI: no amounts, dates or account numbers.</p>
     </div>
   );
 }
@@ -116,7 +118,31 @@ function Repeating({ s, onChange }) {
   );
 }
 
+/** v2.3: the AI suggests a category for payees the rules left as "Other" (only their names go to the AI). */
+function Suggest({ s, sugg, onAsk }) {
+  const { me } = useHub();
+  const [err, setErr] = useState("");
+  if (!sugg || !sugg.unsorted) return null;
+  const waiting = Object.keys(sugg.suggestions).length;
+  return (
+    <div className="panel">
+      <span className="label">{sugg.unsorted} {sugg.unsorted === 1 ? "payment has" : "payments have"} no category yet</span>
+      {waiting ? <p className="small">The AI suggested a category for {waiting} of them — look for “AI suggests” under each payment, and use it or pick another.</p>
+        : <p className="small">The rules couldn't tell what {sugg.unsorted_payees === 1 ? "this payee is" : `these ${sugg.unsorted_payees} payees are`}, so {sugg.unsorted === 1 ? "it's" : "they're"} under “Other”. The AI can suggest a category. Only the payee names go to the AI — no amounts, dates or account numbers.</p>}
+      <FormError msg={err} />
+      <div className="row">
+        <Busy className={`btn ai ${waiting ? "" : "primary"}`} onError={(e) => setErr(e.message)} run={onAsk}>{sugg.asked ? "Suggest again" : "Suggest categories with AI"} · 1 token</Busy>
+        <span className="small muted">{me.runs.left} tokens left this month</span>
+      </div>
+    </div>
+  );
+}
+
 function Payments({ s, onChange }) {
+  const { refresh } = useHub();
+  const [sugg, setSugg] = useState(null);
+  useEffect(() => { api(`/expenses-ai/statement/${s.id}/suggestions`).then(setSugg).catch(() => setSugg(null)); }, [s]);
+  const ask = async () => { setSugg(await api(`/expenses-ai/statement/${s.id}/suggest`, { method: "POST" })); refresh(); };
   const [show, setShow] = useState("waiting");
   const [picked, setPicked] = useState(() => new Set());
   const [remember, setRemember] = useState(true);
@@ -127,9 +153,9 @@ function Payments({ s, onChange }) {
   const open = s.transactions.filter((t) => t.expense && !t.in_expenses);
   const allCount = s.waiting + (salaries ? s.waiting_salaries : 0);
   const toggle = (ref) => setPicked((p) => { const n = new Set(p); n.has(ref) ? n.delete(ref) : n.add(ref); return n; });
-  const setCat = async (t, category) => {
+  const setCat = async (t, category, always = remember) => {
     setErr("");
-    try { onChange(await api(`/bank-statement/${s.id}/transactions/${t.ref}`, { method: "PATCH", body: { category, remember } })); }
+    try { onChange(await api(`/bank-statement/${s.id}/transactions/${t.ref}`, { method: "PATCH", body: { category, remember: always } })); }
     catch (e) { setErr(e.message); }
   };
   const add = async (body) => {
@@ -148,6 +174,7 @@ function Payments({ s, onChange }) {
           ))}
         </div>
       </div>
+      {show !== "in" && <Suggest s={s} sugg={sugg} onAsk={ask} />}
       {show !== "in" && (
         <label className="d1-consent small"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
           <span>When I change a category, use it for this payee every time.</span></label>
@@ -187,6 +214,12 @@ function Payments({ s, onChange }) {
                     {s.categories.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
                   </select>
                 ) : <div className="small">{t.label}</div>}
+                {t.kind === "debit" && sugg?.suggestions?.[t.ref] && t.category === "other" && (
+                  <div className="da-sugg">
+                    <span>AI suggests: <b>{sugg.suggestions[t.ref].label}</b></span>
+                    <Busy className="btn sm ai" run={() => setCat(t, sugg.suggestions[t.ref].category, true)}>Use it for this payee</Busy>
+                  </div>
+                )}
               </div>
               <div className="amt">
                 <span className="money">{t.kind === "credit" ? "+" : ""}{money(t.amount)}</span>
@@ -208,12 +241,13 @@ export default function BankStatement() {
   const [err, setErr] = useState("");
   const [tab, setTab] = useState("picture");
   useEffect(() => { api("/bank-statement").then((d) => { setData(d); setS(d.latest); }).catch((e) => setErr(e.message)); }, []);
-  const head = { kicker: "Structure · Bank statement reader", id: "ST-14", pillar: "Structure", money: true };
+  const head = { kicker: "Data · Expenses & bank statement", id: "ST-14", pillar: "Data", money: true };
   const title = <>See where the money <em>went</em>.</>;
   const sub = "Upload the statement from net banking: money in and out, where it went, the payments that repeat — and into Expenses in one tap.";
-  if (!data) return <Sheet {...head} title={title} sub={sub}>{err ? <FormError msg={err} /> : <Loading />}</Sheet>;
+  if (!data) return <Sheet {...head} title={title} sub={sub}><DataNav />{err ? <FormError msg={err} /> : <Loading />}</Sheet>;
   return (
     <Sheet {...head} title={title} sub={sub}>
+      <DataNav />
       {!s && <UploadBox onRead={setS} />}
       {s && (
         <>

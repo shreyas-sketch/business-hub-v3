@@ -78,6 +78,16 @@ const Research = lazy(() => import("./pages/Research.jsx"));
 const Reputation = lazy(() => import("./pages/Reputation.jsx"));
 const WinBack = lazy(() => import("./pages/WinBack.jsx"));
 const LeadResponse = lazy(() => import("./pages/LeadResponse.jsx"));
+// v2.3 (OwnerDesk)
+const Audit = lazy(() => import("./pages/Audit.jsx"));
+const AdminAudit = lazy(() => import("./pages/AdminAudit.jsx"));
+const Contacts = lazy(() => import("./pages/Contacts.jsx"));
+const LeadIdeas = lazy(() => import("./pages/LeadIdeas.jsx"));
+const Social = lazy(() => import("./pages/Social.jsx"));
+const KeyPerson = lazy(() => import("./pages/KeyPerson.jsx"));
+const KeyPersonForm = lazy(() => import("./pages/KeyPersonForm.jsx"));
+const Engine = lazy(() => import("./pages/Engine.jsx"));
+const AdminOnboarding = lazy(() => import("./pages/AdminOnboarding.jsx"));
 const kit = (name) => lazy(() => import("./pages/Kits.jsx").then((m) => ({ default: m[name] })));
 const [Competence, Culture, Decisions, Hiring, Reviews, Roles, Sops] = ["Competence", "Culture", "Decisions", "Hiring", "Reviews", "Roles", "Sops"].map(kit);
 
@@ -109,6 +119,10 @@ const PAGES = [
   ["/customer-risk", CustomerRisk, "customer_risk", "manager"], ["/getting-paid", GettingPaid, "getting_paid", "manager"],
   ["/competitors", Competitors, "competitor_watch", "manager"], ["/research", Research, "market_research", "manager"],
   ["/reputation", Reputation, "reputation", "manager"], ["/win-back", WinBack, "win_back", "manager"], ["/lead-response", LeadResponse, "lead_response", "manager"],
+  // v2.3 (OwnerDesk)
+  ["/audit", Audit, "engine_audit", "owner"], ["/contacts", Contacts, "crm", "staff"], ["/contacts/:id", Contacts, "crm", "staff"],
+  ["/lead-ideas", LeadIdeas, "lead_ideas", "manager"], ["/social", Social, "social_media", "staff"], ["/key-person", KeyPerson, "key_person", "owner"],
+  ["/engine/:key", Engine, null, "staff"],
 ];
 
 function Shell({ me, children }) {
@@ -126,33 +140,49 @@ function Shell({ me, children }) {
       </div>
       <aside className={`rail ${open ? "open" : ""}`}>
         <div className="row between">
-          <div className="mark"><Logo h={42} /><b>{me.business_name || "Your business"}</b><span>{me.workspace.is_team ? `${me.user.name || "Team"} · ${me.workspace.role}` : me.user.plan_name}</span></div>
+          <div className="mark"><Logo h={42} /><b>{me.business_name || "Your business"}</b><span>{me.workspace.is_team ? `${me.user.name || "Team"} · ${me.workspace.role}` : me.event ? `Event access${me.event.day ? ` · Day ${me.event.day}` : ""}` : me.user.plan_name}</span></div>
           {open && <button className="btn sm ghost" onClick={() => setOpen(false)}>Close</button>}
         </div>
         <nav className="nav" aria-label="Main">
           {me.user.role === "admin" && <><div className="group">Admin</div><NavLink to="/admin" end>Pulse</NavLink><NavLink to="/admin/features">Features &amp; plans</NavLink>
             <NavLink to="/admin/event">Live event</NavLink><NavLink to="/admin/day1">Day-1 reports</NavLink><NavLink to="/admin/calls">Member calls</NavLink><NavLink to="/admin/recordings">Recordings</NavLink>
-            <NavLink to="/admin/compliance">Compliance rules</NavLink><NavLink to="/admin/email">Email</NavLink></>}
-          {(me.menu || []).map(({ group, items }) => (
+            <NavLink to="/admin/compliance">Compliance rules</NavLink><NavLink to="/admin/email">Email</NavLink>
+            <NavLink to="/admin/onboarding">Onboarding</NavLink><NavLink to="/admin/audit">Engine Audit</NavLink></>}
+          {(me.menu || []).map(({ group, items, engine, section, day }) => {
+            const eng = engine ? (me.engines || []).find((x) => x.key === section) : null;
+            return (
             <React.Fragment key={group}>
-              <div className="group">{group}</div>
+              {engine ? (   /* v2.3: an engine heading opens the engine's own page */
+                <NavLink to={`/engine/${section}`} className={({ isActive }) => `group engine-head ${isActive ? "on" : ""} ${eng && !eng.open ? "shut" : ""}`}>
+                  <span>{group}</span>{eng && !eng.open ? <span className="tier" title={`Opens on Day ${day} of the event`}>Day {day}</span> : null}
+                </NavLink>
+              ) : <div className="group">{group}</div>}
               {items.map((it) => (
                 <NavLink key={it.key} to={it.path} className={({ isActive }) => `${isActive ? "on" : ""} ${it.locked ? "locked" : ""}`}>
                   <span>{it.label}{it.sub && <small className="nav-sub">{it.sub}</small>}</span>
-                  {it.locked ? <span className="tier" title={`Unlocks with ${it.tier_name}`}>{it.tier_short || it.tier_name.split(" ")[0]}</span>
+                  {it.locked && it.lock === "day" ? <span className="tier" title={`Opens on Day ${it.opens_day} of the event`}>Day {it.opens_day}</span>
+                    : it.locked && me.ui?.menu === "engines" ? <span className="tier" title="Part of OwnerDesk Membership">Member</span>
+                    : it.locked ? <span className="tier" title={`Unlocks with ${it.tier_name}`}>{it.tier_short || it.tier_name.split(" ")[0]}</span>
                     : it.path === "/approvals" && me.approvals_waiting ? <span className="count" aria-label={`${me.approvals_waiting} waiting`}>{me.approvals_waiting}</span>
                     : it.path === "/tasks" && me.my_open_tasks ? <span className="count" aria-label={`${me.my_open_tasks} open`}>{me.my_open_tasks}</span>
                     : it.path === "/leads" && me.progress.first_lead ? <span className="muted">●</span> : null}
                 </NavLink>
               ))}
+              {section === "account" && me.links?.community_link && (
+                <a href={me.links.community_link} target="_blank" rel="noopener noreferrer"><span>WhatsApp community</span><span className="muted">↗</span></a>
+              )}
+              {section === "account" && me.links?.support_email && (
+                <a href={`mailto:${me.links.support_email}`}><span>Email support</span><span className="muted">↗</span></a>
+              )}
             </React.Fragment>
-          ))}
+            );
+          })}
         </nav>
         <div className="foot">
           <div className="stack" style={{ gap: 6 }}>
-            <span className="label">AI runs this month</span>
+            <span className="label">{me.event ? "AI tokens for the event" : "AI tokens this month"}</span>
             <div className="meter"><i style={{ width: `${Math.min(100, (me.runs.left / Math.max(me.runs.allowance + me.runs.bonus, 1)) * 100)}%` }} /></div>
-            <span className="small muted">{me.runs.left} left · {me.user.plan_name}</span>
+            <span className="small muted">{me.runs.left} left · {me.event ? `Event access${me.event.day ? ` · Day ${me.event.day}` : ""}` : me.user.plan_name}</span>
           </div>
           <button className="btn sm ghost" onClick={logout}>Log out</button>
         </div>
@@ -163,6 +193,26 @@ function Shell({ me, children }) {
 }
 
 function LimitModal({ detail, me, onClose, upgrade }) {
+  if (me.ui?.menu === "engines") {   // v2.3: tokens, one paid plan, no invite rewards
+    return (
+      <Modal onClose={onClose}>
+        <span className="kicker">AI tokens</span>
+        <h2>You've used your <em>AI tokens</em>.</h2>
+        <p className="sub">{me.event ? "That's every token for the event." : "Your tokens refill on the 1st of next month."}{" "}
+          Everything you've made is saved, and pages that don't use AI keep working.</p>
+        {!me.paid && (
+          <div className="panel">
+            <span className="label">{me.membership?.name || "OwnerDesk Membership"}</span>
+            <p>{me.membership?.runs} AI tokens every month, and every engine open. <span className="money">{rupees(me.membership?.price_minor)}/month</span>
+              {me.membership?.price_year_minor ? <> or <span className="money">{rupees(me.membership.price_year_minor)}/year</span></> : null}.</p>
+            <button className="btn money" onClick={() => { onClose(); upgrade("lite", "runs"); }}>How to join</button>
+          </div>
+        )}
+        {me.paid && me.links?.support_email && <p className="small muted">Need more this month? Email <a href={`mailto:${me.links.support_email}`}>{me.links.support_email}</a>.</p>}
+        <button className="btn ghost" onClick={onClose}>Close</button>
+      </Modal>
+    );
+  }
   return (
     <Modal onClose={onClose}>
       <span className="kicker">AI runs</span>
@@ -211,6 +261,8 @@ export default function App() {
     page = <Suspense fallback={<div className="main muted">Loading…</div>}><Day1 /></Suspense>;
   } else if (path === "/event" || path.startsWith("/event/")) {   // the live event link: no login until they save their pack
     page = <Suspense fallback={<div className="main muted">Loading…</div>}><Event /></Suspense>;
+  } else if (path.startsWith("/k/")) {   // v2.3: the key-person questionnaire an employee fills in on their phone (no login)
+    page = <Suspense fallback={<div className="main muted">Loading…</div>}><KeyPersonForm /></Suspense>;
   } else if (!me) {
     page = publicPaths.includes(path) ? (
       <Routes><Route path="/login" element={<Login />} /><Route path="*" element={<Landing />} /></Routes>
@@ -250,6 +302,8 @@ export default function App() {
           {me.user.role === "admin" && <Route path="/admin/recordings" element={<AdminRecordings />} />}
           {me.user.role === "admin" && <Route path="/admin/compliance" element={<AdminCompliance />} />}
           {me.user.role === "admin" && <Route path="/admin/email" element={<AdminEmail />} />}
+          {me.user.role === "admin" && <Route path="/admin/onboarding" element={<AdminOnboarding />} />}
+          {me.user.role === "admin" && <Route path="/admin/audit" element={<AdminAudit />} />}
           <Route path="*" element={<Navigate to={me.landing || "/home"} replace />} />
         </Routes>
         </Suspense>
@@ -275,7 +329,7 @@ export default function App() {
         <Modal onClose={() => setContact(null)}>
           <span className="kicker">Upgrade</span>
           <h2>Our team will <em>call</em> you.</h2>
-          <p className="sub">We've noted your interest. Someone from the Business AI team will reach you on {localPhone(me?.user.phone)} to set it up.</p>
+          <p className="sub">We've noted your interest. Someone from the OwnerDesk team will reach you on {localPhone(me?.user.phone)} to set it up.</p>
           <button className="btn" onClick={() => setContact(null)}>Done</button>
         </Modal>
       )}

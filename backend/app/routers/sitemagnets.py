@@ -13,7 +13,14 @@ Website with lead magnet (v2.1, 3.3).
 3. Public pages — /s/<site>/guide/<slug>: a form (name, mobile, optional email). After it's filled the lead is saved like
    any website lead (source "lead_magnet", owner alert, automations, Employz.ai sync) and the download link is shown on
    screen, and emailed when the visitor gave an email. The PDF only downloads with a signed link that expires.
+4. v2.3 — the lead magnet built for them: the 4 answers (pre-filled from the Knowledge Hub, confirmed) → 8 ideas (1 AI
+   token) → pick one → the full content and its download page (1 AI token) → a PDF in the brand kit design with a cover
+   (app/magnet_pdf.py, no AI) → "Put it on my website". Kept in `magnet_files` with source "ai" (content, landing, idea,
+   format, pages), so it uses the same public page, form, signed download and lead as an upload; it shows first on the
+   website's "free guide" button. magnet_ideas {_id: ws, ideas [...], inputs, at}.
 """
+import asyncio
+import threading
 import base64
 import hashlib
 import hmac
@@ -425,11 +432,15 @@ def token_ok(magnet_id: str, token: str | None) -> bool:
 
 
 async def published_magnets(owner: dict) -> list[dict]:
-    """The owner's published uploads (for the /guide pages)."""
+    """The owner's published downloads (for the /guide pages): the ones the hub built first (newest first), then uploads."""
     if not plans.has(owner, "lead_magnet"):
         return []
-    return [m async for m in db().magnet_files.find({"owner_id": owner["_id"], "published": True}, {"title": 1, "slug": 1, "description": 1})
-            .sort("created_at", 1).limit(MAX_MAGNETS)]
+    fields = {"title": 1, "slug": 1, "description": 1, "source": 1}
+    built = [m async for m in db().magnet_files.find({"owner_id": owner["_id"], "published": True, "source": "ai"}, fields)
+             .sort("created_at", -1).limit(MAX_MAGNETS)]
+    uploads = [m async for m in db().magnet_files.find({"owner_id": owner["_id"], "published": True, "source": {"$ne": "ai"}}, fields)
+               .sort("created_at", 1).limit(MAX_MAGNETS)]
+    return (built + uploads)[:MAX_MAGNETS]
 
 
 async def _public(slug: str, mslug: str):
@@ -541,6 +552,281 @@ async def magnet_cover(slug: str, mslug: str):
     if not f:
         return not_found()
     return Response(bytes(f["data"]), media_type=f["content_type"], headers={"Cache-Control": "public, max-age=3600"})
+
+
+# ═════════════════════════ 4. v2.3: 8 ideas → build → on the website ═════════════════════════
+class AnswersIn(BaseModel):
+    about: str | None = Field(default=None, max_length=400)
+    offers: str | None = Field(default=None, max_length=600)
+    audience: str | None = Field(default=None, max_length=300)
+    pains: str | None = Field(default=None, max_length=500)
+
+
+class PickIn(BaseModel):
+    index: int = Field(ge=0, le=7)
+
+
+class BuiltEdit(BaseModel):
+    content: dict
+    landing: dict = Field(default_factory=dict)
+
+
+class LiveIn(BaseModel):
+    published: bool
+
+
+_RENDERS = threading.BoundedSemaphore(2)       # at most two PDFs drawn at once (each takes a few seconds of CPU)
+
+
+def _render_files(content: dict, landing: dict, design: dict, business: dict, logo, link: str | None, fmt: str, long_form: bool):
+    from .. import magnet_pdf
+    with _RENDERS:
+        pdf, pages = magnet_pdf.render(content, landing, design, business, logo, link, fmt, long_form)
+        cover = magnet_pdf.cover_png(content, design, business, logo)
+    return pdf, pages, cover
+
+
+async def _design_for(ws: str) -> tuple[dict, object, dict]:
+    from .brandkit import _kit, _logo
+    kit = await _kit(ws)
+    b = await db().businesses.find_one({"owner_id": ws}) or {}
+    site = await db().sites.find_one({"owner_id": ws}, {"accent": 1}) or {}
+    return kit.get("design") or bk.default_design(b.get("name", ""), site.get("accent")), await _logo({**kit, "_id": ws}), b
+
+
+def _str(v, n: int) -> str:
+    return re.sub(r"[ \t]+", " ", str(v or "")).strip()[:n]
+
+
+def _ideas_check(guard):
+    from .. import competitor_watch as cw
+    from ..ai import magnet_tasks as mt
+
+    def check(result) -> list[dict]:
+        raw = result.get("ideas") if isinstance(result, dict) else None
+        out = []
+        for x in raw if isinstance(raw, list) else []:
+            if not isinstance(x, dict):
+                continue
+            idea = {"title": _str(x.get("title"), 120), "who": _str(x.get("who"), 200), "problem": _str(x.get("problem"), 240),
+                    "why": _str(x.get("why"), 240)}
+            if any(cw.has_contact(v) for v in idea.values()):
+                continue
+            idea = guard(idea)
+            if len(idea["title"]) < 5:
+                continue
+            fmt = mt.format_key(x.get("format"))
+            idea.update(format=fmt, format_label=mt.FORMATS[fmt])
+            if idea["title"].lower() not in (i["title"].lower() for i in out):
+                out.append(idea)
+        if len(out) < 6:
+            raise ValueError("too few usable ideas")
+        return out[:8]
+    return check
+
+
+def _money_guard(text: str, allowed: str) -> str:
+    """Takes out a sentence with a ₹ amount or a % the owner never gave (the AI mustn't promise prices or results)."""
+    from .. import competitor_watch as cw
+    known_p, known_pc = set(cw.prices_in(allowed)), set(cw.percents_in(allowed))
+    if set(cw.prices_in(text)) <= known_p and set(cw.percents_in(text)) <= known_pc:
+        return text
+    keep = [x for x in re.split(r"(?<=[.!?])\s+", text) if set(cw.prices_in(x)) <= known_p and set(cw.percents_in(x)) <= known_pc]
+    return " ".join(keep).strip()
+
+
+def shape_built(result, fmt: str, guard=None, allowed: str | None = None, strict: bool = True) -> tuple[dict, dict]:
+    """The AI's (or the owner's) lead magnet → (content, landing), trimmed to its limits. With `strict` (a fresh build) a guide
+    needs at least 5 full sections and a checklist 3, or the token is given back."""
+    from .. import competitor_watch as cw
+    from ..ai import magnet_tasks as mt
+    r = result if isinstance(result, dict) else {}
+    raw, land = r.get("content") if isinstance(r.get("content"), dict) else r, r.get("landing") if isinstance(r.get("landing"), dict) else {}
+    if not _str(raw.get("title"), 140):
+        raise ValueError("no title")
+
+    def fix(t: str, n: int) -> str:
+        t = _str(t, n) if "\n" not in str(t or "") else re.sub(r"\n{3,}", "\n\n", str(t or "")).strip()[:n]
+        if allowed is not None:
+            t = "\n\n".join(_money_guard(par, allowed) for par in t.split("\n\n")).strip()
+        if cw.has_contact(t) and strict:
+            return ""
+        return t
+
+    secs = []
+    for x in (raw.get("sections") or [])[:10]:
+        if not isinstance(x, dict) or not _str(x.get("heading"), 140):
+            continue
+        pts = [fix(p, 300) for p in (x.get("points") or []) if str(p or "").strip()][:10]
+        secs.append({"heading": fix(x.get("heading"), 140) or _str(x.get("heading"), 140), "text": fix(x.get("text"), 2400),
+                     "points": [p for p in pts if p]})
+    content = {"title": fix(raw.get("title"), 140) or _str(raw.get("title"), 140), "subtitle": fix(raw.get("subtitle"), 200),
+               "intro": fix(raw.get("intro"), 1200), "sections": secs, "cta": fix(raw.get("cta"), 500)}
+    landing = {"headline": fix(land.get("headline"), 140) or content["title"], "who_for": fix(land.get("who_for"), 200),
+               "what_you_get": [fix(x, 160) for x in (land.get("what_you_get") or []) if str(x or "").strip()][:5],
+               "benefits": [fix(x, 200) for x in (land.get("benefits") or []) if str(x or "").strip()][:3]}
+    if guard:
+        content, landing = guard(content), guard(landing)
+    content["sections"] = [s for s in content["sections"] if s["heading"]]
+    landing["what_you_get"] = [x for x in landing["what_you_get"] if x] or [s["heading"] for s in content["sections"][:5]]
+    landing["benefits"] = [x for x in landing["benefits"] if x]
+    for extra in landing["what_you_get"]:
+        if len(landing["benefits"]) >= 3:
+            break
+        if extra not in landing["benefits"]:
+            landing["benefits"].append(extra)
+    need = (5 if fmt in mt.LONG else 3) if strict else 2
+    if len(content["sections"]) < need:
+        raise ValueError("too short")
+    if strict and fmt in mt.LONG and sum(1 for s in content["sections"] if len(s["text"].split()) >= 25) < 0.6 * len(content["sections"]):
+        raise ValueError("an outline, not the full content")
+    return content, landing
+
+
+async def _studio(ctx: Ctx) -> dict:
+    from .inputs import inputs_view
+    v = await inputs_view(ctx.ws, ctx.owner)
+    site = await db().sites.find_one({"owner_id": ctx.ws}, {"slug": 1, "status": 1})
+    ideas = await db().magnet_ideas.find_one({"_id": ctx.ws})
+    built = [_magnet_view(m, site) async for m in db().magnet_files.find({"owner_id": ctx.ws, "source": "ai"}).sort("created_at", -1)]
+    return {"inputs": v["inputs"], "questions": v["questions"], "hints": v["hints"], "answered": v["answered"], "competitor": v["competitor"],
+            "ideas": {"items": ideas["ideas"], "at": ideas["at"].isoformat()} if ideas else None, "built": built,
+            "count": await db().magnet_files.count_documents({"owner_id": ctx.ws}), "max": MAX_MAGNETS,
+            "site_live": bool(site and site.get("status") == "live"), "site_exists": bool(site)}
+
+
+@router.get("/api/lead-magnet/studio")
+async def studio(ctx: Ctx = Depends(feature("lead_magnet", "owner"))):
+    return await _studio(ctx)
+
+
+@router.post("/api/lead-magnet/ideas")
+async def make_ideas(body: AnswersIn, ctx: Ctx = Depends(feature("lead_magnet", "owner"))):
+    """Saves the confirmed answers (shared with the website) and writes 8 ideas: 1 AI token."""
+    from .. import competitor_watch as cw, shared_inputs as si
+    from ..ai import magnet_tasks as mt
+    from .inputs import _read_if_needed
+    p = await profile_of(ctx.ws)
+    patch = {f"inputs.{k}": re.sub(r"[ \t]+", " ", v).strip() for k, v in body.model_dump(exclude_none=True).items()}
+    if patch:
+        await db().businesses.update_one({"_id": p["_id"]}, {"$set": {**patch, "inputs.confirmed_at": now(), "inputs.updated_at": now()}})
+        p = await profile_of(ctx.ws)
+    inp = await si.get_inputs(ctx.ws, p)
+    if not si.answered(inp):
+        raise HTTPException(400, "Answer the questions first: what your business is about, and what you sell or who you sell to.")
+    if inp["competitor_url"]:
+        await _read_if_needed(ctx.owner, inp["competitor_url"])
+    comp = await cw.competitor_summary(ctx.ws)
+    guard = await cw.competitor_guard(ctx.ws)
+    ideas = await run_ai(ctx.owner, "magnet_ideas", mt.ideas(p, si.answers_text(inp), cw.summary_text(comp)), "Lead magnet ideas",
+                         check=_ideas_check(guard))
+    await db().magnet_ideas.replace_one({"_id": ctx.ws}, {"_id": ctx.ws, "ideas": ideas, "inputs": {k: inp[k] for k in si.QUESTIONS},
+                                                          "with_competitor": bool(comp), "at": now()}, upsert=True)
+    await track("magnet_ideas", ctx.ws)
+    return await _studio(ctx)
+
+
+@router.post("/api/lead-magnet/build")
+async def build_magnet(body: PickIn, ctx: Ctx = Depends(feature("lead_magnet", "owner"))):
+    """The picked idea, built in full (1 AI token): the PDF in the brand kit design, its cover and its download page. It goes
+    on the website only when the owner says so."""
+    from .. import competitor_watch as cw, shared_inputs as si
+    from ..ai import magnet_tasks as mt
+    from ..ai.tasks import profile_text
+    doc = await db().magnet_ideas.find_one({"_id": ctx.ws})
+    if not doc or body.index >= len(doc.get("ideas") or []):
+        raise HTTPException(400, "Get your ideas first, then pick one.")
+    if await db().magnet_files.count_documents({"owner_id": ctx.ws}) >= MAX_MAGNETS:
+        raise HTTPException(400, f"You can keep {MAX_MAGNETS} lead magnets. Remove one to add another.")
+    idea = doc["ideas"][body.index]
+    fmt = mt.format_key(idea.get("format"))
+    p = await profile_of(ctx.ws)
+    inp = await si.get_inputs(ctx.ws, p)
+    comp = await cw.competitor_summary(ctx.ws)
+    guard = await cw.competitor_guard(ctx.ws)
+    allowed = "\n".join((profile_text(p), si.answers_text(inp)))
+    content, landing = await run_ai(ctx.owner, "magnet_build", mt.build(p, si.answers_text(inp), idea, cw.summary_text(comp)),
+                                    f"Lead magnet — {idea['title']}", check=lambda r: shape_built(r, fmt, guard, allowed))
+    item = await _store_built(ctx.ws, content, landing, idea, fmt)
+    await track("magnet_built", ctx.ws, format=fmt, pages=item["pages"])
+    return {"item": item, **await _studio(ctx)}
+
+
+async def _store_built(ws: str, content: dict, landing: dict, idea: dict, fmt: str, replace: dict | None = None) -> dict:
+    from ..ai import magnet_tasks as mt
+    design, logo, b = await _design_for(ws)
+    site = await db().sites.find_one({"owner_id": ws}, {"slug": 1, "status": 1})
+    link = site_url(site["slug"]) if site else None
+    pdf, pages, cover = await asyncio.to_thread(_render_files, content, landing, design, b, logo, link, fmt, fmt in mt.LONG)
+    title = content["title"]
+    stored = []
+    try:
+        slug = replace["slug"] if replace else await _unique_slug(ws, title)
+        f = await files.put(ws, pdf, f"{slug}.pdf", "application/pdf", "lead_magnet")
+        stored.append(f["_id"])
+        c = await files.put(ws, cover, "cover.png", "image/png", "magnet_cover")
+        stored.append(c["_id"])
+        fields = {"title": title[:120], "description": (landing.get("who_for") or content.get("subtitle") or "")[:500], "file_id": f["_id"],
+                  "filename": f["filename"], "size": f["size"], "cover_file_id": c["_id"], "cover_generated": True, "source": "ai",
+                  "format": fmt, "content": content, "landing": landing, "pages": pages, "updated_at": now()}
+        if replace:
+            await db().magnet_files.update_one({"_id": replace["_id"]}, {"$set": fields})
+            for old in (replace.get("file_id"), replace.get("cover_file_id")):
+                if old:
+                    await files.delete(old, ws)
+            doc = await db().magnet_files.find_one({"_id": replace["_id"]})
+        else:
+            doc = None
+            for _ in range(3):
+                candidate = {"_id": new_id(), "owner_id": ws, "slug": slug, **fields, "idea": idea, "published": False, "downloads": 0,
+                             "leads": 0, "created_at": now()}
+                try:
+                    await db().magnet_files.insert_one(candidate)
+                    doc = candidate
+                    break
+                except DuplicateKeyError:
+                    slug = await _unique_slug(ws, title)
+                    candidate["slug"] = slug
+            if doc is None:
+                raise HTTPException(409, "Two builds arrived at once. Please try again.")
+    except BaseException:
+        for fid in stored:
+            await files.delete(fid, ws)
+        raise
+    return _magnet_view(doc, site)
+
+
+async def _built(ws: str, magnet_id: str) -> dict:
+    m = await db().magnet_files.find_one({"_id": magnet_id, "owner_id": ws, "source": "ai"})
+    if not m:
+        raise HTTPException(404, "Not found")
+    return m
+
+
+@router.put("/api/lead-magnet/built/{magnet_id}")
+async def edit_built(magnet_id: str, body: BuiltEdit, ctx: Ctx = Depends(feature("lead_magnet", "owner"))):
+    """The owner's own words: saved and the PDF and cover drawn again (no AI token)."""
+    m = await _built(ctx.ws, magnet_id)
+    try:
+        content, landing = shape_built({"content": body.content, "landing": body.landing or m.get("landing") or {}}, m.get("format", "guide"),
+                                       strict=False)
+    except ValueError:
+        raise HTTPException(400, "It needs a title and at least two sections with headings.")
+    item = await _store_built(ctx.ws, content, landing, m.get("idea") or {}, m.get("format", "guide"), replace=m)
+    return {"item": item, **await _studio(ctx)}
+
+
+@router.post("/api/lead-magnet/built/{magnet_id}/live")
+async def built_live(magnet_id: str, body: LiveIn, ctx: Ctx = Depends(feature("lead_magnet", "owner"))):
+    m = await _built(ctx.ws, magnet_id)
+    site = await db().sites.find_one({"owner_id": ctx.ws}, {"slug": 1, "status": 1})
+    if body.published and not (site and site.get("status") == "live"):
+        raise HTTPException(400, "Publish your website first — the lead magnet lives on it.")
+    await db().magnet_files.update_one({"_id": m["_id"]}, {"$set": {"published": body.published, "updated_at": now(),
+                                                                    **({"published_at": now()} if body.published else {})}})
+    if body.published:
+        await track("lead_magnet_live", ctx.ws, source="ai")
+    return await _studio(ctx)
 
 
 async def ensure_indexes() -> None:

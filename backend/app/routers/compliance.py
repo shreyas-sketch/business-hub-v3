@@ -191,6 +191,113 @@ async def review_stamp() -> dict:
     return {"reviewed": False, "line": "These dates have not been reviewed by a CA yet. Confirm every date with your CA."}
 
 
+# ───────────────────────── v2.3: the GST and TAN pop-up ─────────────────────────
+TAN_NOTE = "Companies usually need a TAN to deduct TDS — check with your CA."
+TAN_ERROR = "A TAN has 10 characters: 4 letters, 5 numbers and a letter, like MUMA12345B. Or choose “No TAN”."
+
+
+def setup_state(identity: dict | None, state_doc: dict | None) -> dict:
+    """Whether the compliance pop-up should ask for the GST number and TAN, and what it already knows. The owner can skip
+    it; a banner then stays on the page until it's filled in."""
+    ident = identity or {}
+    gst_known = isinstance(ident.get("gst_registered"), bool) and (not ident["gst_registered"] or bool(ident.get("gstin")))
+    needed = not gst_known or not rules_mod.tan_answered(ident)
+    skipped = bool((state_doc or {}).get("setup_skipped_at"))
+    return {"needed": needed, "popup": needed and not skipped, "banner": needed and skipped,
+            "known": {"gst_registered": ident.get("gst_registered"), "gstin": ident.get("gstin") or "", "state": ident.get("state") or "",
+                      "entity": ident.get("entity") or "", "has_tan": ident.get("has_tan"), "tan": ident.get("tan") or "",
+                      "gst_scheme": ident.get("gst_scheme") or "monthly"},
+            "ask_staff": not isinstance(ident.get("staff"), int),
+            "entities": [{"value": a, "label": b} for a, b in knowledge.ENTITIES], "states": knowledge.STATES}
+
+
+def tan_notes(identity: dict | None) -> list[str]:
+    ident = identity or {}
+    if ident.get("has_tan") is False and ident.get("entity") in rules_mod.COMPANY:
+        return [TAN_NOTE]
+    return []
+
+
+class SetupIn(BaseModel):
+    gst_registered: bool
+    gstin: str = Field(default="", max_length=20)
+    gst_scheme: str | None = Field(default=None, pattern="^(monthly|qrmp)$")
+    has_tan: bool
+    tan: str = Field(default="", max_length=14)
+    entity: str | None = Field(default=None, pattern="^(proprietor|partnership|llp|pvt_ltd|opc|other)$")
+    state: str | None = Field(default=None, max_length=60)
+    staff: int | None = Field(default=None, ge=0, le=1_000_000)
+
+
+@router.get("/compliance/setup")
+async def get_setup(ctx: Ctx = Depends(feature("compliance_calendar", "manager"))):
+    b = await db().businesses.find_one({"owner_id": ctx.ws}, {"identity": 1}) or {}
+    return setup_state(b.get("identity"), await db().compliance_state.find_one({"_id": ctx.ws}))
+
+
+@router.post("/compliance/setup/gstin")
+async def check_gstin(body: dict, ctx: Ctx = Depends(feature("compliance_calendar", "manager"))):
+    """What a GST number says (valid, state, which business types fit), as the owner types it. No GST portal is called."""
+    from ..event import parse_gstin
+    return parse_gstin(str(body.get("gstin") or "")[:20])
+
+
+@router.post("/compliance/setup")
+async def save_setup(body: SetupIn, ctx: Ctx = Depends(feature("compliance_calendar", "owner"))):
+    """The pop-up's answers go into the Knowledge Hub's business identity: the GST number (with the state, the PAN and the
+    business type it implies) and the TAN. The calendar is rebuilt from them at once; dates still come from the rules table."""
+    from ..event import parse_gstin
+    b = await db().businesses.find_one({"owner_id": ctx.ws})
+    if not b or not b.get("name"):
+        raise HTTPException(400, "Tell us about your business first (Knowledge Hub).")
+    before = b.get("identity") or None
+    ident = dict(before or {})
+    if body.gst_registered:
+        g = parse_gstin(body.gstin)
+        if not g["valid"]:
+            raise HTTPException(400, g["error"])
+        allowed = [e["value"] for e in g["entities"]]
+        entity = body.entity if body.entity in allowed else ident.get("entity") if ident.get("entity") in allowed else allowed[0] if len(allowed) == 1 else None
+        if not entity:
+            raise HTTPException(400, f"Your GST number says “{g['pan_kind']}”. Pick which one your business is.")
+        ident.update(gst_registered=True, gstin=g["gstin"], state=g["state"] or ident.get("state") or "", pan=g["gstin"][2:12], entity=entity,
+                     gst_scheme=body.gst_scheme or ident.get("gst_scheme") or "monthly")
+    else:
+        entity = body.entity or ident.get("entity")
+        if not entity:
+            raise HTTPException(400, "Pick your business type: proprietorship, partnership, LLP or company.")
+        state = body.state or ident.get("state")
+        if state not in knowledge.STATES:
+            raise HTTPException(400, "Pick your state from the list.")
+        ident.update(gst_registered=False, gstin="", gst_scheme="monthly", state=state, entity=entity)
+    if body.has_tan:
+        tan = re.sub(r"\s+", "", body.tan).upper()
+        if not re.fullmatch(rules_mod.TAN_RE, tan):
+            raise HTTPException(400, TAN_ERROR)
+        ident.update(has_tan=True, tan=tan)
+    else:
+        ident.update(has_tan=False, tan="")
+    if body.staff is not None:
+        ident["staff"] = body.staff
+    elif not isinstance(ident.get("staff"), int):
+        raise HTTPException(400, "How many people work with you? Type 0 if it's only you.")
+    ident.setdefault("registrations", [])
+    await db().businesses.update_one({"_id": b["_id"]}, {"$set": {"identity": ident, "updated_at": now()}})
+    await db().compliance_state.update_one({"_id": ctx.ws}, {"$set": {"setup_done_at": now()}, "$unset": {"setup_skipped_at": ""}}, upsert=True)
+    changed = knowledge.changed_sections({"identity": before}, {"identity": ident})
+    await generate(ctx.ws, ident)              # the calendar at once; the rest of the hub follows as after any Knowledge Hub save
+    knowledge.after_save(ctx.owner, changed)
+    await track("compliance_setup", ctx.ws, gst=bool(ident.get("gstin")), tan=bool(ident.get("has_tan")))
+    return {"ok": True, "setup": setup_state(ident, {}), "notes": tan_notes(ident)}
+
+
+@router.post("/compliance/setup/skip")
+async def skip_setup(ctx: Ctx = Depends(feature("compliance_calendar", "manager"))):
+    await db().compliance_state.update_one({"_id": ctx.ws}, {"$set": {"setup_skipped_at": now()}}, upsert=True)
+    b = await db().businesses.find_one({"owner_id": ctx.ws}, {"identity": 1}) or {}
+    return setup_state(b.get("identity"), {"setup_skipped_at": True})
+
+
 @router.get("/compliance")
 async def get_compliance(days: int = 90, ctx: Ctx = Depends(feature("compliance_calendar", "manager"))):
     await _fresh(ctx.ws)
@@ -204,6 +311,8 @@ async def get_compliance(days: int = 90, ctx: Ctx = Depends(feature("compliance_
     b = await db().businesses.find_one({"owner_id": ctx.ws}, {"identity": 1}) or {}
     return {"items": upcoming, "all": items, "overdue": [i for i in items if i["status"] == "overdue"],
             "needs_date": [i for i in items if i["status"] == "needs_date"], "expiring_docs": expiring,
+            "setup": setup_state(b.get("identity"), await db().compliance_state.find_one({"_id": ctx.ws})),
+            "notes": tan_notes(b.get("identity")),
             "identity": b.get("identity"), "review": await review_stamp(),
             "renewals": [{"key": r["key"], "title": r["title"], "registration": (r.get("applies") or {}).get("registration")}
                          for r in await rules() if (r.get("due") or {}).get("type") == "owner_date" and r.get("on", True)],

@@ -183,6 +183,15 @@ const RENDER = {
 
 function Tile({ t }) {
   const { me, upgrade } = useHub();
+  if (t.state === "teaser" && t.opens_day) {   // v2.3: the live event opens this tile's engine on a later day
+    return (
+      <article className={`db-tile teaser ${t.size} t-${t.key}`}>
+        <div className="db-head"><span className="label">{t.title}</span><Pill>Day {t.opens_day}</Pill></div>
+        <p className="small muted">{t.what}.</p>
+        <span className="small">Opens on <b className="paper">Day {t.opens_day}</b> of the event.</span>
+      </article>
+    );
+  }
   if (t.state === "teaser") {
     return (
       <article className={`db-tile teaser ${t.size} t-${t.key}`}>

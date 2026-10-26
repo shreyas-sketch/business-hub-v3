@@ -882,3 +882,240 @@ def csv_template() -> str:
     buf = io.StringIO()
     csv.writer(buf).writerow(CSV_COLUMNS)
     return buf.getvalue()
+
+
+# ═════════════════════════ v2.3: the competitor summary (backend only) ═════════════════════════
+# The owner gives one competitor's website once (Knowledge Hub, onboarding, the Website page). The hub reads it with the
+# same polite reader as Competitor Watch (robots.txt, at most 5 pages), keeps a short structured summary in its own words
+# and uses it only to position the owner differently: the website, the lead magnet ideas, the Revenue Multiplier ideas,
+# the pipeline builder and the brochures. It is never shown as the competitor's words and their text is never copied:
+# every AI output that used the summary goes through no_copy(), which drops any sentence sharing COPY_RUN words in a row
+# with the competitor's pages.
+#
+# competitor_summaries {_id: ws, url, host, status ok|failed, summary {...} | null, shingles (bytes: 8-byte hashes of every
+#                       COPY_RUN-word run on their pages), pages, at, error, ai_used, source manual|monthly|inputs}
+SUMMARY_MAX_AGE_DAYS = 30
+COPY_RUN = 8
+WORD = re.compile(r"[0-9a-zऀ-ॿ]+", re.I)
+BUY_PATHS = {   # how customers buy from them, read from their own pages (rules, no AI)
+    "quote": ("Asks for a quote", re.compile(r"\b(?:get|request|ask for|free|instant)\s+(?:a\s+|your\s+)?(?:quote|quotation|estimate)|\bquotation\b", re.I)),
+    "call": ("Asks visitors to call", re.compile(r"\bcall\s+(?:us|now|today)\b|\bgive us a call\b|\btalk to (?:us|an expert)\b", re.I)),
+    "visit": ("Asks visitors to visit", re.compile(r"\bvisit\s+(?:us|our)\b|\bshowroom\b|\bwalk[- ]?in\b|\bexperience cent(?:re|er)\b|\bour stores?\b", re.I)),
+    "buy_now": ("Sells online (buy now)", re.compile(r"\b(?:buy now|add to cart|shop now|order now|checkout)\b", re.I)),
+    "book": ("Books a visit or appointment", re.compile(r"\bbook\s+(?:a|an|now|your|free)\b|\bappointment\b|\bschedule a\b|\bsite visit\b", re.I)),
+    "whatsapp": ("Chats on WhatsApp", re.compile(r"\bwhatsapp\b|wa\.me", re.I)),
+    "form": ("Has an inquiry form", re.compile(r"\b(?:enquire|enquiry|inquire|inquiry|send (?:us )?a message|get in touch|contact form)\b", re.I)),
+}
+CTA_WORDS = re.compile(r"\b(?:quote|call|book|visit|enquir|inquir|buy|order|shop|whatsapp|consult|demo|appointment|download|get started|contact)\w*", re.I)
+
+
+def words_of(text: str) -> list[str]:
+    return [w.lower() for w in WORD.findall(text or "")]
+
+
+def _h(gram: list[str]) -> int:
+    return int.from_bytes(hashlib.blake2b(" ".join(gram).encode(), digest_size=8).digest(), "big")
+
+
+def shingles_of(texts: list[str], n: int = COPY_RUN) -> set[int]:
+    """Every run of n words in a row on the competitor's pages (as hashes). One page's lines are read as one text, so a
+    sentence split over two lines still counts."""
+    out: set[int] = set()
+    for t in texts:
+        w = words_of(t)
+        for i in range(0, max(0, len(w) - n + 1)):
+            out.add(_h(w[i:i + n]))
+    return out
+
+
+def pack(shingles: set[int]) -> bytes:
+    return b"".join(h.to_bytes(8, "big") for h in sorted(shingles))
+
+
+def unpack(blob) -> set[int]:
+    b = bytes(blob or b"")
+    return {int.from_bytes(b[i:i + 8], "big") for i in range(0, len(b) - 7, 8)}
+
+
+def copied(text: str, shingles: set[int], n: int = COPY_RUN) -> bool:
+    if not shingles:
+        return False
+    w = words_of(text)
+    return any(_h(w[i:i + n]) in shingles for i in range(0, max(0, len(w) - n + 1)))
+
+
+SENTENCE = re.compile(r"(?<=[.!?।])\s+|\n+")
+
+
+def no_copy(value, shingles: set[int]):
+    """The value with every sentence that copies the competitor (COPY_RUN words in a row from their pages) taken out.
+    Strings inside dicts and lists too; a list item left empty is dropped. Nothing to compare with → the value as it is."""
+    if not shingles:
+        return value
+    if isinstance(value, str):
+        if not copied(value, shingles):
+            return value
+        kept = [s for s in SENTENCE.split(value) if s.strip() and not copied(s, shingles)]
+        return " ".join(kept).strip()
+    if isinstance(value, dict):
+        return {k: no_copy(v, shingles) for k, v in value.items()}
+    if isinstance(value, list):
+        out = []
+        for v in value:
+            c = no_copy(v, shingles)
+            if isinstance(c, str) and not c.strip() and isinstance(v, str) and v.strip():
+                continue
+            out.append(c)
+        return out
+    return value
+
+
+def buy_path(texts: list[str]) -> list[str]:
+    hay = "\n".join(texts)
+    return [k for k, (_label, rx) in BUY_PATHS.items() if rx.search(hay)]
+
+
+def summary_rules(pages: list[dict]) -> dict:
+    """What the hub can say from their pages without any AI: how customers buy, the calls to action, the prices shown."""
+    lines = [line for p in pages for line in p.get("lines", [])]
+    texts = ["\n".join(p.get("lines", [])) for p in pages]
+    path = buy_path(texts)
+    ctas = []
+    for line in lines:
+        if len(line) <= 40 and CTA_WORDS.search(line) and not has_contact(line):
+            t = re.sub(r"\s+", " ", line).strip(" ·|-")
+            if t and t.lower() not in (c.lower() for c in ctas):
+                ctas.append(t)
+    pricing = []
+    for p in pages:
+        for x in p.get("prices", []):
+            item = redact(x.get("item") or "")
+            label = f"{item} — {', '.join(x.get('amounts') or [])}" if item and _meaningful(item) else ", ".join(x.get("amounts") or [])
+            if label and label not in pricing:
+                pricing.append(label[:120])
+    title = next((p.get("title") for p in pages if p.get("title")), "")
+    return {"buy_path": path, "buy_path_labels": [BUY_PATHS[k][0] for k in path], "ctas": ctas[:8], "pricing": pricing[:8],
+            "name": re.split(r"\s+[|–—-]\s+", title or "")[0][:80], "pages_read": len(pages)}
+
+
+def competitor_material(pages: list[dict], limit: int = 6000) -> str:
+    """Their pages as quoted data for the AI: lines with web addresses, emails and phone numbers taken out."""
+    out, size = [], 0
+    for p in pages:
+        head = f"[page {p.get('path', '/')}] {redact(p.get('title', ''))}"
+        out.append(head)
+        size += len(head)
+        for line in p.get("lines", []):
+            t = redact(line)[:200]
+            if size + len(t) > limit:
+                break
+            out.append(t)
+            size += len(t)
+    return "\n".join(out)
+
+
+def mock_competitor(p: dict, rules: dict, pages: list[dict]) -> dict:
+    """The test stand-in: short, in the hub's own words, from the rules only."""
+    short = []
+    for page in pages:
+        for line in page.get("lines", []):
+            if 2 <= len(line.split()) <= 4 and not PRICE.search(line) and not has_contact(line) and line not in short:
+                short.append(line)
+    own = {o.get("name", "").lower() for o in p.get("offers", []) if o.get("name")}
+    offers = [s for s in short if s.lower() not in own][:5]
+    gaps = []
+    if rules["pricing"] and not any(o.get("price") for o in p.get("offers", [])):
+        gaps.append("They show prices on their website; you don't show yours yet, so a clear 'what's included' can win trust.")
+    if "whatsapp" not in rules["buy_path"]:
+        gaps.append("They don't offer a quick WhatsApp chat; a reply on WhatsApp within minutes can set you apart.")
+    if "quote" in rules["buy_path"]:
+        gaps.append("They ask for a quote first; a free checklist or guide can reach people before they ask anyone for a quote.")
+    gaps.append("Say plainly why customers choose you, in your own words, near the top of your page.")
+    return {"positioning": "A local business selling similar products, speaking to the same kind of customer.",
+            "offers": offers, "claims": ["Says it has experience in this work"], "gaps": gaps[:5]}
+
+
+async def competitor_ai(p: dict, rules: dict, pages: list[dict]):
+    return await complete(RULES + "\nYou study one competitor's public website so the owner can stand out. You write in your own words.", f"""{profile_text(p)}
+
+WHAT THE HUB READ ON THE COMPETITOR'S PUBLIC WEBSITE.
+{QUOTED.replace("competitors' public web pages", "a competitor's public web pages")}
+<<<COMPETITOR DATA>>>
+{competitor_material(pages)}
+<<<END>>>
+How customers buy from them (found by the hub): {', '.join(rules['buy_path_labels']) or 'not clear'}
+
+Summarise this competitor for the owner, in YOUR OWN WORDS — never copy a sentence or phrase from their pages:
+- positioning: 1-2 sentences on who they speak to and how they present themselves;
+- offers: their main products or services, as short names (max 8);
+- claims: what they promise or claim (experience, speed, quality…), reworded, max 5;
+- gaps: 3-5 ways THIS owner could stand out against them, using only the owner's real facts (never invent prices,
+  numbers or claims for the owner).
+Never name a person, phone number, email or web address.
+JSON only: {{"positioning": "...", "offers": ["..."], "claims": ["..."], "gaps": ["..."]}}""", lambda: mock_competitor(p, rules, pages), 1500)
+
+
+def competitor_check(rules: dict, shingles: set[int], names: list[str] | None = None):
+    """Shapes the AI summary: plain strings only, no contact details, nothing copied from their pages."""
+    def clean_list(v, n, size=200) -> list[str]:
+        out = []
+        for x in (v if isinstance(v, list) else []):
+            s = re.sub(r"\s+", " ", str(x or "")).strip()[:size]
+            if s and not has_contact(s) and s not in out:
+                out.append(s)
+        return out[:n]
+
+    def check(result) -> dict:
+        r = result if isinstance(result, dict) else {}
+        out = {"positioning": "" if has_contact(str(r.get("positioning") or "")) else re.sub(r"\s+", " ", str(r.get("positioning") or "")).strip()[:400],
+               "offers": clean_list(r.get("offers"), 8, 80), "claims": clean_list(r.get("claims"), 5), "gaps": clean_list(r.get("gaps"), 5, 260)}
+        out = no_copy(out, shingles)
+        out["offers"] = [o for o in out["offers"] if o]
+        if not out["positioning"] and not out["gaps"]:
+            raise ValueError("nothing usable")
+        return {**out, **rules}
+    return check
+
+
+async def competitor_summary(ws: str) -> dict | None:
+    """The owner's competitor, as the hub understood it, or None (no competitor given, or not read yet).
+
+    {"url", "host", "name", "at" (ISO), "age_days", "positioning": str, "offers": [str], "claims": [str], "gaps": [str],
+     "buy_path": ["quote"|"call"|"visit"|"buy_now"|"book"|"whatsapp"|"form"], "buy_path_labels": [str], "ctas": [str],
+     "pricing": [str], "pages_read": int}
+
+    Use it ONLY to position the owner differently. Never put its words on the owner's page: pass every AI result that used
+    it through `await competitor_guard(ws)` (or no_copy(result, shingles)). It never fetches: reading the site is
+    routers/competitors.refresh_summary (on demand, and once a month)."""
+    from .db import db
+    doc = await db().competitor_summaries.find_one({"_id": ws}, {"shingles": 0})
+    if not doc or doc.get("status") != "ok" or not doc.get("summary"):
+        return None
+    at = doc.get("at")
+    age = (now() - at).days if isinstance(at, datetime) else None
+    return {"url": doc.get("url", ""), "host": doc.get("host", ""), "at": at.isoformat() if isinstance(at, datetime) else None, "age_days": age,
+            **doc["summary"]}
+
+
+async def competitor_guard(ws: str):
+    """A function that takes any AI result (str, dict, list) and returns it with copied sentences taken out."""
+    from .db import db
+    doc = await db().competitor_summaries.find_one({"_id": ws}, {"shingles": 1}) or {}
+    sh = unpack(doc.get("shingles"))
+    return lambda value: no_copy(value, sh)
+
+
+def summary_text(s: dict | None) -> str:
+    """The summary as a few lines for another AI prompt (never their own words: it's the hub's summary)."""
+    if not s:
+        return "(no competitor given)"
+    parts = [f"Competitor positioning (the hub's summary): {s.get('positioning', '')}"]
+    if s.get("offers"):
+        parts.append("They offer: " + "; ".join(s["offers"][:8]))
+    if s.get("claims"):
+        parts.append("They claim: " + "; ".join(s["claims"][:5]))
+    if s.get("buy_path_labels"):
+        parts.append("How customers buy from them: " + ", ".join(s["buy_path_labels"]))
+    if s.get("gaps"):
+        parts.append("Where the owner can stand out: " + "; ".join(s["gaps"][:5]))
+    return "\n".join(parts)

@@ -205,6 +205,84 @@ function PlansInner() {
   );
 }
 
+/* v2.3 (OwnerDesk): one plan, paid outside the hub on Razorpay; the team switches it on (Admin → Onboarding). */
+function PlansV23() {
+  const { me, setContact } = useHub();
+  const m = me.membership || {};
+  const links = me.links || {};
+  const saving = m.price_year_minor ? m.price_minor * 12 - m.price_year_minor : 0;
+  const engines = (me.menu || []).filter((g) => g.engine);
+  const status = me.paid
+    ? { label: "Your plan", title: m.name, line: m.paid_until ? `Paid until ${day(m.paid_until)}.` : "Switched on for you by the OwnerDesk team." }
+    : me.event
+      ? { label: "Event access", title: "Your event access", line: `Open until ${day(me.event.until)}${me.event.day ? ` · Day ${me.event.day} of the event` : ""}. Everything you make stays in your hub.` }
+      : { label: "Your plan", title: "Free", line: "Your Knowledge Hub and Engine Audit stay open. Everything you made is saved — join to open the engines again." };
+  const ask = () => { api("/upgrade-click", { method: "POST", body: { tier: "lite", from_feature: "plans" } }).catch(() => {}); setContact(true); };
+  return (
+    <Sheet kicker="Account · Plans & billing" id="U-01" money title={<>One plan. <em>Every engine.</em></>}
+      sub="OwnerDesk Membership opens all 6 engines of your business, with your AI tokens every month.">
+      <div className="panel active">
+        <span className="label">{status.label}</span>
+        <h2 style={{ margin: 0 }}>{status.title}</h2>
+        <p className="muted" style={{ margin: 0 }}>{status.line}</p>
+        <div className="row" style={{ gap: 18, flexWrap: "wrap" }}>
+          <Stat label={me.event ? "AI tokens for the event" : "AI tokens this month"} value={`${me.runs.left} left`} />
+          <Stat label="Social images" value={`${me.images?.allowance ?? 0} ${me.event ? "for the event" : "a month"}`} />
+        </div>
+      </div>
+
+      {!me.paid && (
+        <div className="stack">
+          <span className="label">Join {m.name || "OwnerDesk Membership"}</span>
+          <div className="plan-prices">
+            <div className="plan-price">
+              <span className="label">Monthly</span>
+              <span className="big money">{rupees(m.price_minor)}<span className="small">/month</span></span>
+              {links.pay_monthly_link ? <a className="btn money" href={links.pay_monthly_link} target="_blank" rel="noopener noreferrer">Pay monthly</a>
+                : <button className="btn money" onClick={ask}>Ask us to call you</button>}
+            </div>
+            {m.price_year_minor ? (
+              <div className="plan-price best">
+                <span className="label">Yearly</span>
+                <span className="big money">{rupees(m.price_year_minor)}<span className="small">/year</span></span>
+                {saving > 0 && <span className="small muted">{rupees(saving)} less than 12 monthly payments.</span>}
+                {links.pay_yearly_link ? <a className="btn money" href={links.pay_yearly_link} target="_blank" rel="noopener noreferrer">Pay yearly</a>
+                  : <button className="btn money" onClick={ask}>Ask us to call you</button>}
+              </div>
+            ) : null}
+          </div>
+          <p className="small muted">Payment is on Razorpay. After you pay, the OwnerDesk team switches your plan on — usually within a few hours. Nothing you've made is lost.</p>
+        </div>
+      )}
+
+      <div className="stack">
+        <span className="label">What's included</span>
+        <div className="engine-cards">
+          {engines.map((g) => (
+            <div key={g.section} className="engine-card">
+              <h3>{g.group}</h3>
+              <p className="small muted">{g.items.map((i) => i.label).join(" · ")}</p>
+            </div>
+          ))}
+          <div className="engine-card">
+            <h3>Every month</h3>
+            <p className="small muted">{m.runs} AI tokens · {m.images} social media images · the business and product brochures</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="stack">
+        <span className="label">Help</span>
+        {links.community_link && <p><a href={links.community_link} target="_blank" rel="noopener noreferrer">Join the WhatsApp community</a></p>}
+        {links.support_email ? <p>Questions about your plan or a payment: <a href={`mailto:${links.support_email}`}>{links.support_email}</a></p>
+          : <p className="small muted">Questions about your plan or a payment: message the OwnerDesk team.</p>}
+      </div>
+    </Sheet>
+  );
+}
+
 export default function Plans() {
+  const { me } = useHub();
+  if (me?.ui?.menu === "engines") return <Gate role="owner" kicker="Account · Plans & billing" id="U-01"><PlansV23 /></Gate>;
   return <Gate role="owner" kicker="Grow · Plans & billing" id="U-01"><PlansInner /></Gate>;
 }

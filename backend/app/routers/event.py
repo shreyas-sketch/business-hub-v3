@@ -21,11 +21,11 @@ from datetime import datetime, time as dtime
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
-from .. import event as ev, fetch, knowledge
+from .. import event as ev, fetch, knowledge, plans
 from ..config import settings
 from ..db import IST, db, now
 from ..security import client_ip, current_user, normalise_phone, rate_limit, require_admin
-from ..services import track
+from ..services import notify, track
 from .auth import VerifyIn, login_with_code, send_login_code
 
 router = APIRouter()
@@ -246,7 +246,11 @@ def _cfg_out(c: dict) -> dict:
     cfg = ev.event_of(c)
     until = cfg.get("trial_until")
     return {"open": cfg["open"], "ai": cfg["ai"], "pack_cap": cfg["pack_cap"], "ai_cap": cfg["ai_cap"],
-            "trial_until": until.astimezone(IST).date().isoformat() if isinstance(until, datetime) else None}
+            "trial_until": until.astimezone(IST).date().isoformat() if isinstance(until, datetime) else None,
+            # v2.3: the event day (which engines are open), and each attendee's AI tokens and social images for the event
+            # ("tokens", not "runs": the live numbers below already use "runs" for the packs)
+            "day": cfg.get("day"), "tokens": cfg.get("runs") or plans.EVENT_RUNS_DEFAULT,
+            "images": cfg.get("images") or plans.EVENT_IMAGES_DEFAULT, "ended_at": cfg.get("ended_at")}
 
 
 @admin.get("")
@@ -264,6 +268,9 @@ class EventIn(BaseModel):
     pack_cap: int = Field(ge=1, le=20_000)
     ai_cap: int = Field(ge=0, le=20_000)
     trial_until: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")   # the last day Membership features stay open
+    # v2.3: AI tokens and social media images each attendee gets for the event (None keeps what's set)
+    tokens: int | None = Field(default=None, ge=1, le=10_000)
+    images: int | None = Field(default=None, ge=0, le=1_000)
 
 
 @admin.put("/{code}")
@@ -279,9 +286,55 @@ async def save_event(code: str, body: EventIn, user: dict = Depends(require_admi
             raise HTTPException(400, "Pick a last day that hasn't passed.")
     cfg = {"open": body.open, "ai": body.ai, "pack_cap": body.pack_cap, "ai_cap": min(body.ai_cap, body.pack_cap), "trial_until": until,
            "updated_at": now(), "updated_by": user["_id"]}
+    old = c.get("event") or {}
+    for k in ("day", "runs", "images", "ended_at"):   # v2.3 settings saved by their own buttons stay as they are
+        if k in old:
+            cfg[k] = old[k]
+    if body.tokens is not None:
+        cfg["runs"] = body.tokens      # stored as "runs", like the plans' AI allowance
+    if body.images is not None:
+        cfg["images"] = body.images
     await db().cohorts.update_one({"_id": c["_id"]}, {"$set": {"event": cfg}})
+    await plans.load(force=True)
     await track("event_settings", user["_id"], cohort=c["code"], open=body.open)
     return {"code": c["code"], **_cfg_out({"event": cfg})}
+
+
+class DayIn(BaseModel):
+    day: int = Field(ge=0, le=3)   # 0: nothing yet · 1: Lead and Sales · 2: + Conversion and Operations · 3: + Brand and Data
+
+
+@admin.post("/{code}/day")
+async def set_day(code: str, body: DayIn, user: dict = Depends(require_admin)):
+    """v2.3: opens the event's engines day by day for every attendee on the event's access (paying members have them all)."""
+    c = await ev.cohort(code)
+    if not c:
+        raise HTTPException(404, "Cohort not found. Create it in Admin first.")
+    await db().cohorts.update_one({"_id": c["_id"]}, {"$set": {"event.day": body.day, "event.day_set_at": now(), "event.day_set_by": user["_id"]}})
+    await plans.load(force=True)
+    await track("event_day", user["_id"], cohort=c["code"], day=body.day)
+    return {"code": c["code"], **_cfg_out(await ev.cohort(code))}
+
+
+@admin.post("/{code}/end-access")
+async def end_access(code: str, user: dict = Depends(require_admin)):
+    """v2.3: ends the event's access now for every attendee who hasn't paid. Nothing is deleted: their hub keeps everything,
+    and Plans & billing shows how to continue. Paying members aren't touched."""
+    c = await ev.cohort(code)
+    if not c:
+        raise HTTPException(404, "Cohort not found")
+    ended = 0
+    async for u in db().users.find({"trial.reason": "event", "trial.cohort": c["code"], "trial.until": {"$gt": now()}}):
+        if plans.is_paid(u):
+            continue
+        await db().users.update_one({"_id": u["_id"]}, {"$set": {"trial.until": now(), "trial.ended_by": user["_id"]}})
+        await notify(u["_id"], "Your event access has ended. Everything you made is saved — continue with OwnerDesk Membership "
+                               "to keep using it (Plans & billing).")
+        ended += 1
+    await db().cohorts.update_one({"_id": c["_id"]}, {"$set": {"event.ended_at": now(), "event.open": False}})
+    await plans.load(force=True)
+    await track("event_end_access", user["_id"], cohort=c["code"], ended=ended)
+    return {"ended": ended, "code": c["code"], **_cfg_out(await ev.cohort(code))}
 
 
 @admin.get("/{code}/live")

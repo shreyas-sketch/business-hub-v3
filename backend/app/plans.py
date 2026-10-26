@@ -8,6 +8,13 @@ here in place, so every `plans.has(...)`, `plans.PLANS[...]` and `plans.FEATURES
 
 A plan can come from four places — the admin, a referral trial, the Membership subscription, or a one-time purchase —
 and the highest one that is still valid wins. The admin can also give one owner a single feature until a date (a grant).
+
+v2.3 (OwnerDesk): every feature also has an engine (the 6 engines of a business, plus start / more / account), a "show"
+switch (in the menu or only working behind other pages), "paid_only" (closed during a free or event trial) and an optional
+event day. The engine menu, the hidden features and the new prices are switched on together by the v2.3 setup
+(app/v23.py), stored in the same `config` collection as any admin change — so the code defaults stay as they were.
+During a live event, an attendee's engines open day by day: Lead and Sales on Day 1, Conversion and Operations on Day 2,
+Brand and Data on Day 3 (Admin → Live event → the event day).
 """
 import copy
 import os
@@ -19,6 +26,22 @@ from .db import db, now
 TIERS = ["free", "lite", "program", "running", "growth", "office"]
 GROUPS = ["Start", "Learn", "Structure", "Systems", "Scale", "AI team", "Grow"]
 ROLES = ("staff", "manager", "owner")
+
+# v2.3: the 6 engines, in menu order, with the event day each one opens on
+ENGINES = [
+    {"key": "lead", "label": "Lead", "day": 1, "blurb": "Get found, and turn visitors into inquiries."},
+    {"key": "sales", "label": "Sales", "day": 1, "blurb": "Grow revenue from the customers you can reach, and get invoices out the same day."},
+    {"key": "conversion", "label": "Conversion", "day": 2, "blurb": "Every inquiry caught, answered and tracked to a deal."},
+    {"key": "operations", "label": "Operations", "day": 2, "blurb": "The money, deadlines and know-how that keep the business running without you."},
+    {"key": "brand", "label": "Brand", "day": 3, "blurb": "One voice and one look everywhere, and a month of posts ready."},
+    {"key": "data", "label": "Data", "day": 3, "blurb": "Know where the money goes, and keep what your key people know."},
+]
+ENGINE_KEYS = [e["key"] for e in ENGINES]
+ENGINE_DAY = {e["key"]: e["day"] for e in ENGINES}
+SECTIONS = ["start", *ENGINE_KEYS, "more", "account"]
+SECTION_LABEL = {"start": "Start", **{e["key"]: f"{e['label']} engine" for e in ENGINES}, "more": "More", "account": "Account"}
+EVENT_RUNS_DEFAULT = 50      # AI tokens an event account gets for the event (Admin → Live event can change it)
+EVENT_IMAGES_DEFAULT = 7     # social media images on the free and event plans
 
 
 def _days(name: str, default: int) -> int:
@@ -48,8 +71,10 @@ DEFAULT_PLANS = {
                 "access_days": _days("ACCESS_DAYS_OFFICE", 365), "short": "₹6L", "pitch": "A full AI workforce: 30 AI staff in 5 departments",
                 "promise": "A 30-strong AI workforce that plans and acts", "agent_level": "A 30-strong AI workforce that plans and acts"},
 }
+for _t, _p in DEFAULT_PLANS.items():   # v2.3: social media images a month, extra AI tokens a month for paying members, a yearly price
+    _p.update(images=EVENT_IMAGES_DEFAULT if _t == "free" else 30, extra_runs=0, price_year_minor=0)
 PLAN_EDITABLE = {"name": str, "short": str, "price_minor": int, "runs": int, "team_size": int, "access_days": int, "pitch": str, "promise": str,
-                 "razorpay_plan_id": str}
+                 "razorpay_plan_id": str, "images": int, "extra_runs": int, "price_year_minor": int}
 
 
 def F(tier, group, label, what, path=None, role="staff", core=False):
@@ -164,21 +189,55 @@ DEFAULT_FEATURES: dict[str, dict] = {
     "agentic_office":  F("office", "AI team", "AI office", "Give one instruction; the Chief of Staff plans it across departments and the staff do it", "/office", "manager"),
     "agents_act":      F("office", "AI team", "Staff act on their own", "AI staff can act without waiting; money messages and messages with links always wait"),
     "more_connections": F("office", "Systems", "Tally, email and calendar", "Connections to Tally, email and your calendar"),
+    # ───────── v2.3: OwnerDesk (off until the v2.3 setup switches them on) ─────────
+    "engine_audit":    F("free", "Start", "Engine Audit", "Check your business against the 6 engines: what each gap costs you in hours and rupees, and what fixing it unlocks", "/audit", "owner"),
+    "lead_ideas":      F("lite", "Structure", "Ways to get more leads", "Lead ideas that fit your kind of business, each with a first step and the hub feature that does it", "/lead-ideas", "manager"),
+    "crm":             F("lite", "Systems", "CRM", "Every contact and company with their deals, calls, notes and follow-up dates — import and export too", "/contacts"),
+    "social_media":    F("lite", "Scale", "Social media", "Posts with images in your colours and a caption, ready to post — a counter shows the images left this month", "/social"),
+    "brochures":       F("lite", "Structure", "Brochures", "A business brochure and a products and services brochure, written from your brand kit, website and competitor research", None, "owner"),
+    "whatsapp_tool":   F("growth", "Systems", "WhatsApp tool", "Connect your own WhatsApp number through the WhatsApp service you use, so messages go from your number", None, "owner"),
+    "key_person":      F("lite", "Structure", "Key-person knowledge", "What your key employee knows, written down as an AI agent skill, a role card and SOPs — so the business doesn't depend on one person", "/key-person", "owner"),
+}
+V23_NEW = ("engine_audit", "lead_ideas", "crm", "social_media", "brochures", "key_person")
+# Each feature's engine. Anything not listed here sits under "More" (only seen when the admin switches it on).
+DEFAULT_ENGINE = {
+    "home": "start", "business_brain": "start", "engine_audit": "start",
+    "website": "lead", "lead_magnet": "lead", "leads": "lead",
+    "revenue_levers": "sales", "lead_ideas": "sales", "quotations": "sales", "gateway_invoicing": "sales", "quote_followup": "sales",
+    "offer_ladder": "sales",
+    "inquiry_desk": "conversion", "crm": "conversion", "pipeline": "conversion", "customers": "conversion", "follow_up_agent": "conversion",
+    "crm_sync": "conversion", "funnel_leaks": "conversion", "approvals": "conversion", "whatsapp_ai": "conversion", "lead_response": "conversion",
+    "smart_dashboard": "operations", "money_owed": "operations", "reminder_agent": "operations", "auto_reminders": "operations",
+    "compliance_calendar": "operations", "sop_library": "operations", "voice_sop": "operations", "magic_number": "operations",
+    "cash_flow": "operations",
+    "brand_kit": "brand", "brand_message": "brand", "social_media": "brand", "content_calendar": "brand", "brochures": "brand",
+    "launch_kit": "brand", "competitor_watch": "brand",
+    "key_person": "data", "expenses": "data", "bank_reader": "data", "gst_setaside": "data", "customer_risk": "data", "getting_paid": "data",
+    "whatsapp_tool": "account", "plans_billing": "account", "connections": "account", "recordings": "account", "member_call": "account", "invite": "account",
+    "team_logins": "account",
 }
 for _i, (_k, _f) in enumerate(DEFAULT_FEATURES.items()):
-    _f.update(key=_k, order=_i * 10, on=True, teaser=True, sub="")
+    _f.update(key=_k, order=_i * 10, on=_k not in V23_NEW, teaser=True, sub="", engine=DEFAULT_ENGINE.get(_k, "more"), show=True,
+              paid_only=False, day=-1)   # day -1: the engine's own day
 DEFAULT_FEATURES["business_brain"]["sub"] = "Business Brain"
 # One dashboard: the Control Room is the Dashboard with the Growth tiles switched on, so it has no menu entry of its own
 # (its Monday CEO report and /control stay).
 DEFAULT_FEATURES["control_room"]["path"] = None
 
-FEATURE_EDITABLE = {"tier": str, "group": str, "label": str, "what": str, "order": int, "on": bool, "teaser": bool}
+FEATURE_EDITABLE = {"tier": str, "group": str, "label": str, "what": str, "order": int, "on": bool, "teaser": bool,
+                    "engine": str, "show": bool, "paid_only": bool, "day": int}
+
+# Hub-wide settings outside the registry (the v2.3 setup turns the engine menu on; the admin edits the account links).
+DEFAULT_UI = {"menu": "groups", "community_link": "", "support_email": "", "pay_monthly_link": "", "pay_yearly_link": "", "v23": None}
+UI_EDITABLE = {"menu": str, "community_link": str, "support_email": str, "pay_monthly_link": str, "pay_yearly_link": str}
 
 # Live values (defaults with the admin's changes applied). Mutated in place so imports stay valid.
 PLANS: dict[str, dict] = copy.deepcopy(DEFAULT_PLANS)
 META: dict[str, dict] = copy.deepcopy(DEFAULT_FEATURES)
 FEATURES: dict[str, tuple] = {}          # key → (tier, group, label): the short form most of the app reads
 AGENT_LEVEL: dict[str, str] = {}
+UI: dict = dict(DEFAULT_UI)
+EVENTS: dict[str, dict] = {}             # cohort code → {"day", "runs", "images"} for events that set a day (v2.3)
 _state = {"loaded_at": 0.0, "stamp": None}
 
 
@@ -205,6 +264,10 @@ def apply_overrides(features: dict | None, plan_over: dict | None) -> None:
             if field == "tier" and patch[field] not in TIERS:
                 continue
             if field == "group" and patch[field] not in GROUPS:
+                continue
+            if field == "engine" and patch[field] not in SECTIONS:
+                continue
+            if field == "day" and (isinstance(patch[field], bool) or not -1 <= patch[field] <= 3):
                 continue
             if META[key]["core"] and field in ("tier", "on"):
                 continue  # Home, Business Brain and Plans stay free and on: the hub can't work without them
@@ -235,11 +298,40 @@ async def load(force: bool = False) -> None:
     if force or stamp != _state["stamp"]:
         _state["stamp"] = stamp
         apply_overrides(feats.get("overrides"), plan_doc.get("overrides"))
+    apply_ui(await db().config.find_one({"_id": "ui"}))
+    # the live events' day and allowances (small: only cohorts whose event has a day)
+    events = {}
+    q = {"$or": [{"event.day": {"$exists": True}}, {"event.runs": {"$exists": True}}, {"event.images": {"$exists": True}}]}
+    async for c in db().cohorts.find(q, {"code": 1, "event.day": 1, "event.runs": 1, "event.images": 1}):
+        e = c.get("event") or {}
+        day = e.get("day")
+        events[c["code"]] = {"day": day if isinstance(day, int) and not isinstance(day, bool) else None,
+                             "runs": e.get("runs"), "images": e.get("images")}
+    EVENTS.clear()
+    EVENTS.update(events)
+
+
+def apply_ui(doc: dict | None) -> None:
+    UI.clear()
+    UI.update(DEFAULT_UI)
+    for field, kind in UI_EDITABLE.items():
+        v = (doc or {}).get(field)
+        if isinstance(v, kind):
+            UI[field] = v
+    if (doc or {}).get("v23"):
+        UI["v23"] = doc["v23"]
+
+
+def engines_on() -> bool:
+    """True once the v2.3 setup (or the admin) has switched the hub to the engine menu."""
+    return UI.get("menu") == "engines"
 
 
 def reset_cache() -> None:
     _state.update(loaded_at=0.0, stamp=None)
     apply_overrides(None, None)
+    apply_ui(None)
+    EVENTS.clear()
 
 
 # ───────────────────────── plans ─────────────────────────
@@ -289,11 +381,60 @@ def granted(user: dict, feature: str, at: datetime | None = None) -> bool:
 
 
 def has(user: dict, feature: str) -> bool:
-    """On for everyone (the admin's switch), and either in the owner's plan or granted to this owner by the admin."""
+    """On for everyone (the admin's switch), and either in the owner's plan or granted to this owner by the admin.
+    v2.3: a paid-only feature stays closed during a free or event trial, and during a live event a menu feature opens on
+    its engine's day."""
     m = META.get(feature)
     if not m or not m["on"]:
         return False
-    return rank(effective_plan(user)) >= rank(m["tier"]) or granted(user, feature)
+    if granted(user, feature):
+        return True
+    if rank(effective_plan(user)) < rank(m["tier"]):
+        return False
+    if m.get("paid_only") and not is_paid(user):
+        return False
+    return not day_locked(user, feature)
+
+
+def is_paid(user: dict) -> bool:
+    """The member pays (or the team has set the plan by hand): a Membership-or-higher plan that isn't only a trial."""
+    sources = plan_sources(user)
+    return max((rank(t) for k, t in sources.items() if k != "trial"), default=0) >= rank("lite")
+
+
+def event_trial(user: dict) -> dict | None:
+    """The live-event trial, when that is what the owner's plan comes from right now (a paid plan always wins)."""
+    t = user.get("trial") or {}
+    if t.get("reason") != "event" or not _valid(t.get("until"), now()):
+        return None
+    if is_paid(user) or rank(effective_plan(user)) > rank(t.get("plan", "free")):
+        return None
+    return t
+
+
+def event_day(user: dict) -> int | None:
+    """Which day of the live event the owner is on (None: not on an event trial, or the event doesn't set days)."""
+    t = event_trial(user)
+    if not t:
+        return None
+    ev = EVENTS.get(t.get("cohort") or "")
+    return ev.get("day") if ev else None
+
+
+def feature_day(feature: str) -> int:
+    m = META.get(feature) or {}
+    d = m.get("day", -1)
+    return d if isinstance(d, int) and d >= 0 else ENGINE_DAY.get(m.get("engine", ""), 0)
+
+
+def day_locked(user: dict, feature: str) -> bool:
+    """A menu feature whose engine opens on a later day of the live event. Features that only work behind other pages
+    (show off) follow the plan, so a Day-1 page never breaks because a helper belongs to a later engine."""
+    m = META.get(feature)
+    if not m or not m.get("show", True):
+        return False
+    day = event_day(user)
+    return day is not None and feature_day(feature) > day
 
 
 def tier_of(feature: str) -> str:
@@ -305,7 +446,25 @@ def label_of(feature: str) -> str:
 
 
 def monthly_runs(user: dict) -> int:
-    return PLANS[effective_plan(user)]["runs"]
+    """AI tokens a month (the code says runs). v2.3: an event account gets the event's own allowance; a paying member gets
+    the plan's tokens plus the plan's extra tokens."""
+    t = event_trial(user) if engines_on() else None
+    if t:
+        ev = EVENTS.get(t.get("cohort") or "") or {}
+        return int(ev.get("runs") or EVENT_RUNS_DEFAULT)
+    p = PLANS[effective_plan(user)]
+    return p["runs"] + (p.get("extra_runs", 0) if is_paid(user) else 0)
+
+
+def monthly_images(user: dict) -> int:
+    """Social media images a calendar month: the event's (or the free plan's) number until the member pays."""
+    t = event_trial(user)
+    if t:
+        ev = EVENTS.get(t.get("cohort") or "") or {}
+        return int(ev.get("images") or PLANS["free"].get("images", EVENT_IMAGES_DEFAULT))
+    if not is_paid(user):
+        return int(PLANS["free"].get("images", EVENT_IMAGES_DEFAULT))
+    return int(PLANS[effective_plan(user)].get("images", 30))
 
 
 def team_size(user: dict) -> int:
@@ -320,7 +479,8 @@ def unlocking_tier(feature: str) -> dict:
 def feature_view(key: str) -> dict:
     m = META[key]
     return {"key": key, "label": m["label"], "sub": m.get("sub", ""), "what": m["what"], "tier": m["tier"], "group": m["group"], "path": m["path"],
-            "role": m["role"], "order": m["order"], "on": m["on"], "teaser": m["teaser"], "core": m["core"]}
+            "role": m["role"], "order": m["order"], "on": m["on"], "teaser": m["teaser"], "core": m["core"],
+            "engine": m.get("engine", "more"), "show": m.get("show", True), "paid_only": m.get("paid_only", False), "day": m.get("day", -1)}
 
 
 def ladder() -> list[dict]:
@@ -336,6 +496,8 @@ def ladder() -> list[dict]:
 def menu_for(owner: dict, role: str) -> list[dict]:
     """The owner's menu: every page this role may see, grouped, in the admin's order. A locked page shows (with the plan
     that unlocks it) only when the admin lets it show as a teaser. Features switched off for everyone never show."""
+    if engines_on():
+        return engine_menu(owner, role)
     rank_role = ROLES.index(role)
     groups: dict[str, list] = {g: [] for g in GROUPS}
     for key, m in META.items():
@@ -348,3 +510,29 @@ def menu_for(owner: dict, role: str) -> list[dict]:
                                    "tier": m["tier"], "tier_name": PLANS[m["tier"]]["name"], "tier_short": PLANS[m["tier"]]["short"],
                                    "order": m["order"]})
     return [{"group": g, "items": sorted(items, key=lambda i: i["order"])} for g, items in groups.items() if items]
+
+
+def engine_menu(owner: dict, role: str) -> list[dict]:
+    """v2.3: the menu as Start, the 6 engines, More (anything the admin switched back on) and Account. Only features with
+    "show" on appear. During a live event, an engine that opens on a later day shows its pages locked, with the day."""
+    rank_role = ROLES.index(role)
+    sections: dict[str, list] = {s: [] for s in SECTIONS}
+    for key, m in META.items():
+        if not m["path"] or not m["on"] or not m.get("show", True) or ROLES.index(m["role"]) > rank_role:
+            continue
+        unlocked = has(owner, key)
+        by_day = not unlocked and day_locked(owner, key)
+        if not unlocked and not by_day and not m["teaser"]:
+            continue
+        sections[m.get("engine") if m.get("engine") in sections else "more"].append({
+            "key": key, "path": m["path"], "label": m["label"], "sub": m.get("sub", ""), "locked": not unlocked,
+            "lock": "day" if by_day else ("plan" if not unlocked else None), "opens_day": feature_day(key) if by_day else None,
+            "tier": m["tier"], "tier_name": PLANS[m["tier"]]["name"], "tier_short": PLANS[m["tier"]]["short"], "order": m["order"]})
+    return [{"group": SECTION_LABEL[s], "section": s, "engine": s in ENGINE_DAY, "day": ENGINE_DAY.get(s),
+             "items": sorted(items, key=lambda i: i["order"])} for s, items in sections.items() if items]
+
+
+def engines_for(owner: dict) -> list[dict]:
+    """The 6 engines as this owner sees them: open, or the event day they open on."""
+    day = event_day(owner)
+    return [{**e, "open": day is None or e["day"] <= day} for e in ENGINES]

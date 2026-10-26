@@ -35,7 +35,12 @@ footer{color:var(--muted);font-size:14px;padding:24px 0 48px;border-top:1px soli
 <style>
 .mag{display:grid;grid-template-columns:200px 1fr;gap:24px;align-items:start;margin-top:14px}.mag img{width:100%;border-radius:12px;border:1px solid var(--line);display:block}
 .more{border-top:1px solid var(--line);padding:24px 0}.more h2{font-size:18px}.more a{color:var(--accent);font-weight:600}
-@media(max-width:640px){.mag{grid-template-columns:1fr}.mag img{max-width:220px}}
+.meta{color:var(--muted);font-size:14px;margin:10px 0 0}
+.get{border-top:0;padding:24px 0 6px}
+.benefits{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:14px 0 4px}
+.benefit{border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:6px;background:#fff}
+.benefit b{width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:14px}
+@media(max-width:640px){.mag{grid-template-columns:1fr}.mag img{max-width:220px}.benefits{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -44,10 +49,16 @@ footer{color:var(--muted);font-size:14px;padding:24px 0 48px;border-top:1px soli
   <span class="kicker">Free download from {{ name }}</span>
   <div class="mag">
     <img src="{{ cover }}" alt="Cover of {{ m.title }}" width="200" height="200">
-    <div><h1>{{ m.title }}</h1>{% if m.description %}<p class="lead">{{ m.description }}</p>{% endif %}</div>
+    <div><h1>{{ (m.landing.headline if m.landing and m.landing.headline else m.title) }}</h1>{% if m.landing and m.landing.who_for %}<p class="lead">{{ m.landing.who_for }}</p>{% elif m.description %}<p class="lead">{{ m.description }}</p>{% endif %}
+    {% if m.pages %}<p class="meta">A free PDF · {{ m.pages }} pages</p>{% endif %}
+    {% if m.landing %}<p style="margin:16px 0 0"><a class="btn" href="#get">Get it free</a></p>{% endif %}</div>
   </div>
 </div></div>
 <div class="wrap">
+  {% if m.landing %}
+  {% if m.landing.what_you_get %}<section class="get"><h2>What you'll get</h2><ul>{% for x in m.landing.what_you_get %}<li>{{ x }}</li>{% endfor %}</ul></section>{% endif %}
+  {% if m.landing.benefits %}<div class="benefits">{% for x in m.landing.benefits %}<div class="benefit"><b>{{ loop.index }}</b><span>{{ x }}</span></div>{% endfor %}</div>{% endif %}
+  {% endif %}
   <form id="get" method="post" action="{{ base }}/guide/{{ m.slug }}">
     <b>Get it free — a PDF you can keep</b>
     {% if form_error %}<div class="err" role="alert">{{ form_error }}</div>{% endif %}

@@ -59,63 +59,91 @@ function Compounding({ f, r }) {
   );
 }
 
-const TYPE = { trading: "a trading business", clinic: "a clinic", food: "a food business", services: "a services business", manufacturing: "a manufacturer" };
-const SOURCE = { website: "website", guide: "lead magnet", whatsapp: "WhatsApp", email: "email", card: "card / QR", qr: "card / QR" };
+const EFFORT = { low: "Low effort", medium: "Some effort", high: "Big effort" };
+const IMPACT = { low: "Small impact", medium: "Good impact", high: "Big impact" };
+const SRC = { knowledge: "Knowledge Hub", website: "Your website", lead_magnet: "Your lead magnet", competitor: "Competitor", business_type: "Your kind of business" };
 
-/** Ways to get more leads: 5–7 ideas a month that fit this kind of business, each with a first step and the hub feature that does it. */
-function LeadIdeas() {
-  const { me, toast } = useHub();
+/** 45 growth ideas: 15 per lever, written for this business from the Knowledge Hub, the website, the lead magnet and the
+    competitor summary. Each idea says where it came from, its first step, effort and impact (never a rupee promise). */
+function GrowthIdeas() {
+  const { toast } = useHub();
+  const [loaded, , loadErr] = useLoad("/multiplier");
   const [d, setD] = useState(null);
-  const [loaded, , loadErr] = useLoad("/levers/ideas");
+  const [lever, setLever] = useState("customers");
   const [err, setErr] = useState("");
+  const [all, setAll] = useState("");
+  const [more, setMore] = useState(false);
   useEffect(() => { if (loaded) setD(loaded); }, [loaded]);
+  useEffect(() => setMore(false), [lever]);
   if (!d) return <div className="panel">{loadErr ? <FormError msg={loadErr.message} /> : <Loading />}</div>;
-  const cur = d.current;
-  const sources = Object.entries(d.sources || {});
-  const tierName = (feature) => me?.tiers?.[me?.feature_tiers?.[feature] || "lite"]?.name || "a higher plan";
-  const tick = async (i, tried) => setD(await api(`/levers/ideas/${i.n}/tried`, { method: "POST", body: { tried } }));
-  const suggest = async () => { setD(await api("/levers/ideas", { method: "POST" })); toast("This month's ideas are ready"); };
+  const lv = d.levers.find((x) => x.key === lever) || d.levers[0];
+  const write = async (key) => { setD(await api(`/multiplier/${key}`, { method: "POST" })); };
+  const writeAll = async () => {
+    for (const x of d.levers) {
+      setAll(`Writing ideas for ${x.label.toLowerCase()}…`);
+      try { setD(await api(`/multiplier/${x.key}`, { method: "POST" })); } catch (e) { setAll(""); throw e; }
+    }
+    setAll("");
+    toast("45 ideas ready");
+  };
+  const status = async (i, st) => setD(await api(`/multiplier/${lever}/${i.key}/status`, { method: "POST", body: { status: st } }));
+  const used = Object.entries(d.sources).filter(([, v]) => v).map(([k]) => SRC[k]);
   return (
     <div className="panel active">
       <div className="row between">
         <div className="stack" style={{ gap: 4 }}>
-          <span className="label">Ways to get more leads</span>
-          <p className="small muted">Ideas that fit {TYPE[d.business_type] || "your business"}, each with one first step. Tick what you tried.</p>
+          <span className="label">45 ways to grow — 15 for each lever</span>
+          <p className="small muted">Written for your business from {used.length ? used.join(", ") : "your Knowledge Hub"}{d.sources.competitor ? "" : ". Add a competitor's website in the Knowledge Hub for sharper ideas"}.</p>
         </div>
-        {cur && <Pill kind="on">{cur.tried} of {cur.ideas.length} tried</Pill>}
+        {d.total > 0 && <Pill kind="on">{d.doing} doing · {d.done} done</Pill>}
       </div>
-      <span className="small muted">
-        Your leads in the last 90 days: {sources.length ? sources.map(([k, v]) => `${SOURCE[k] || k} ${v}`).join(" · ") : "none recorded yet"}.
-      </span>
-      {cur?.ideas?.length > 0 && (
+      <div className="mp-levers" role="tablist">
+        {d.levers.map((x) => (
+          <button key={x.key} role="tab" aria-selected={lever === x.key} className={`mp-lever ${lever === x.key ? "on" : ""}`} onClick={() => setLever(x.key)}>
+            <b>{x.label}</b><span className="small muted">{x.ideas.length ? `${x.ideas.length} ideas · ${x.doing + x.done} on the go` : "Not written yet"}</span>
+          </button>
+        ))}
+      </div>
+      <p className="small muted">{lv.meaning.charAt(0).toUpperCase() + lv.meaning.slice(1)}.</p>
+      {lv.ideas.length > 0 && (
         <div className="lv-ideas">
-          {cur.ideas.map((i) => (
-            <div key={i.n} className={`lv-idea ${i.tried ? "done" : ""}`}>
-              <label className="lv-tick">
-                <input type="checkbox" checked={!!i.tried} aria-label={`Tried: ${i.title}`} onChange={(e) => tick(i, e.target.checked).catch((x) => toast(x.message, "err"))} />
-              </label>
+          {(more ? lv.ideas : lv.ideas.slice(0, 5)).map((i, n) => (
+            <div key={i.key} className={`lv-idea mp-idea ${i.status === "done" ? "done" : ""}`}>
+              <span className="mp-n" aria-hidden="true">{n + 1}</span>
               <div className="stack" style={{ gap: 4 }}>
                 <b className="lv-title">{i.title}</b>
-                {i.why && <span className="small muted">{i.why}</span>}
+                <span className="small muted">{i.why}</span>
                 {i.first_step && <span className="small">First step: {i.first_step}</span>}
-                {i.feature && i.path && (
-                  i.locked
-                    ? <span className="small muted">{i.feature_label} unlocks with {tierName(i.feature)}. <Link to={i.path}>See it</Link></span>
-                    : <span className="small"><Link to={i.path}>Open {i.feature_label} →</Link></span>
-                )}
+                <div className="row" style={{ gap: 6 }}>
+                  <Pill>{SRC[i.source] || "Knowledge Hub"}</Pill><Pill>{EFFORT[i.effort]}</Pill><Pill kind="ai">{IMPACT[i.impact]}</Pill>
+                  {i.feature && i.path && (i.locked ? <span className="small muted">{i.feature_label} (locked)</span>
+                    : <Link className="small" to={i.path}>Open {i.feature_label} →</Link>)}
+                </div>
+                <div className="row" style={{ gap: 6 }}>
+                  <button className={`btn sm ${i.status === "doing" ? "primary" : "ghost"}`} aria-pressed={i.status === "doing"}
+                    onClick={() => status(i, i.status === "doing" ? "" : "doing").catch((x) => toast(x.message, "err"))}>Doing</button>
+                  <button className={`btn sm ${i.status === "done" ? "primary" : "ghost"}`} aria-pressed={i.status === "done"}
+                    onClick={() => status(i, i.status === "done" ? "" : "done").catch((x) => toast(x.message, "err"))}>Done</button>
+                </div>
               </div>
             </div>
           ))}
         </div>
       )}
+      {lv.ideas.length > 5 && <button className="btn sm ghost" aria-expanded={more} onClick={() => setMore(!more)}>{more ? "Show the first 5" : `Show all ${lv.ideas.length} ideas`}</button>}
       <FormError msg={err} />
+      {all && <p className="small muted" aria-live="polite">{all}</p>}
       <div className="row">
-        <Busy className={`btn ai ${cur ? "ghost" : "primary"}`} onError={setErr} run={suggest}>{cur ? "Suggest again" : "Suggest ideas"}</Busy>
-        <span className="small muted">Uses 1 AI run. Written from your Knowledge Hub{cur ? "; ideas you ticked are kept" : ""}.</span>
+        <Busy className={`btn ai ${lv.ideas.length ? "ghost" : "primary"}`} onError={setErr} run={() => write(lv.key)}>
+          {lv.ideas.length ? `Write ${lv.label.toLowerCase()} ideas again` : `Write 15 ideas: ${lv.label.toLowerCase()}`}
+        </Busy>
+        {d.total === 0 && <Busy className="btn ai" onError={setErr} run={writeAll}>Write all 45</Busy>}
+        <span className="small muted">
+          {lv.ideas.length ? "Uses 1 AI token. Ideas you're doing or have done are kept." : `1 AI token for 15 ideas, or ${d.tokens_all} tokens for all 45.`}
+        </span>
       </div>
-      {d.past?.length > 0 && (
-        <span className="small muted">Earlier: {d.past.map((p) => `${p.month} — ${p.tried} of ${p.ideas} tried`).join(" · ")}</span>
-      )}
+      <span className="small muted">Ideas, not promises: impact is a rough guide, never a rupee figure. New ideas each month.</span>
+      {d.past?.length > 0 && <span className="small muted">Earlier: {d.past.map((p) => `${p.month} — ${p.done} of ${p.ideas} done`).join(" · ")}</span>}
     </div>
   );
 }
@@ -138,7 +166,7 @@ function Lever({ title, label, value, onValue, grow, onGrow, growLabel, step = "
 }
 
 export default function Levers() {
-  const { toast } = useHub();
+  const { me, toast } = useHub();
   const [loaded] = useLoad("/levers");
   const [f, setF] = useState(BLANK);
   const [saved, setSaved] = useState(null);
@@ -149,7 +177,7 @@ export default function Levers() {
     if (loaded.levers) setF(Object.fromEntries(KEYS.map((k) => [k, loaded.levers[k] ?? BLANK[k]])));
   }, [loaded]);
 
-  const head = { kicker: "Structure · Revenue levers", id: "PR-03", pillar: "Structure", money: true };
+  const head = { kicker: "Sales · Revenue Multiplier", id: "SA-01", pillar: "Sales", money: true };
   const sub = "Revenue = customers × average value × how often they buy. Grow each a little and the total grows a lot.";
   if (!loaded) return <Sheet {...head} title={<>Three small levers, one big <em>jump</em>.</>} sub={sub}><Loading /></Sheet>;
 
@@ -194,7 +222,19 @@ export default function Levers() {
       {!hasNumbers && <p className="small muted">Fill in the three numbers for last year to see your revenue in rupees.</p>}
       {hasNumbers && <Compounding f={f} r={r} />}
 
-      <LeadIdeas />
+      <GrowthIdeas />
+
+      {me?.features?.lead_ideas && (
+        <div className="panel">
+          <div className="row between">
+            <div className="stack" style={{ gap: 4 }}>
+              <span className="label">Ways to get more leads</span>
+              <span className="small muted">This month's short list of lead ideas for your kind of business, each with a first step.</span>
+            </div>
+            <Link className="btn sm" to="/lead-ideas">Open →</Link>
+          </div>
+        </div>
+      )}
 
       <div className="panel">
         <div className="stack" style={{ gap: 4 }}>

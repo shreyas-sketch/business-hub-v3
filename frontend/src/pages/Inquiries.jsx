@@ -218,7 +218,9 @@ export default function Inquiries() {
               {(it.replies || []).map((r, i) => <div key={i} className="inq-reply small"><b>They replied {ago(r.at)}:</b> {r.text}</div>)}
               <Proposal it={it} reload={reload} />
               <FollowUp it={it} reload={reload} />
-              <div className="small"><Link to="/leads">Open in Leads</Link>{me.features?.pipeline ? <> · <Link to="/pipeline">Pipeline</Link></> : null}
+              <div className="small">{me.features?.crm && me.features?.pipeline
+                ? <Link to={`/pipeline?deal=${it.id}`}>Open the deal</Link>   /* v2.3: the deal (and its contact in the CRM) */
+                : <><Link to="/leads">Open in Leads</Link>{me.features?.pipeline ? <> · <Link to="/pipeline">Pipeline</Link></> : null}</>}
                 {me.features?.quotations && canAct(me, "manager") ? <> · <Link to={`/quotes?inquiry=${it.id}`}>Make a quotation</Link></> : null}</div>
             </div>
           ))}

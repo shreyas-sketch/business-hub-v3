@@ -10,6 +10,7 @@ import "@fontsource/manrope/800.css";
 import "@fontsource/jetbrains-mono/400.css";
 import "./styles.css";
 import "./v2.css";
+import "./v23.css";
 import App from "./App.jsx";
 
 createRoot(document.getElementById("root")).render(<BrowserRouter><App /></BrowserRouter>);

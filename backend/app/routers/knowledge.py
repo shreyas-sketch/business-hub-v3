@@ -27,6 +27,19 @@ class IdentityIn(BaseModel):
     state: str = Field(max_length=60)
     staff: int = Field(ge=0, le=1_000_000)
     registrations: list[str] = Field(default_factory=list, max_length=20)
+    # v2.3: the TAN (the compliance pop-up asks for it). Left out = keep what's saved.
+    has_tan: bool | None = None
+    tan: str | None = Field(default=None, max_length=14)
+
+    @field_validator("tan")
+    @classmethod
+    def valid_tan(cls, v):
+        if v is None:
+            return v
+        v = re.sub(r"\s+", "", v).upper()
+        if v and not re.fullmatch(r"^[A-Z]{4}\d{5}[A-Z]$", v):
+            raise ValueError("A TAN has 10 characters: 4 letters, 5 numbers and a letter, like MUMA12345B")
+        return v
 
     @field_validator("state")
     @classmethod
@@ -134,6 +147,21 @@ async def save_identity(body: IdentityIn, ctx: Ctx = Depends(owner_ctx)):
     data = body.model_dump()
     if not data["gst_registered"]:
         data.update(gstin="", gst_scheme="monthly")
+    # v2.3: the TAN answer and the PAN (from the GST number) are kept when this form leaves them out
+    old = (await db().businesses.find_one({"owner_id": ctx.ws}, {"identity": 1}) or {}).get("identity") or {}
+    for k in ("has_tan", "tan"):
+        if data.get(k) is None:
+            data.pop(k, None)
+            if k in old:
+                data[k] = old[k]
+    if data.get("has_tan") is False:
+        data["tan"] = ""
+    elif data.get("has_tan") is True and not data.get("tan"):
+        raise HTTPException(400, "Type your TAN, or choose “No TAN”.")
+    if data["gstin"]:
+        data["pan"] = data["gstin"][2:12]
+    elif "pan" in old and not data["gst_registered"]:
+        data["pan"] = old["pan"]
     return await _save(ctx, "identity", data)
 
 

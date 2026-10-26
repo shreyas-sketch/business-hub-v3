@@ -245,10 +245,20 @@ async def _site_edited(ws: str) -> bool:
     return site.get("generated_content") is None or site.get("content") != site.get("generated_content")
 
 
+async def _site_words(owner: dict, b: dict) -> dict:
+    """The website's words written again from the Knowledge Hub. A website built from the shared inputs (v2.3) is written
+    the same way again — the answers and the competitor summary — so a refresh doesn't lose what made it stand out."""
+    site = await db().sites.find_one({"owner_id": owner["_id"]}, {"built_from": 1}) or {}
+    if site.get("built_from"):
+        from .inputs import write_content
+        return (await write_content(owner, b))[0]
+    return await run_ai(owner, "site", tasks.site_content(b, b.get("brand")), f"Website refreshed from your Knowledge Hub — {b['name']}",
+                        check=_site_from_ai)
+
+
 async def _site_rewrite(owner: dict) -> None:
     b = await profile_of(owner["_id"])
-    content = await run_ai(owner, "site", tasks.site_content(b, b.get("brand")), f"Website refreshed from your Knowledge Hub — {b['name']}",
-                           check=_site_from_ai)
+    content = await _site_words(owner, b)
     await db().sites.update_one({"owner_id": owner["_id"]}, {"$set": {"content": content, "generated_content": content, "updated_at": now(),
                                                                       "brain_refreshed_at": now()}})
 
@@ -258,8 +268,7 @@ async def _site_refresh(owner: dict, sections: set) -> str | None:
         return None  # the page reads contact details live; the copy didn't depend on them
     before = await db().sites.find_one({"owner_id": owner["_id"]}, {"updated_at": 1}) or {}
     b = await profile_of(owner["_id"])
-    content = await run_ai(owner, "site", tasks.site_content(b, b.get("brand")), f"Website refreshed from your Knowledge Hub — {b['name']}",
-                           check=_site_from_ai)
+    content = await _site_words(owner, b)
     # written only if the owner didn't save the page while the AI was writing; otherwise their version stays, with the banner
     r = await db().sites.update_one({"owner_id": owner["_id"], "updated_at": before.get("updated_at")},
                                     {"$set": {"content": content, "generated_content": content, "updated_at": now(), "brain_refreshed_at": now()}})
@@ -366,6 +375,8 @@ async def update_lead(lead_id: str, body: LeadPatch, ctx: Ctx = Depends(get_ctx)
     if patch.get("status") and patch["status"] != before.get("status"):   # the day it was won, for "Am I on target" (edits don't move it)
         patch["won_at"] = now() if patch["status"] == "won" else None
     await db().leads.update_one({"_id": lead_id}, {"$set": {**patch, **first_action, "updated_at": now(), "updated_by": ctx.actor}})
+    from .. import crm   # v2.3: a line in the contact's history
+    await crm.on_lead_patched(ctx.ws, before, patch, ctx.actor, ctx.user.get("name", ""))
     if patch.get("status") and patch["status"] != before.get("status"):
         if patch["status"] == "won":
             await track("lead_won", ctx.ws)
