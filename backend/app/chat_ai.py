@@ -135,6 +135,11 @@ async def _hand_over(owner: dict, b: dict, t: dict, result: dict, lead: dict | N
         dashboard_cache.bust(ws)
         await track("lead", ws, source="whatsapp")
         await db().wa_threads.update_one({"_id": t["_id"]}, {"$set": {"lead_id": lead["_id"]}})
+        try:   # a draft quotation from what they asked, for the owner to check (background job)
+            from . import auto_quote
+            await auto_quote.on_inquiry(owner, lead)
+        except Exception:
+            log.exception("could not queue the draft quotation for a WhatsApp lead")
     text = f"{who} on WhatsApp: {result.get('why') or result.get('summary') or 'needs you'}"
     await notify(ws, f"Needs you — {text}")
     await whatsapp_template(owner["phone"], settings.aisensy_owner_alert_campaign, owner.get("name", ""),
