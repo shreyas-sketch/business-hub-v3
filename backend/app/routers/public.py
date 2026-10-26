@@ -131,14 +131,16 @@ def _mix(a: str, b: str, t: float) -> str:
     return "#" + "".join(f"{round(ca[i] * t + cb[i] * (1 - t)):02X}" for i in range(3))
 
 
-async def site_theme(owner_id: str, accent: str, look: str = "signboard", variant: int = 0) -> dict:
+async def site_theme(owner_id: str, accent: str, look: str = "signboard", variant: int = 0, pop: str = "#FFC21A",
+                     kit_colours: bool = True) -> dict:
     """The website's colours and fonts from the owner's brand: the website's own colour leads, the brand kit adds its second
     colour, fonts and corners. Text on the brand colour is white or ink, whichever reads better."""
     from .. import brand_kit as bk
     design = ((await db().brand_kits.find_one({"_id": owner_id}, {"design": 1})) or {}).get("design") or {}
     primary = accent if re.fullmatch(r"#[0-9A-Fa-f]{6}", accent or "") else "#1F4E79"
     colors = design.get("colors") or {}
-    second = colors.get("secondary") if re.fullmatch(r"#[0-9A-Fa-f]{6}", colors.get("secondary") or "") else _mix(primary, "#000000", .55)
+    # the brand kit's second colour, unless the page's colour was picked for its kind of business (it wouldn't match)
+    second = colors.get("secondary") if kit_colours and re.fullmatch(r"#[0-9A-Fa-f]{6}", colors.get("secondary") or "") else _mix(primary, "#000000", .55)
     fonts = design.get("fonts") or {}
     if fonts.get("heading") in SITE_FONTS and fonts.get("heading") != "poppins":     # the owner's own choice wins
         h, b = SITE_FONTS[fonts["heading"]], SITE_FONTS.get(fonts.get("body"), SITE_FONTS["mukta"])
@@ -172,7 +174,7 @@ async def site_theme(owner_id: str, accent: str, look: str = "signboard", varian
             "pill": "3px" if design.get("corners") == "square" or (look == "works" and design.get("corners") != "round") else "999px",
             "head_font": head[0], "body_font": body[0],
             # Launch's second colour for buttons and highlights: a warm yellow, or ink when the brand itself is light
-            "pop_colour": "#FFC21A" if bk.luminance(primary) < .45 and bk.contrast(primary, "#FFC21A") >= 2.2 else "#0F1236",
+            "pop_colour": next((c for c in (pop, "#FFC21A", "#FFFFFF") if bk.luminance(primary) < .45 and bk.contrast(primary, c) >= 2.2), "#0F1236"),
             "fonts_url": "https://fonts.googleapis.com/css2?" + "&".join(f"family={quote(f).replace('%20', '+')}:wght@{w}" for f, w in families.items()) + "&display=swap"}
 
 
@@ -195,10 +197,12 @@ async def member_site(slug: str, request: Request, preview: int = 0, sent: int =
     extras = await _extras(owner, owner["_id"])
     from ..site_looks import look_of
     look, variant = look_of(site, business)
+    from ..site_looks import pop_colour
     accent = site.get("accent", "#1F4E79")
-    if accent == "#1F4E79" and not site.get("brand_accent") and not site.get("accent_chosen"):   # no brand colour of its own
+    by_niche = accent == "#1F4E79" and not site.get("brand_accent") and not site.get("accent_chosen")   # no brand colour of its own
+    if by_niche:
         from ..site_looks import niche_colour
-        accent = niche_colour(site, variant) or accent
+        accent = niche_colour(site, variant)
     html = templates.get_template("site.html").render(
         c=site["content"], name=name, city=business.get("city", ""), accent=site.get("accent", "#1F4E79"), base=base,
         whatsapp_link=f"{base}/wa" if wa else None, email=business.get("email", ""), slug=site["slug"], sent=bool(sent),
@@ -207,7 +211,7 @@ async def member_site(slug: str, request: Request, preview: int = 0, sent: int =
         ladder=extras["ladder"], guide=extras["guide"], logo=extras["logo"], url=site_url(site["slug"]),
         program=settings.program_name, year=now().year, photos=photos_mod.resolved(site.get("photos"), base),
         industry=business.get("industry", ""), proof=(business.get("proof") or "").strip(),
-        theme=await site_theme(owner["_id"], accent, look, variant), look=look, variant=variant)
+        theme=await site_theme(owner["_id"], accent, look, variant, pop_colour(site), kit_colours=not by_niche), look=look, variant=variant)
     photos_mod.fill_later(site, business)
     return HTMLResponse(html, headers={"Cache-Control": "no-store" if preview else "no-cache"})  # edits and plan changes show at once
 

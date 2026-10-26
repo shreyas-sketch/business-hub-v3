@@ -60,8 +60,12 @@ async def test_variants_change_the_fonts_and_a_page_without_a_brand_colour_gets_
     a = await site_theme("nobody", "#1F4E79", "care", 0)
     b = await site_theme("nobody", "#1F4E79", "care", 2)
     assert a["head_font"] != b["head_font"]
-    assert site_looks.niche_colour({"content": {"niche": "dental"}}, 0) != site_looks.niche_colour({"content": {"niche": "dental"}}, 2)
-    assert site_looks.niche_colour({"content": {}}, 0) is None
+    dental = {site_looks.niche_colour({"slug": f"clinic-{i}", "content": {"niche": "dental"}}) for i in range(30)}
+    assert dental == set(site_looks.NICHE_COLOURS["dental"])                    # random across a room of clinics
+    one = {"slug": "smile-dental", "content": {"niche": "dental"}}
+    assert site_looks.niche_colour(one) == site_looks.niche_colour(one)          # and the same each time for one of them
+    assert site_looks.niche_colour({"slug": "x", "content": {}}) in site_looks.NICHE_COLOURS["other"]
+    assert len({site_looks.pop_colour({"slug": f"s{i}"}) for i in range(40)}) > 3
 
 
 async def test_the_launch_look_renders_its_pieces(client):

@@ -26,18 +26,40 @@ NICHES = {
     "construction": "works", "retail_shop": "signboard", "trading_wholesale": "signboard", "home_services": "signboard",
     "other": "",
 }
-# a colour per kind of business for pages that have no brand colour of their own (two each: neighbours differ)
+# colours that suit each kind of business, for pages without a brand colour of their own: each page takes one of them,
+# picked from its web address — random across a room of businesses, the same every time the page opens
 NICHE_COLOURS = {
-    "dental": ("#0E7C86", "#2563EB"), "clinic": ("#0F766E", "#1D4ED8"), "wellness": ("#3F7D58", "#7C5CBF"),
-    "salon_beauty": ("#B83280", "#8B5E3C"), "restaurant_cafe": ("#C2410C", "#9A3412"), "bakery_sweets": ("#B45309", "#BE185D"),
-    "catering": ("#A16207", "#B91C1C"), "interiors": ("#7C5A3A", "#3F4B5B"), "architecture": ("#334155", "#7C2D12"),
-    "real_estate": ("#14532D", "#1E3A8A"), "fashion_jewellery": ("#7C2D5C", "#8A6A1F"), "photography_events": ("#6D28D9", "#DB2777"),
-    "wedding": ("#9D174D", "#A16207"), "coaching_education": ("#2B3BEA", "#E4572E"), "fitness_yoga": ("#E4572E", "#16A34A"),
-    "d2c_brand": ("#2B3BEA", "#DB2777"), "agency_marketing": ("#2B3BEA", "#7C3AED"), "travel": ("#0369A1", "#EA580C"),
-    "it_software": ("#4338CA", "#0F766E"), "professional_services": ("#1E3A8A", "#334155"), "manufacturing": ("#B45309", "#1F4E79"),
-    "engineering": ("#C2410C", "#0F766E"), "auto_repair": ("#B91C1C", "#1F2937"), "construction": ("#D97706", "#374151"),
-    "retail_shop": ("#B91C1C", "#047857"), "trading_wholesale": ("#1F4E79", "#9A3412"), "home_services": ("#0F766E", "#C2410C"),
+    "dental": ("#0E7C86", "#2563EB", "#0F766E", "#1D4ED8", "#0369A1"),
+    "clinic": ("#0F766E", "#1D4ED8", "#0E7490", "#047857", "#4338CA"),
+    "wellness": ("#3F7D58", "#7C5CBF", "#0F766E", "#A16207", "#9D4E6E"),
+    "salon_beauty": ("#B83280", "#8B5E3C", "#9D174D", "#7C3AED", "#BE185D"),
+    "restaurant_cafe": ("#C2410C", "#9A3412", "#B91C1C", "#15803D", "#A16207"),
+    "bakery_sweets": ("#B45309", "#BE185D", "#C2410C", "#9D174D", "#A16207"),
+    "catering": ("#A16207", "#B91C1C", "#C2410C", "#15803D", "#9A3412"),
+    "interiors": ("#7C5A3A", "#3F4B5B", "#0F766E", "#7C2D12", "#4B5563"),
+    "architecture": ("#334155", "#7C2D12", "#1F2937", "#0F766E", "#57534E"),
+    "real_estate": ("#14532D", "#1E3A8A", "#0F766E", "#7C2D12", "#334155"),
+    "fashion_jewellery": ("#7C2D5C", "#8A6A1F", "#9D174D", "#1F2937", "#7C3AED"),
+    "photography_events": ("#6D28D9", "#DB2777", "#0F766E", "#C2410C", "#1D4ED8"),
+    "wedding": ("#9D174D", "#A16207", "#BE185D", "#7C2D12", "#6D28D9"),
+    "coaching_education": ("#2B3BEA", "#E4572E", "#7C3AED", "#0F766E", "#DB2777"),
+    "fitness_yoga": ("#E4572E", "#16A34A", "#DC2626", "#2B3BEA", "#7C3AED"),
+    "d2c_brand": ("#2B3BEA", "#DB2777", "#E4572E", "#7C3AED", "#0F766E"),
+    "agency_marketing": ("#2B3BEA", "#7C3AED", "#DB2777", "#E4572E", "#0F172A"),
+    "travel": ("#0369A1", "#EA580C", "#0F766E", "#2B3BEA", "#B45309"),
+    "it_software": ("#4338CA", "#0F766E", "#2B3BEA", "#7C3AED", "#0369A1"),
+    "professional_services": ("#1E3A8A", "#334155", "#14532D", "#7C2D12", "#0F766E"),
+    "manufacturing": ("#B45309", "#1F4E79", "#C2410C", "#334155", "#B91C1C"),
+    "engineering": ("#C2410C", "#0F766E", "#1F4E79", "#B45309", "#374151"),
+    "auto_repair": ("#B91C1C", "#1F2937", "#C2410C", "#1D4ED8", "#B45309"),
+    "construction": ("#D97706", "#374151", "#C2410C", "#1F4E79", "#B45309"),
+    "retail_shop": ("#B91C1C", "#047857", "#C2410C", "#2B3BEA", "#7C3AED"),
+    "trading_wholesale": ("#1F4E79", "#9A3412", "#047857", "#B45309", "#334155"),
+    "home_services": ("#0F766E", "#C2410C", "#2B3BEA", "#15803D", "#B91C1C"),
+    "other": ("#2B3BEA", "#0F766E", "#C2410C", "#7C3AED", "#B91C1C", "#047857", "#B45309", "#DB2777"),
 }
+# the Launch look's highlight colour, one of these per page (each reads with dark text)
+POP_COLOURS = ("#FFC21A", "#FF8FA3", "#5EE6B0", "#FFB347", "#B9E769", "#7FD6FF")
 
 # whole words or word starts only ("art" must not match "spare parts")
 STUDIO = re.compile(r"\b(interior|design|architect|decor|furnish|furniture|salon|boutique|studio|photograph|fashion|wedding|bridal|"
@@ -85,10 +107,15 @@ def niche_of(site: dict) -> str:
     return n if n in NICHES else ""
 
 
-def niche_colour(site: dict, variant: int) -> str | None:
-    """The colour for a page without a brand colour of its own: its kind of business's, so neighbours don't all get the default."""
-    pair = NICHE_COLOURS.get(niche_of(site))
-    return pair[(variant >> 1) & 1] if pair else None
+def niche_colour(site: dict, variant: int = 0) -> str:
+    """The colour for a page without a brand colour of its own: one of its kind of business's colours, picked from its web
+    address (random across businesses, stable for each); a page the AI couldn't place picks from a general set."""
+    palette = NICHE_COLOURS.get(niche_of(site) or "other") or NICHE_COLOURS["other"]
+    return palette[_bucket((site.get("slug") or "") + ":colour", len(palette))]
+
+
+def pop_colour(site: dict) -> str:
+    return POP_COLOURS[_bucket((site.get("slug") or "") + ":pop", len(POP_COLOURS))]
 
 
 def options(business: dict, site: dict | None = None) -> dict:
