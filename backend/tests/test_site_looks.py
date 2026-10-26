@@ -35,7 +35,10 @@ async def test_owner_picks_a_look_and_the_page_changes(client):
     assert (await client.put("/api/site", json={**body, "look": "neon"})).status_code == 400
     r = await client.put("/api/site", json={**body, "look": "auto"})
     assert r.json()["look"] == "auto"
-    assert f'class="look-{r.json()["look_auto"]} ' in (await client.get(f"/s/{site['slug']}")).text
+    # automatic: a mix of the parts that suit the business, not one of the six bundles as is
+    allowed = site_looks.parts_for(r.json()["look_auto"], got["content"].get("niche", ""))
+    page = (await client.get(f"/s/{site['slug']}")).text
+    assert any(f'class="look-{f} hero-{h} svc-{v} ' in page for f in allowed["finish"] for h in allowed["hero"] for v in allowed["services"])
 
 
 async def test_brand_colour_reads_on_white_and_on_dark_panels(client):
@@ -73,7 +76,8 @@ async def test_the_launch_look_renders_its_pieces(client):
     await login(client, "9827200009")
     site = await go_live(client)
     got = (await client.get("/api/site")).json()
-    content = {**got["content"], "niche": "coaching_education", "pains": ["Chats all day, zero orders", "Prices cut until no margin"]}
+    content = {**got["content"], "niche": "coaching_education", "pains": ["Chats all day, zero orders", "Prices cut until no margin"],
+               "design": {"hero": "launch", "services": "cards", "finish": "launch"}}
     assert (await client.put("/api/site", json={"content": content, "accent": got["accent"], "slug": got["slug"]})).status_code == 200
     page = (await client.get(f"/s/{site['slug']}")).text
     assert 'class="look-launch ' in page and 'class="ticker"' in page and "Sound familiar?" in page and "Chats all day, zero orders" in page
@@ -111,3 +115,52 @@ def test_the_event_card_opens_in_the_colour_the_page_will():
     assert got["accent"] in site_looks.NICHE_COLOURS["dental"] and got["on_accent"] == bk.text_on(got["accent"])
     gold = card_colour(profile, {"colors": {"primary": "#D3B982"}}, {"niche": "bakery_sweets"})
     assert gold["accent"] == "#D3B982" and gold["on_accent"] != "#FFFFFF"     # a light brand colour keeps dark text on it
+
+
+def test_pages_are_put_together_from_parts_so_one_kind_of_business_varies():
+    clinics = [site_looks.design_of({"slug": f"smile-{i}", "content": {"niche": "dental"}}, {}) for i in range(40)]
+    allowed = site_looks.parts_for("care", "dental")
+    for d in clinics:
+        assert d["voice"] == "care" and d["hero"] in allowed["hero"] and d["services"] in allowed["services"]
+        assert d["finish"] in allowed["finish"] and d["fonts"] in site_looks.FINISH_FONTS[d["finish"]]   # weights it can carry
+    combos = {(d["hero"], d["services"], d["finish"], d["fonts"]) for d in clinics}
+    assert len(combos) > 15                                                            # not one page in six colours
+    assert {d["hero"] for d in clinics} == set(allowed["hero"])
+    # never a part that doesn't suit: no menu for a clinic, no spec table for a bakery
+    assert all(d["services"] != "menu" for d in clinics)
+    cakes = [site_looks.design_of({"slug": f"cake-{i}", "content": {"niche": "bakery_sweets"}}, {}) for i in range(30)]
+    assert all(d["services"] != "spec" and d["voice"] == "bazaar" for d in cakes)
+    # the same page stays the same on every visit
+    one = {"slug": "smile-dental", "content": {"niche": "dental"}}
+    assert site_looks.design_of(one, {}) == site_looks.design_of(one, {})
+
+
+def test_the_ai_picks_parts_that_suit_and_the_owner_can_pin_a_bundle():
+    picked = {"slug": "x", "content": {"niche": "gaming", "design": {"hero": "works", "services": "spec", "finish": "works", "fonts": "oswald"}}}
+    d = site_looks.design_of(picked, {})
+    assert (d["hero"], d["services"], d["finish"], d["fonts"]) == ("works", "spec", "works", "oswald")
+    # a pick that doesn't suit the business (a menu for a gaming arena) or fonts the finish can't carry fall back
+    odd = {"slug": "x", "content": {"niche": "gaming", "design": {"services": "menu", "finish": "launch", "fonts": "serif"}}}
+    d = site_looks.design_of(odd, {})
+    assert d["services"] in ("cards", "spec") and d["fonts"] in site_looks.FINISH_FONTS["launch"]
+    # the owner's own look is that look's bundle, exactly
+    d = site_looks.design_of({"slug": "x", "look": "atelier", "content": {"niche": "gaming"}}, {})
+    assert (d["hero"], d["services"], d["finish"], d["fonts"]) == site_looks.LOOK_PARTS["atelier"]
+    # only real parts are kept from the AI's answer
+    assert site_looks.design_choices({"hero": "Care", "services": "carousel", "fonts": 3}) == {"hero": "care"}
+
+
+async def test_every_part_renders_with_the_kind_of_business_words(client):
+    from app.db import db
+    await login(client, "9827200010")
+    site = await go_live(client)
+    got = (await client.get("/api/site")).json()
+    for niche, voice, words, never in (("dental", "care", "Treatments and services", "Our menu"),
+                                       ("bakery_sweets", "bazaar", "Our menu", "Capabilities")):
+        allowed = site_looks.parts_for(voice, niche)
+        for hero in allowed["hero"]:
+            for services in allowed["services"]:
+                content = {**got["content"], "niche": niche, "design": {"hero": hero, "services": services, "finish": allowed["finish"][-1]}}
+                await db().sites.update_one({"slug": site["slug"]}, {"$set": {"content": content, "look": None}})
+                page = (await client.get(f"/s/{site['slug']}")).text
+                assert f'hero-{hero} svc-{services} ' in page and words in page and never not in page, (niche, hero, services)

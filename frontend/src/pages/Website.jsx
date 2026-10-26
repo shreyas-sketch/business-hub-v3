@@ -405,7 +405,7 @@ export default function Website() {
             <span className="label">Look</span>
             {site.look_looks && (
               <div className="look-pick" role="radiogroup" aria-label="Website look">
-                {[{ key: "auto", name: `Automatic · ${site.look_looks.find((l) => l.key === site.look_auto)?.name || ""}`, about: "Picked for your kind of business." }, ...site.look_looks].map((l) => (
+                {[{ key: "auto", name: "Automatic", about: "Put together for your business from the parts that suit its kind, so it isn't the same as the next one." }, ...site.look_looks].map((l) => (
                   <button key={l.key} type="button" role="radio" aria-checked={look === l.key} className={`look-opt ${look === l.key ? "on" : ""}`} onClick={() => setLook(l.key)}>
                     <b>{l.name}</b><span>{l.about}</span>
                   </button>

@@ -162,6 +162,7 @@ class SiteContent(BaseModel):
     photo_queries: list[str] = Field(default_factory=list, max_length=4)  # stock photo search terms the AI suggested
     niche: str = Field(default="", max_length=30)        # the kind of business the AI read (site_looks.NICHES): picks the look
     pains: list[str] = Field(default_factory=list, max_length=4)   # the customers' problems, only from the owner's own words
+    design: dict[str, str] = Field(default_factory=dict)  # the AI's picks of the page's parts (site_looks.design_of checks them)
 
 
 class SiteIn(BaseModel):
@@ -234,9 +235,11 @@ def _site_from_ai(result: dict) -> dict:
     from ..site_looks import NICHES
     niche = str(r.get("niche") or "").strip().lower()
     pains = [" ".join(str(x).split())[:90] for x in (r.get("pains") if isinstance(r.get("pains"), list) else []) if isinstance(x, str) and x.strip()][:4]
+    from ..site_looks import design_choices
     return SiteContent.model_validate({**r, "offers": lists["offers"][:12], "why": lists["why"][:6],
                                        "steps": lists["steps"][:6], "faq": lists["faq"][:10],
-                                       "niche": niche if niche in NICHES else "", "pains": pains}).model_dump()
+                                       "niche": niche if niche in NICHES else "", "pains": pains,
+                                       "design": design_choices(r.get("design"))}).model_dump()
 
 
 class GenerateIn(BaseModel):
