@@ -1,9 +1,8 @@
 """The member website's design, put together from parts (see templates/site.html): a first screen (hero), a services layout,
 a finish (how the sections below are styled) and a font pairing, plus the colour and a variant bit that swaps the picture side
-and the pattern. Each kind of business has the parts that suit it; the AI picks among them when it writes the page, else the
-web address does, so a room of clinics or coaches gets many different pages, not six. The first screen is always the kind of
-business's own (a design studio and a machine shop never open the same way); the rest varies. Nothing here is picked by the
-owner: the page is put together for them."""
+and the pattern. Every niche has its own design (NICHE_DESIGN): no two kinds of business get the same page. Within a niche the
+fonts, picture side, pattern and colour come from the web address, so two clinics differ too. Nothing here is picked by the
+owner or by the AI beyond the niche: the page is put together for them."""
 import hashlib
 import re
 
@@ -87,59 +86,82 @@ FONT_PAIRS = {
 FINISH_FONTS = {"signboard": ("grotesk", "archivo", "space", "sora"), "bazaar": ("rozha", "yeseva", "fraunces", "dm"),
                 "care": ("nunito", "jakarta", "sora"), "works": ("barlow", "oswald", "space"),
                 "atelier": ("serif", "fraunces", "dm"), "launch": ("bricolage", "space", "sora", "jakarta")}
-# the parts that suit each kind of business, by the look its niche maps to; a niche can narrow or widen its own. The first
-# screen isn't among them: it is always the kind's own (design_of), so two kinds of business never open alike.
-FAMILY_PARTS = {
-    "care": {"services": ("tiles", "index", "board"), "finish": ("care", "atelier")},
-    "bazaar": {"services": ("menu", "cards", "board"), "finish": ("bazaar", "signboard")},
-    "works": {"services": ("spec", "board"), "finish": ("works", "signboard")},
-    "atelier": {"services": ("index", "tiles", "cards"), "finish": ("atelier", "care")},
-    "signboard": {"services": ("board", "cards", "tiles", "menu"), "finish": ("signboard", "launch", "bazaar")},
-    "launch": {"services": ("cards", "tiles", "index", "board"), "finish": ("launch", "signboard", "atelier")},
+# every niche's own design: its kind's first screen (NICHES), and a services layout and finish no other niche has, so two
+# kinds of business never get the same page. Businesses of one niche still differ by fonts, picture side, pattern and colour.
+NICHE_DESIGN = {
+    # care: clinics and wellness
+    "dental": ("tiles", "care"), "clinic": ("board", "care"), "wellness": ("menu", "atelier"),
+    # bazaar: food
+    "restaurant_cafe": ("menu", "bazaar"), "bakery_sweets": ("cards", "bazaar"), "catering": ("menu", "signboard"),
+    # atelier: studios, design and advice
+    "interiors": ("index", "atelier"), "architecture": ("index", "works"), "design_studio": ("cards", "atelier"),
+    "fashion_jewellery": ("tiles", "atelier"), "salon_beauty": ("menu", "care"), "wedding": ("tiles", "bazaar"),
+    "real_estate": ("board", "signboard"), "professional_services": ("index", "signboard"),
+    # launch: coaching, fitness, brands, agencies, events, travel, software, gaming
+    "coaching_education": ("cards", "launch"), "fitness_yoga": ("tiles", "launch"), "it_software": ("spec", "launch"),
+    "agency_marketing": ("index", "launch"), "travel": ("board", "launch"), "gaming": ("cards", "works"),
+    "d2c_brand": ("cards", "signboard"), "photography_events": ("index", "atelier"),
+    # works: manufacturing, engineering, repair and building
+    "manufacturing": ("spec", "works"), "engineering": ("board", "works"), "construction": ("spec", "signboard"),
+    "auto_repair": ("board", "signboard"),
+    # signboard: shops, traders and home services
+    "retail_shop": ("board", "signboard"), "trading_wholesale": ("spec", "signboard"), "home_services": ("tiles", "signboard"),
+    # a business nothing places
+    "other": ("index", "launch"),
 }
-NICHE_PARTS = {
-    "gaming": {"services": ("cards", "spec"), "finish": ("launch", "works")},
-    "it_software": {"services": ("cards", "spec", "index"), "finish": ("launch", "works", "atelier")},
-    "wellness": {"services": ("tiles", "index", "menu"), "finish": ("care", "atelier", "bazaar")},
-    "fitness_yoga": {"services": ("cards", "tiles", "board"), "finish": ("launch", "care")},
-    "auto_repair": {"services": ("board", "spec", "cards"), "finish": ("works", "signboard")},
+OTHER_LOOK = "signboard"     # the first screen and wording of a business nothing places
+# and every niche's own take on its look's first screen: a tone (light, the brand colour, dark) and a layout (picture right,
+# picture left, centred), none shared by two niches of one look, so even a dentist and a clinic open differently
+NICHE_FIRST = {
+    "dental": ("light", "right"), "clinic": ("light", "left"), "wellness": ("light", "centre"),
+    "restaurant_cafe": ("light", "right"), "bakery_sweets": ("light", "left"), "catering": ("light", "centre"),
+    "interiors": ("light", "right"), "architecture": ("dark", "left"), "design_studio": ("dark", "right"),
+    "fashion_jewellery": ("light", "centre"), "salon_beauty": ("colour", "centre"), "wedding": ("colour", "right"),
+    "real_estate": ("light", "left"), "professional_services": ("dark", "centre"),
+    "coaching_education": ("colour", "right"), "fitness_yoga": ("dark", "left"), "it_software": ("dark", "right"),
+    "agency_marketing": ("colour", "left"), "travel": ("light", "right"), "gaming": ("dark", "centre"),
+    "d2c_brand": ("colour", "centre"), "photography_events": ("light", "left"),
+    "manufacturing": ("dark", "right"), "engineering": ("light", "left"), "construction": ("colour", "right"),
+    "auto_repair": ("dark", "left"),
+    "retail_shop": ("colour", "right"), "trading_wholesale": ("light", "left"), "home_services": ("colour", "left"),
+    "other": ("dark", "centre"),
 }
-AXES = ("services", "finish", "fonts")
 
 # the Launch look's highlight colour, one of these per page (each reads with dark text)
 POP_COLOURS = ("#FFC21A", "#FF8FA3", "#5EE6B0", "#FFB347", "#B9E769", "#7FD6FF")
 
-# whole words or word starts only ("art" must not match "spare parts")
+# for a business the niche words don't place: whole words or word starts only ("art" must not match "spare parts")
 STUDIO = re.compile(r"\b(interior|design|architect|decor|furnish|furniture|salon|boutique|studio|photograph|fashion|wedding|bridal|"
                     r"jewel|art|artist|makeover|spa|consult|chartered|modular|wardrobe)", re.I)
 WORKS = re.compile(r"\b(engineering|industrial|pump|machine|machining|fabricat|steel|foundry|tool|spare|valve|automation|"
                    r"packaging|plastic|moulding|casting|forging|chemical)", re.I)
+LAUNCH = re.compile(r"\b(coach|training|trainer|academy|classes|tuition|course|fitness|gym|yoga|event|agency|marketing|travel|tour|"
+                    r"software|gam)", re.I)
 
 
-def auto_look(business: dict, niche: str = "", slug: str = "") -> str:
-    """The AI's niche when it named one; else the niche the words of what the business does point to; else the business's
-    type. A service business nothing places alternates between Signboard and Launch (by its web address), so a room of coaches
-    and agencies doesn't all match."""
+def niche_for(site: dict, business: dict) -> str:
+    """The page's niche: the AI's, else the one the words of what the business does point to, else the closest one its type
+    points to; "other" when nothing places it."""
+    niche = niche_of(site)
+    if niche in ("", "other"):         # the AI couldn't place it: the words still might
+        niche = guessed_niche(business or {})
+    if niche in NICHES and niche != "other":
+        return niche
     b = business or {}
-    niche = niche if NICHES.get(niche) else guessed_niche(b)
-    if NICHES.get(niche):
-        return NICHES[niche]
-    kind = business_type(b)
     text = f"{b.get('industry', '')} {b.get('name', '')}"
-    if kind == "food":
-        return "bazaar"
-    if kind == "clinic":
-        return "care"
-    if kind == "manufacturing" or WORKS.search(text):
-        return "works"
-    if kind == "trading":
-        return "signboard"
-    if STUDIO.search(text):
-        return "atelier"
-    if re.search(r"\b(coach|training|trainer|academy|classes|tuition|course|fitness|gym|yoga|event|agency|marketing|brand|travel|tour|software|gam)",
-                 text, re.I):
-        return "launch"
-    return "launch" if _bucket(slug, 2) else "signboard"
+    kind = business_type(b)
+    for hit, closest in ((kind == "food", "restaurant_cafe"), (kind == "clinic", "clinic"),
+                         (kind == "manufacturing" or WORKS.search(text), "manufacturing"), (kind == "trading", "trading_wholesale"),
+                         (STUDIO.search(text), "design_studio"), (LAUNCH.search(text), "coaching_education")):
+        if hit:
+            return closest
+    return "other"
+
+
+def auto_look(business: dict, niche: str = "") -> str:
+    """The look a business gets: its niche's (the AI's when it named one)."""
+    niche = niche if NICHES.get(niche) else niche_for({}, business)
+    return NICHES.get(niche) or OTHER_LOOK
 
 
 def _bucket(slug: str, n: int) -> int:
@@ -147,54 +169,23 @@ def _bucket(slug: str, n: int) -> int:
 
 
 def look_of(site: dict, business: dict) -> tuple[str, int]:
-    """The look the page's kind of business maps to, and the variant 0-3: bit 0 swaps the picture side and the pattern. The
-    look is the page's first screen and its wording ("Our menu", "Book a visit"); the other parts are design_of's. A look an
-    owner picked before pages were put together from parts is no longer used."""
-    return auto_look(business, niche_of(site), site.get("slug") or ""), _bucket(site.get("slug") or "", 4)
-
-
-def parts_for(look: str, niche: str = "") -> dict:
-    """The parts that suit a kind of business: its own first screen, its niche's parts (else its look's family's), and the fonts
-    its finishes carry."""
-    look = look if look in FAMILY_PARTS else "signboard"
-    allowed = dict(NICHE_PARTS.get(niche) or FAMILY_PARTS[look])
-    return {"hero": (look,), **allowed, "fonts": tuple(dict.fromkeys(f for fin in allowed["finish"] for f in FINISH_FONTS[fin]))}
+    """The look the page's niche maps to (its first screen and its wording: "Our menu", "Book a visit"), and a variant 0-3 from
+    the web address."""
+    return auto_look(business, niche_of(site)), _bucket(site.get("slug") or "", 4)
 
 
 def design_of(site: dict, business: dict) -> dict:
-    """The page's parts. The first screen is its kind of business's own; each other part is the AI's pick when it suits the
-    business (content.design), else one picked from the web address among those that suit it, so pages of one kind vary."""
+    """The page's parts: its niche's own first screen (its look's hero in the niche's tone and layout, NICHE_FIRST), services
+    layout and finish (NICHE_DESIGN), and a font pairing that finish carries, picked from the web address (as the colour is),
+    so two businesses of one niche differ too and each page stays the same."""
+    niche = niche_for(site, business)
     voice, variant = look_of(site, business)
-    slug = site.get("slug") or ""
-    allowed = parts_for(voice, niche_for(site, business))
-    ai = ((site.get("content") or {}).get("design") or {})
-    out = {"voice": voice, "variant": variant, "hero": voice}
-    for axis in ("services", "finish"):
-        opts = allowed[axis]
-        out[axis] = ai.get(axis) if ai.get(axis) in opts else opts[_bucket(f"{slug}:{axis}", len(opts))]
-    fonts = FINISH_FONTS[out["finish"]]           # the pairing must carry the finish's heading weights
-    out["fonts"] = ai.get("fonts") if ai.get("fonts") in fonts else fonts[_bucket(f"{slug}:fonts", len(fonts))]
-    return out
-
-
-def design_choices(raw) -> dict:
-    """The AI's design picks, kept only where each names a real part (whether it suits the business is design_of's call)."""
-    valid = {"services": SERVICES, "finish": FINISHES, "fonts": FONT_PAIRS}
-    raw = raw if isinstance(raw, dict) else {}
-    picks = {k: str(raw.get(k) or "").strip().lower() for k in AXES}
-    return {k: v for k, v in picks.items() if v in valid[k]}
-
-
-def niche_for(site: dict, business: dict) -> str:
-    return niche_of(site) or guessed_niche(business or {})
-
-
-def design_menu() -> str:
-    """The parts, for the AI's prompt: it picks the ones that fit this business."""
-    def line(d):
-        return "; ".join(f"{k} ({v})" for k, v in d.items())
-    return (f'"services": one of {line(SERVICES)}\n'
-            f' "finish": how the sections below look, one of {", ".join(FINISHES)}\n "fonts": one of {", ".join(FONT_PAIRS)}')
+    services, finish = NICHE_DESIGN[niche]
+    tone, layout = NICHE_FIRST[niche]
+    fonts = FINISH_FONTS[finish]
+    return {"niche": niche, "voice": voice, "variant": variant, "hero": voice, "tone": tone, "layout": layout,
+            "services": services, "finish": finish,
+            "fonts": fonts[_bucket((site.get("slug") or "") + ":fonts", len(fonts))]}
 
 
 def niche_of(site: dict) -> str:
