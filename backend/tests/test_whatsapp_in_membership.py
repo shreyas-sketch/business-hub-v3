@@ -81,3 +81,15 @@ async def test_event_extras_move_into_membership_and_back_in_one_tap(client):
     assert not any(me[k] for k in ("win_back", "market_research", "whatsapp_ai", "whatsapp_tool", "lead_response"))
     cfg = {f["key"]: f for f in (await admin.get("/api/admin/config")).json()["features"]}
     assert cfg["win_back"]["label"] == "Bring them back" and cfg["win_back"]["tier"] == "program" and cfg["lead_response"]["tier"] == "growth"
+
+
+async def test_a_template_field_takes_its_name_not_its_wording(client):
+    c, uid, site, admin = await member("9839100009")
+    assert (await admin.patch("/api/admin/config/features/whatsapp_tool", json={"tier": "lite"})).status_code == 200
+    wording = "Hello {{1}}, thank you for contacting {{2}}. We've got your message and will reply shortly."
+    r = await c.put("/api/connections/whatsapp", json={"values": {"provider": "aisensy", "tpl_instant": wording}})
+    assert r.status_code == 400 and "name" in r.json()["detail"]
+    r = await c.put("/api/connections/whatsapp", json={"values": {"provider": "aisensy", "tpl_instant": "instant_reply"}})
+    assert r.status_code == 200
+    stored = await db().connections.find_one({"_id": uid})
+    assert stored["whatsapp"]["tpl_instant"] == "instant_reply"

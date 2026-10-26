@@ -50,13 +50,13 @@ SPECS: dict[str, dict] = {
         ("phone_number_id", "Phone number id", "text", "From your Meta app's WhatsApp settings"),
         ("access_token", "Access token", "secret", "A permanent system-user token"),
         ("app_secret", "App secret", "secret", "Checks that incoming messages really come from Meta"),
-        ("tpl_instant", "Template: instant reply to a new inquiry", "text", "{{1}} customer name, {{2}} business"),
-        ("tpl_lead_response", "Template: first reply with a booking", "text", "{{1}} customer name, {{2}} business, {{3}} the booking line"),
-        ("tpl_followup", "Template: follow-up", "text", "{{1}} name, {{2}} business, {{3}} message"),
-        ("tpl_reminder", "Template: payment reminder", "text", "{{1}} name, {{2}} business, {{3}} amount, {{4}} due date, {{5}} how to pay"),
-        ("tpl_review", "Template: review request", "text", "{{1}} name, {{2}} business, {{3}} review link"),
-        ("tpl_customer", "Template: customer message", "text", "{{1}} name, {{2}} business, {{3}} message (reorders, referrals, greetings)"),
-        ("tpl_campaign", "Template: money campaign", "text", "{{1}} name, {{2}} business, {{3}} message"),
+        ("tpl_instant", "Template: instant reply to a new inquiry", "text", "Its name, not its wording: the API campaign (or template) name in your WhatsApp tool, e.g. instant_reply. Variables: {{1}} customer name, {{2}} business"),
+        ("tpl_lead_response", "Template: first reply with a booking", "text", "Its name, not its wording: the API campaign (or template) name in your WhatsApp tool, e.g. lead_response_v1. Variables: {{1}} customer name, {{2}} business, {{3}} the booking line"),
+        ("tpl_followup", "Template: follow-up", "text", "Its name, not its wording: the API campaign (or template) name in your WhatsApp tool, e.g. follow_up. Variables: {{1}} name, {{2}} business, {{3}} message"),
+        ("tpl_reminder", "Template: payment reminder", "text", "Its name, not its wording: the API campaign (or template) name in your WhatsApp tool, e.g. payment_reminder. Variables: {{1}} name, {{2}} business, {{3}} amount, {{4}} due date, {{5}} how to pay"),
+        ("tpl_review", "Template: review request", "text", "Its name, not its wording: the API campaign (or template) name in your WhatsApp tool, e.g. review_request. Variables: {{1}} name, {{2}} business, {{3}} review link"),
+        ("tpl_customer", "Template: customer message", "text", "Its name, not its wording: the API campaign (or template) name in your WhatsApp tool, e.g. customer_message. Variables: {{1}} name, {{2}} business, {{3}} message (reorders, referrals, greetings)"),
+        ("tpl_campaign", "Template: money campaign", "text", "Its name, not its wording: the API campaign (or template) name in your WhatsApp tool, e.g. money_campaign. Variables: {{1}} name, {{2}} business, {{3}} message"),
         ("language", "Template language code", "text", "e.g. en, en_US, hi"),
     ]},
     "employz": {"label": "CRM", "feature": "crm_sync", "fields": [
@@ -221,6 +221,9 @@ async def save(ws: str, kind: str, values: dict, by: str, by_label: str) -> dict
             continue
         if typ.startswith("select:") and val and val not in typ.split(":", 1)[1].split(",") + (["demo"] if settings.local_dev else []):
             raise HTTPException(400, f"Pick one of the options for {key}")
+        if key in TEMPLATE_FIELDS and ("{{" in val or "\n" in val or len(val) > 100):
+            raise HTTPException(400, "Type the template's name here, not its wording: the name of the API campaign (or template) "
+                                     "in your WhatsApp tool, like instant_reply.")
         if typ == "number" and val and not val.isdigit():
             raise HTTPException(400, f"{key} must be a number")
         current[key] = val
