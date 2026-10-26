@@ -344,6 +344,28 @@ async def guide_get(slug: str, request: Request):
         form_error=None, program=settings.program_name, year=now().year, uploads=await _uploads(slug)), headers={"Cache-Control": "no-store"})
 
 
+# ───────────────────────── a quotation or invoice, as a PDF, for the customer ─────────────────────────
+@router.get("/i/{token}")
+async def document_pdf(token: str, request: Request):
+    """The link in the WhatsApp message: the quotation, invoice or credit note as a PDF. The token is unguessable and only
+    made when the owner shares it; nothing else about the business is reachable from here."""
+    import asyncio
+    from .. import invoice_pdf
+    from ..brand import accent_for
+    if not re.fullmatch(r"[A-Za-z0-9_-]{16,40}", token or ""):
+        return not_found()
+    await rate_limit(f"doc-pdf:{client_ip(request)}", 60, 600, "Too many downloads from this network. Try again in a few minutes.")
+    q = await db().quotes.find_one({"share_token": token})
+    if not q or str(q.get("status") or "").lower() in ("deleted", "void", "voided", "cancelled", "canceled"):
+        return not_found()
+    b = await db().businesses.find_one({"owner_id": q["ws"]}) or {}
+    qs = await db().quote_settings.find_one({"_id": q["ws"]}) or {}
+    pdf = await asyncio.to_thread(invoice_pdf.render, q, b, qs, await accent_for(q["ws"]))
+    name = re.sub(r"[^A-Za-z0-9_-]+", "-", q.get("number") or "document")
+    return Response(pdf, media_type="application/pdf", headers={"Content-Disposition": f'inline; filename="{name}.pdf"',
+                                                                "Cache-Control": "private, no-store", "X-Robots-Tag": "noindex"})
+
+
 # ───────────────────────── the digital visiting card ─────────────────────────
 @router.get("/s/{slug}/card", response_class=HTMLResponse)
 async def visiting_card(slug: str, request: Request):

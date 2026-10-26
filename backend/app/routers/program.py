@@ -325,6 +325,30 @@ def levers_result(i: dict) -> dict:
             "simple_sum_pct": round(i["grow_customers"] + i["grow_value"] + i["grow_frequency"], 1)}
 
 
+NUMBERS = ("customers", "avg_value", "frequency", "grow_customers", "grow_value", "grow_frequency")
+HISTORY_KEEP = 12
+SESSION = timedelta(minutes=30)       # saves this close together are one sitting: only the numbers before it are kept
+
+
+def _lever_history(prev: dict, new: dict) -> list[dict]:
+    """The earlier numbers, newest first. The page saves as the owner types, so the numbers from before this sitting are
+    kept once (when the last save is over 30 minutes old and the numbers changed), not every keystroke."""
+    hist = list(prev.get("history") or [])
+    if not prev or all(float(prev.get(k) or 0) == float(new[k]) for k in NUMBERS):
+        return hist
+    at = prev.get("updated_at")
+    if at and at.tzinfo is None:
+        from datetime import timezone
+        at = at.replace(tzinfo=timezone.utc)
+    if at and now() - at < SESSION:
+        return hist                                   # still the same sitting
+    if not any(float(prev.get(k) or 0) for k in ("customers", "avg_value", "frequency")):
+        return hist                                   # an empty first try isn't worth keeping
+    snap = {**{k: float(prev.get(k) or 0) for k in NUMBERS}, "revenue": (prev.get("result") or {}).get("revenue", 0),
+            "new_revenue": (prev.get("result") or {}).get("new_revenue", 0), "at": at or now()}
+    return [snap, *hist][:HISTORY_KEEP]
+
+
 @router.get("/levers")
 async def get_levers(ctx: Ctx = Depends(feature("revenue_levers", "manager"))):
     d = await db().levers.find_one({"_id": ctx.ws})
@@ -342,7 +366,8 @@ async def save_levers(body: LeversIn, ctx: Ctx = Depends(feature("revenue_levers
     if inputs["pledge"].strip() and inputs["pledge"].strip() != prev.get("pledge", ""):
         pledged_at = now()
     await db().levers.replace_one({"_id": ctx.ws}, {"_id": ctx.ws, **inputs, "result": levers_result(inputs), "pledged_at": pledged_at,
-                                                    "updated_at": now(), "by": ctx.actor}, upsert=True)
+                                                    "history": _lever_history(prev, inputs), "updated_at": now(), "by": ctx.actor},
+                                  upsert=True)
     return {"levers": public(await db().levers.find_one({"_id": ctx.ws})), "stages": [{"key": k, "label": l} for k, l in STAGES5]}
 
 

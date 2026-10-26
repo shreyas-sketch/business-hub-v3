@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ago, api, day, rs } from "../api.js";
 import { Busy, Field, FormError, Sheet, Stat, useHub, useLoad } from "../ui.jsx";
@@ -17,6 +17,14 @@ const HINTS = {
   retention: "e.g. A service reminder every 6 months",
   referral: "e.g. Ask every happy customer for one name",
 };
+
+/** What the server keeps: numbers as numbers, the funnel's empty stages left out. */
+const bodyOf = (f) => ({
+  customers: n(f.customers), avg_value: n(f.avg_value), frequency: n(f.frequency),
+  grow_customers: n(f.grow_customers), grow_value: n(f.grow_value), grow_frequency: n(f.grow_frequency),
+  funnel: Object.fromEntries(Object.entries(f.funnel || {}).map(([k, v]) => [k, String(v || "").trim()]).filter(([, v]) => v)),
+  pledge: String(f.pledge || "").trim(),
+});
 
 /** The same maths as the server, so the numbers move while you type. */
 function calc(f) {
@@ -171,11 +179,33 @@ export default function Levers() {
   const [f, setF] = useState(BLANK);
   const [saved, setSaved] = useState(null);
   const [err, setErr] = useState("");
+  const [saving, setSaving] = useState(false);
+  const sent = useRef(null);      // the last body the server has, so an unchanged form isn't saved again
   useEffect(() => {
     if (!loaded) return;
     setSaved(loaded.levers);
-    if (loaded.levers) setF(Object.fromEntries(KEYS.map((k) => [k, loaded.levers[k] ?? BLANK[k]])));
+    if (loaded.levers) {
+      const form = Object.fromEntries(KEYS.map((k) => [k, loaded.levers[k] ?? BLANK[k]]));
+      setF(form);
+      sent.current = JSON.stringify(bodyOf(form));
+    } else {
+      sent.current = JSON.stringify(bodyOf(BLANK));
+    }
   }, [loaded]);
+  // Saved as you type (a second after the last change), so numbers are never lost by leaving the page
+  useEffect(() => {
+    if (!loaded || sent.current === null) return undefined;
+    const body = bodyOf(f);
+    if (JSON.stringify(body) === sent.current) return undefined;
+    const t = setTimeout(async () => {
+      setSaving(true);
+      try {
+        const d = await api("/levers", { method: "PUT", body });
+        sent.current = JSON.stringify(body); setSaved(d.levers); setErr("");
+      } catch (e) { if (!e.handled) setErr(e.message); } finally { setSaving(false); }
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [f, loaded]);
 
   const head = { kicker: "Sales · Revenue Multiplier", id: "SA-01", pillar: "Sales", money: true };
   const sub = "Revenue = customers × average value × how often they buy. Grow each a little and the total grows a lot.";
@@ -188,16 +218,14 @@ export default function Levers() {
   const pledgeText = () => `I pledge to grow my customers by ${pct(n(f.grow_customers))}%, my average sale by ${pct(n(f.grow_value))}% and how often customers buy by ${pct(n(f.grow_frequency))}%` +
     (hasNumbers ? ` — from ${rs(r.revenue)} to ${rs(r.new_revenue)} a year.` : ` — ${pct(r.growth_pct)}% more revenue.`);
   const save = async () => {
-    const body = {
-      customers: n(f.customers), avg_value: n(f.avg_value), frequency: n(f.frequency),
-      grow_customers: n(f.grow_customers), grow_value: n(f.grow_value), grow_frequency: n(f.grow_frequency),
-      funnel: Object.fromEntries(Object.entries(f.funnel || {}).map(([k, v]) => [k, String(v || "").trim()]).filter(([, v]) => v)),
-      pledge: f.pledge.trim(),
-    };
+    const body = bodyOf(f);
     const d = await api("/levers", { method: "PUT", body });
+    sent.current = JSON.stringify(body);
     setSaved(d.levers);
     toast("Saved");
   };
+  const history = saved?.history || [];
+  const restoreOld = (h) => setF({ ...f, ...Object.fromEntries(["customers", "avg_value", "frequency", "grow_customers", "grow_value", "grow_frequency"].map((k) => [k, h[k]])) });
 
   return (
     <Sheet {...head} sub={sub}
@@ -219,7 +247,23 @@ export default function Levers() {
         <div className="stat"><span className="label">Growth</span><span className="num aqua">{pct(r.growth_pct)}%</span><span className="small muted">10% on each lever ≈ 33.1%</span></div>
         <Stat label="Extra a year" value={hasNumbers ? `+${rs(r.extra)}` : "—"} money />
       </div>
+      <p className="small muted" aria-live="polite">{saving ? "Saving…" : saved?.updated_at ? `Your numbers are saved as you type · last saved ${ago(saved.updated_at)}` : "Your numbers are saved as you type."}</p>
       {!hasNumbers && <p className="small muted">Fill in the three numbers for last year to see your revenue in rupees.</p>}
+      {history.length > 0 && (
+        <details className="panel lv-history">
+          <summary><span className="label">Your earlier numbers</span><span className="small muted"> · {history.length} saved</span></summary>
+          <ul className="lv-hist">
+            {history.map((h, i) => (
+              <li key={i}>
+                <span className="small">{day(h.at)}</span>
+                <span className="small">{Number(h.customers).toLocaleString("en-IN")} customers × {rs(h.avg_value)} × {h.frequency}/yr</span>
+                <span className="small money">{rs(h.revenue)} → {rs(h.new_revenue)}</span>
+                <button type="button" className="btn sm ghost" onClick={() => restoreOld(h)}>Use these</button>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
       {hasNumbers && <Compounding f={f} r={r} />}
 
       <GrowthIdeas />

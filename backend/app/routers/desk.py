@@ -13,13 +13,16 @@ import re
 from datetime import date, timedelta
 from urllib.parse import quote as urlquote
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile as FastUpload
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from pymongo import ReturnDocument
 from starlette.datastructures import UploadFile
 
+import secrets
+
 from .. import connections, plans
+from ..config import settings
 from ..agents.desk import crm_sync
 from ..ai import desk_tasks
 from ..context import Ctx, feature
@@ -345,7 +348,10 @@ def rupees(x: float) -> str:
     return f"₹{s}" + (f".{frac}" if frac != "00" else "")
 
 
-def share_text(q: dict, business: str) -> str:
+DOC_NAME = {"quote": "quotation", "credit_note": "credit note"}
+
+
+def share_text(q: dict, business: str, pdf_url: str | None = None) -> str:
     lines = [f"{ {'quote': 'Quotation', 'credit_note': 'Credit note'}.get(q['kind'], 'Invoice') } {q['number']} from {business}"]
     for i in q["items"][:12]:
         amount = i.get("amount", round(float(i.get("qty") or 0) * float(i.get("rate") or 0), 2))
@@ -357,14 +363,31 @@ def share_text(q: dict, business: str) -> str:
         lines.append(f"Valid for {q.get('valid_days', 15)} days. Reply YES to confirm.")
     elif q.get("due_date"):
         lines.append(f"Due by {q['due_date']}.")
+    if pdf_url:
+        lines.append(f"See the {DOC_NAME.get(q['kind'], 'invoice')} as a PDF: {pdf_url}")
     return "\n".join(lines)
+
+
+async def pdf_link(q: dict) -> str:
+    """The document's own PDF address for the customer: no login, an unguessable token made the first time it's shared."""
+    token = q.get("share_token")
+    if not token:
+        token = secrets.token_urlsafe(16)
+        r = await db().quotes.update_one({"_id": q["_id"], "share_token": {"$exists": False}}, {"$set": {"share_token": token}})
+        if not r.modified_count:   # made at the same moment by another request: use that one
+            token = (await db().quotes.find_one({"_id": q["_id"]}, {"share_token": 1}) or {}).get("share_token") or token
+        q["share_token"] = token
+    return f"{settings.app_url}/i/{token}"
 
 
 async def _qview(q: dict) -> dict:
     b = await db().businesses.find_one({"owner_id": q["ws"]}, {"name": 1}) or {}
+    url = await pdf_link(q)
     out = public(q)
-    text = share_text(q, b.get("name") or "us")
+    out.pop("share_token", None)
+    text = share_text(q, b.get("name") or "us", url)
     out["share_text"] = text
+    out["pdf_url"] = url
     phone = wa_digits((q.get("customer") or {}).get("phone", ""))
     out["whatsapp_link"] = f"https://wa.me/{phone}?text={urlquote(text)}" if phone else None
     return out
@@ -395,6 +418,10 @@ async def draft_quote(body: DraftIn, ctx: Ctx = Depends(feature("quotations", "m
     if plans.has(ctx.owner, "company_brain"):
         from ..company_brain import context as brain
         context = await brain(ctx.ws, body.brief)
+    from .. import invoice_style as ist   # the owner's own past invoices: how they name items, their units, GST and rates
+    own = ist.prompt_block((await db().invoice_styles.find_one({"_id": ctx.ws}) or {}).get("style"))
+    if own:
+        context = own + ("\n\n" + context if context else "")
 
     def shape(r):
         items = []
@@ -416,6 +443,63 @@ async def draft_quote(body: DraftIn, ctx: Ctx = Depends(feature("quotations", "m
     out = await run_ai(ctx.owner, "quote", desk_tasks.quote_items(p, body.brief, context), f"Quotation draft: {body.brief[:60]}", save_output=False, check=shape)
     out["missing_rates"] = sum(1 for i in out["items"] if not i["rate"])
     return out
+
+
+# ───── the owner's own invoice as a reference (see app/invoice_style.py) ─────
+async def _style_view(ws: str, filled: list[str] | None = None) -> dict:
+    from .. import invoice_style as ist
+    d = await db().invoice_styles.find_one({"_id": ws}) or {}
+    samples = [{"id": x["id"], "name": x["name"], "kind": x["kind"], "pages": x.get("pages", 1), "at": x["at"].isoformat(),
+                "summary": x["style"].get("summary", "")} for x in d.get("samples") or []]
+    return {"samples": samples, "style": d.get("style"), "max": ist.MAX_SAMPLES, "max_mb": ist.MAX_MB, **({"filled": filled} if filled is not None else {})}
+
+
+@router.get("/quotes/style")
+async def get_style(ctx: Ctx = Depends(feature("quotations", "manager"))):
+    return await _style_view(ctx.ws)
+
+
+@router.post("/quotes/style")
+async def add_style_sample(file: FastUpload = File(...), ctx: Ctx = Depends(feature("quotations", "manager"))):
+    """One of the owner's own invoices (PDF or photo) → how this business writes them (1 AI token). The file isn't kept."""
+    from .. import invoice_style as ist
+    d = await db().invoice_styles.find_one({"_id": ctx.ws}) or {}
+    if len(d.get("samples") or []) >= ist.MAX_SAMPLES:
+        raise HTTPException(400, f"You have {ist.MAX_SAMPLES} invoices already. Remove one to add another.")
+    data = await file.read(ist.MAX_MB * 1024 * 1024 + 1)
+    try:
+        sample = ist.read(data, file.filename or "", file.content_type or "")
+    except ist.StyleError as e:
+        raise HTTPException(400, str(e))
+    finally:
+        del data
+    style = await run_ai(ctx.owner, "invoice_style", ist.learn(sample), "Your invoice style", save_output=False, check=ist.shape)
+    entry = {"id": new_id(), "name": (file.filename or "invoice")[:120], "kind": sample["kind"], "pages": sample["pages"], "at": now(),
+             "style": style}
+    samples = [*(d.get("samples") or []), entry]
+    merged = ist.merged(samples)
+    await db().invoice_styles.replace_one({"_id": ctx.ws}, {"_id": ctx.ws, "samples": samples, "style": merged, "updated_at": now()}, upsert=True)
+    # the settings the owner hasn't filled yet come from their own invoice (never overwriting what they typed)
+    qs = await db().quote_settings.find_one({"_id": ctx.ws}) or {}
+    fill = {k: merged[k] for k in ("terms", "payment") if merged.get(k) and not (qs.get(k) or "").strip()}
+    if fill:
+        await db().quote_settings.update_one({"_id": ctx.ws}, {"$set": fill}, upsert=True)
+    await track("invoice_style_sample", ctx.ws, kind=sample["kind"])
+    return await _style_view(ctx.ws, sorted(fill))
+
+
+@router.delete("/quotes/style/{sid}")
+async def remove_style_sample(sid: str, ctx: Ctx = Depends(feature("quotations", "manager"))):
+    from .. import invoice_style as ist
+    d = await db().invoice_styles.find_one({"_id": ctx.ws}) or {}
+    samples = [x for x in d.get("samples") or [] if x["id"] != sid]
+    if len(samples) == len(d.get("samples") or []):
+        raise HTTPException(404, "Not found")
+    if samples:
+        await db().invoice_styles.update_one({"_id": ctx.ws}, {"$set": {"samples": samples, "style": ist.merged(samples), "updated_at": now()}})
+    else:
+        await db().invoice_styles.delete_one({"_id": ctx.ws})
+    return await _style_view(ctx.ws)
 
 
 @router.post("/quotes")
@@ -491,7 +575,7 @@ async def make_invoice(qid: str, body: InvoiceIn, ctx: Ctx = Depends(feature("qu
     due_date = (today() + timedelta(days=body.due_in_days)).isoformat()
     inv_id, due_id = new_id(), new_id()
     number = await next_number(ctx.ws, "invoice")
-    inv = {**{k: v for k, v in q.items() if k not in ("_id", "number", "status", "sent_on", "followups", "last_followup_at")},
+    inv = {**{k: v for k, v in q.items() if k not in ("_id", "number", "status", "sent_on", "followups", "last_followup_at", "share_token")},
            "_id": inv_id, "kind": "invoice", "number": number, "status": "due", "quote_id": qid, "due_date": due_date, "due_id": due_id,
            "created_at": now(), "updated_at": now()}
     await db().quotes.insert_one(inv)
@@ -572,3 +656,4 @@ async def ensure_indexes() -> None:
     await db().customers.create_index([("ws", 1), ("total_value", -1)])
     await db().quotes.create_index([("ws", 1), ("kind", 1), ("created_at", -1)])
     await db().quotes.create_index([("ws", 1), ("kind", 1), ("status", 1)])
+    await db().quotes.create_index("share_token", unique=True, sparse=True)     # the customer's PDF link (/i/<token>)
