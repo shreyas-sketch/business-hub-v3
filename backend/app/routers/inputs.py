@@ -168,6 +168,8 @@ def _numbers_guard(content: dict, allowed_text: str) -> dict:
     out["steps"] = [x for x in out["steps"] if x["title"]]
     out["faq"] = [{"q": clean(x.get("q", "")), "a": clean(x.get("a", ""))} for x in out.get("faq") or []]
     out["faq"] = [x for x in out["faq"] if x["q"] and x["a"]]
+    out["pains"] = [clean(str(x)) for x in out.get("pains") or []]
+    out["pains"] = [x for x in out["pains"] if x]
     return out
 
 

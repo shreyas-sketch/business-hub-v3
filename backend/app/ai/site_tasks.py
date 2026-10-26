@@ -6,7 +6,7 @@ import json
 import re
 
 from .provider import complete
-from .tasks import RULES, _first, _v, profile_text
+from .tasks import RULES, _first, _niche_list, _v, guess_niche, profile_text
 
 SECTIONS = {
     "headline": "the big line at the top (max 10 words)",
@@ -132,7 +132,8 @@ def mock_site_from_inputs(p: dict, brand: dict, inp: dict, own_site: str, comp: 
                       {"title": "Get a clear quote", "text": "You see what is included before anything starts."},
                       {"title": "We get it done", "text": "One person stays responsible until it's complete."}],
             "faq": [{"q": "How do I start?", "a": "Message us on WhatsApp or fill the form, and we'll get back to you."},
-                    {"q": "Which areas do you serve?", "a": f"We work across {city}." if city else "Message us with your location and we'll confirm."}]}
+                    {"q": "Which areas do you serve?", "a": f"We work across {city}." if city else "Message us with your location and we'll confirm."}],
+            "niche": guess_niche(p), "pains": [x.strip(" .") for x in re.split(r"[,;\n]", inp.get("pains") or "") if x.strip(" .")][:4]}
 
 
 async def site_from_inputs(p: dict, brand: dict, inp: dict, own_site: str, comp: dict | None, competitor_text: str):
@@ -164,5 +165,8 @@ JSON: {{
  "offers": [{{"name": "...", "description": "one sentence", "price": "exactly as given by the owner, or empty"}}],
  "why": [{{"title": "max 6 words", "text": "one sentence"}}] (3 items, only from the owner's real reasons),
  "steps": [{{"title": "...", "text": "..."}}] (3 steps: how working with them goes),
- "faq": [{{"q": "...", "a": "..."}}] (2-4 items, only questions the facts above can answer)
+ "faq": [{{"q": "...", "a": "..."}}] (2-4 items, only questions the facts above can answer),
+ "niche": "the ONE kind of business this is, from: {_niche_list()}",
+ "pains": ["up to 4 short problems their customers have before they find this business, max 8 words each, ONLY from the owner's
+           answers (their pain points) or their own website; an empty list if not given. Never invent."]
 }}""", lambda: mock_site_from_inputs(p, brand, inp, own_site, comp), 4000)
