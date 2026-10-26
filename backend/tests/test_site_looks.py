@@ -52,7 +52,7 @@ def test_the_ai_niche_picks_the_look_and_unknown_services_dont_all_match():
     assert site_looks.look_of({"slug": "a", "content": {"niche": "made-up"}}, {"industry": "Dental clinic"})[0] == "care"
     assert site_looks.auto_look({"industry": "Business coaching for founders"}) == "launch"
     # a service the words don't place: some Signboard, some Launch — a room of them doesn't all look the same
-    looks = {site_looks.auto_look({"industry": "Pest control and deep cleaning"}, "", f"biz-{i}") for i in range(12)}
+    looks = {site_looks.auto_look({"industry": "Astrology and vastu advice"}, "", f"biz-{i}") for i in range(12)}
     assert looks == {"signboard", "launch"}
 
 
@@ -84,3 +84,30 @@ async def test_the_launch_look_renders_its_pieces(client):
     content["pains"] = []
     await client.put("/api/site", json={"content": content, "accent": got["accent"], "slug": got["slug"]})
     assert "Sound familiar?" not in (await client.get(f"/s/{site['slug']}")).text
+
+
+def test_the_words_place_a_page_the_ai_gave_no_niche():
+    """Pages from before niches, or when the AI names none, go by the words of what the business does."""
+    cases = {"Online store selling electronics and home appliances in Delhi NCR": "signboard",   # a shop, not a D2C brand
+             "A 100% plant-based patisserie making cakes and desserts": "bazaar",                 # "plant-based" is not a factory
+             "Gaming cafe with PS5 and PC gaming stations": "launch",                             # not a restaurant
+             "Indie game development studio": "launch",                                           # not an interiors studio
+             "Esports tournaments and LAN events": "launch"}
+    for industry, look in cases.items():
+        assert site_looks.look_of({"slug": "a", "content": {}}, {"industry": industry})[0] == look, industry
+    from app.ai.tasks import guess_niche
+    assert guess_niche({"industry": "Yoga institute teaching yoga courses"}) == "fitness_yoga"
+    assert guess_niche({"industry": "Dental implants and braces"}) == "dental"
+    assert guess_niche({"industry": "Gaming zone and arcade"}) == "gaming"
+    # a page without a brand colour, made before niches, still gets its kind of business's colours
+    assert site_looks.niche_colour({"slug": "x", "content": {}}, 0, {"industry": "Dental clinic"}) in site_looks.NICHE_COLOURS["dental"]
+
+
+def test_the_event_card_opens_in_the_colour_the_page_will():
+    from app.event import card_colour
+    profile = {"name": "Smile Dental", "industry": "Dental clinic"}
+    got = card_colour(profile, {"colors": {"primary": "#1F4E79"}}, {"niche": "dental"})
+    assert got["accent"] == site_looks.niche_colour({"slug": "smile-dental", "content": {"niche": "dental"}})
+    assert got["accent"] in site_looks.NICHE_COLOURS["dental"] and got["on_accent"] == bk.text_on(got["accent"])
+    gold = card_colour(profile, {"colors": {"primary": "#D3B982"}}, {"niche": "bakery_sweets"})
+    assert gold["accent"] == "#D3B982" and gold["on_accent"] != "#FFFFFF"     # a light brand colour keeps dark text on it

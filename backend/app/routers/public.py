@@ -202,7 +202,7 @@ async def member_site(slug: str, request: Request, preview: int = 0, sent: int =
     by_niche = accent == "#1F4E79" and not site.get("brand_accent") and not site.get("accent_chosen")   # no brand colour of its own
     if by_niche:
         from ..site_looks import niche_colour
-        accent = niche_colour(site, variant)
+        accent = niche_colour(site, variant, business)
     html = templates.get_template("site.html").render(
         c=site["content"], name=name, city=business.get("city", ""), accent=site.get("accent", "#1F4E79"), base=base,
         whatsapp_link=f"{base}/wa" if wa else None, email=business.get("email", ""), slug=site["slug"], sent=bool(sent),

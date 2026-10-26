@@ -14,7 +14,7 @@ LOOKS = {
     "works": ("Works", "Precise and solid: a blueprint grid, a spec table and a process flow. Suits manufacturing and engineering."),
     "atelier": ("Atelier", "Quiet and refined: an oversized headline, a large index and wide margins. Suits interiors, design and studios."),
     "launch": ("Launch", "Bold and energetic: chunky type, outlined cards, a moving ticker and a sticky booking bar. Suits coaches, "
-               "trainers, fitness, brands, events and agencies."),
+               "trainers, fitness, brands, events, agencies and gaming."),
 }
 # the kinds of business the AI picks from when it writes the website (content.niche) → the look each gets automatically
 NICHES = {
@@ -23,7 +23,7 @@ NICHES = {
     "fashion_jewellery": "atelier", "photography_events": "launch", "wedding": "atelier", "coaching_education": "launch",
     "fitness_yoga": "launch", "d2c_brand": "launch", "agency_marketing": "launch", "travel": "launch", "it_software": "launch",
     "professional_services": "atelier", "manufacturing": "works", "engineering": "works", "auto_repair": "works",
-    "construction": "works", "retail_shop": "signboard", "trading_wholesale": "signboard", "home_services": "signboard",
+    "construction": "works", "gaming": "launch", "retail_shop": "signboard", "trading_wholesale": "signboard", "home_services": "signboard",
     "other": "",
 }
 # colours that suit each kind of business, for pages without a brand colour of their own: each page takes one of them,
@@ -53,6 +53,7 @@ NICHE_COLOURS = {
     "engineering": ("#C2410C", "#0F766E", "#1F4E79", "#B45309", "#374151"),
     "auto_repair": ("#B91C1C", "#1F2937", "#C2410C", "#1D4ED8", "#B45309"),
     "construction": ("#D97706", "#374151", "#C2410C", "#1F4E79", "#B45309"),
+    "gaming": ("#7C3AED", "#DB2777", "#0891B2", "#16A34A", "#E11D48"),
     "retail_shop": ("#B91C1C", "#047857", "#C2410C", "#2B3BEA", "#7C3AED"),
     "trading_wholesale": ("#1F4E79", "#9A3412", "#047857", "#B45309", "#334155"),
     "home_services": ("#0F766E", "#C2410C", "#2B3BEA", "#15803D", "#B91C1C"),
@@ -69,11 +70,13 @@ WORKS = re.compile(r"\b(engineering|industrial|pump|machine|machining|fabricat|s
 
 
 def auto_look(business: dict, niche: str = "", slug: str = "") -> str:
-    """The AI's niche when it named one; else from the words of what the business does. A service business the words don't
-    place alternates between Signboard and Launch (by its web address), so a room of coaches and agencies doesn't all match."""
+    """The AI's niche when it named one; else the niche the words of what the business does point to; else the business's
+    type. A service business nothing places alternates between Signboard and Launch (by its web address), so a room of coaches
+    and agencies doesn't all match."""
+    b = business or {}
+    niche = niche if NICHES.get(niche) else guessed_niche(b)
     if NICHES.get(niche):
         return NICHES[niche]
-    b = business or {}
     kind = business_type(b)
     text = f"{b.get('industry', '')} {b.get('name', '')}"
     if kind == "food":
@@ -86,7 +89,8 @@ def auto_look(business: dict, niche: str = "", slug: str = "") -> str:
         return "signboard"
     if STUDIO.search(text):
         return "atelier"
-    if re.search(r"\b(coach|training|trainer|academy|classes|tuition|course|fitness|gym|yoga|event|agency|marketing|brand|travel|tour|software)", text, re.I):
+    if re.search(r"\b(coach|training|trainer|academy|classes|tuition|course|fitness|gym|yoga|event|agency|marketing|brand|travel|tour|software|gam)",
+                 text, re.I):
         return "launch"
     return "launch" if _bucket(slug, 2) else "signboard"
 
@@ -107,10 +111,17 @@ def niche_of(site: dict) -> str:
     return n if n in NICHES else ""
 
 
-def niche_colour(site: dict, variant: int = 0) -> str:
+def guessed_niche(business: dict) -> str:
+    """The niche from the words of what the business does, for pages the AI gave none (and pages made before niches)."""
+    from .ai.tasks import guess_niche
+    return guess_niche(business or {}) if business else ""
+
+
+def niche_colour(site: dict, variant: int = 0, business: dict | None = None) -> str:
     """The colour for a page without a brand colour of its own: one of its kind of business's colours, picked from its web
-    address (random across businesses, stable for each); a page the AI couldn't place picks from a general set."""
-    palette = NICHE_COLOURS.get(niche_of(site) or "other") or NICHE_COLOURS["other"]
+    address (random across businesses, stable for each); a page nothing places picks from a general set."""
+    niche = niche_of(site) or guessed_niche(business or {})
+    palette = NICHE_COLOURS.get(niche if niche in NICHES else "other") or NICHE_COLOURS["other"]
     return palette[_bucket((site.get("slug") or "") + ":colour", len(palette))]
 
 

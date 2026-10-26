@@ -112,8 +112,10 @@ PROCESS_MAPS = {
 def business_type(p: dict) -> str:
     text = f"{p.get('industry', '')} {' '.join(o.get('name', '') for o in p.get('offers') or [])}".lower()
     for kind, words in (("clinic", ("clinic", "dental", "doctor", "hospital", "physio", "diagnostic", "skin", "eye care")),
-                        ("food", ("restaurant", "cafe", "café", "food", "sweets", "bakery", "catering", "farsan", "kitchen and dining", "cloud kitchen")),
-                        ("manufacturing", ("manufactur", "factory", "fabrication", "machining", "plant", "production")),
+                        ("food", ("restaurant", "cafe", "café", "food", "sweets", "bakery", "cake", "patisserie", "catering", "farsan",
+                                  "kitchen and dining", "cloud kitchen")),
+                        # no bare "plant": a "plant-based" bakery is not a factory
+                        ("manufacturing", ("manufactur", "factory", "fabrication", "machining", "production")),
                         ("trading", ("trader", "trading", "wholesale", "distributor", "dealer", "supplier", "retail", "shop", "store"))):
         if any(w in text for w in words):
             return kind
