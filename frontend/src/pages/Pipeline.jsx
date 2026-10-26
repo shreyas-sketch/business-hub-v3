@@ -252,8 +252,9 @@ function CardMenu({ deal, stages, anchor, onMove, onOpen, onClose, onWon }) {
   return createPortal(
     <div className="pp-menu" ref={ref} role="menu" aria-label={`Actions for ${deal.name}`} style={pos ? { top: pos.top, left: pos.left } : { visibility: "hidden", top: 0, left: 0 }}
       onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
-      <button role="menuitem" onClick={() => { onClose(); onOpen(deal.id); }}>Open</button>
-      {isOpen(deal) && <>
+      <button role="menuitem" onClick={() => { onClose(); onOpen(deal.id); }}>{deal.readonly ? "View" : "Open"}</button>
+      {deal.readonly && deal.open_url && <a role="menuitem" className="pp-menu-link" href={deal.open_url} target="_blank" rel="noopener noreferrer" onClick={onClose}>Open in Employz.ai</a>}
+      {isOpen(deal) && !deal.readonly && <>
         <span className="pp-menu-label">Move to</span>
         {stages.filter((s) => s.id !== deal.pstage).map((s) => (
           <button key={s.id} role="menuitem" onClick={() => { onClose(); onMove(deal, s.id); }}><i style={{ background: s.colour }} />{s.name}</button>
@@ -276,7 +277,7 @@ function Card({ d, stages, today, onPointerDown, suppressClick, onOpen, onMove, 
   return (
     <div className={`pp-card ${isOpen(d) ? "" : `st-${d.status}`}`} role="button" tabIndex={0}
       aria-label={`${d.name}, ${d.value ? rs(d.value) : "no value yet"}. Open details`}
-      onPointerDown={(e) => isOpen(d) && onPointerDown(e, d)} onClick={() => { if (!suppressClick.current) onOpen(d.id); }}
+      onPointerDown={(e) => isOpen(d) && !d.readonly && onPointerDown(e, d)} onClick={() => { if (!suppressClick.current) onOpen(d.id); }}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(d.id); } }}>
       <div className="pp-card-top">
         <Avatar name={d.name} />
@@ -305,7 +306,7 @@ function Card({ d, stages, today, onPointerDown, suppressClick, onOpen, onMove, 
 }
 
 /* ───────────── the board ───────────── */
-function Board({ stages, deals, today, sort, onMove, onOpen, onWon, onAddIn }) {
+function Board({ stages, deals, today, sort, onMove, onOpen, onWon, onAddIn, readonly }) {
   const boardRef = useRef(null);
   const { over, onPointerDown, suppressClick } = useBoardDrag(boardRef, onMove);
   const [menuFor, setMenuFor] = useState(null);
@@ -318,14 +319,14 @@ function Board({ stages, deals, today, sort, onMove, onOpen, onWon, onAddIn }) {
             <header className="pp-col-head">
               <div className="row between" style={{ gap: 6, flexWrap: "nowrap" }}>
                 <b title={s.ff_label}>{s.name}</b>
-                <button type="button" className="pp-add" aria-label={`Add an opportunity in ${s.name}`} onClick={() => onAddIn(s.id)}>+</button>
+                {!readonly && <button type="button" className="pp-add" aria-label={`Add an opportunity in ${s.name}`} onClick={() => onAddIn(s.id)}>+</button>}
               </div>
               <span className="pp-col-sum"><span>{col.length} {col.length === 1 ? "opportunity" : "opportunities"}</span><span className="money">{rs(sumOf(col))}</span></span>
             </header>
             <div className="pp-col-body">
               {col.map((d) => <Card key={d.id} d={d} stages={stages} today={today} onPointerDown={onPointerDown} suppressClick={suppressClick}
                 onOpen={onOpen} onMove={onMove} onWon={onWon} menuFor={menuFor} setMenuFor={setMenuFor} />)}
-              {!col.length && <div className="pp-empty">Drop an opportunity here</div>}
+              {!col.length && <div className="pp-empty">{readonly ? "None in this stage" : "Drop an opportunity here"}</div>}
             </div>
           </section>
         );
@@ -551,6 +552,60 @@ function EditDeal({ id, focus, board, stages, onClose, onChanged }) {
   );
 }
 
+/* ───────────── an Employz.ai opportunity (view only: changes are made in Employz.ai) ───────────── */
+function ViewDeal({ deal: d, board, stageOf, onClose }) {
+  const { me } = useHub();
+  useEffect(() => { const k = (e) => e.key === "Escape" && onClose(); window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [onClose]);
+  const fields = Object.entries(d.fields || {});
+  const status = { open: "Open", won: "Won", lost: "Lost", abandoned: "Abandoned" }[d.crm_status] || (isOpen(d) ? "Open" : d.status);
+  const rows = [["Pipeline", board.pipeline_name], ["Stage", stageOf[d.pstage]?.name || "—"], ["Status", status],
+    ["Value", d.value ? rs(d.value) : "Not set"], ["Source", d.source_label || "—"], ["Owner", d.assignee_name || "—"],
+    ["Opportunity name", d.title || "—"], ["Updated", d.updated_at ? ago(d.updated_at) : "—"]];
+  return (
+    <div className="pp-modal-wrap" role="dialog" aria-modal="true" aria-label={`Opportunity: ${d.name}`}>
+      <div className="pp-scrim" onClick={onClose} />
+      <div className="pp-modal">
+        <header className="pp-modal-head">
+          <div className="row" style={{ gap: 12, flexWrap: "nowrap", minWidth: 0 }}>
+            <Avatar name={d.name} />
+            <div className="stack" style={{ gap: 2, minWidth: 0 }}>
+              <span className="label">From Employz.ai · view only</span>
+              <h2>{d.name}</h2>
+            </div>
+          </div>
+          <div className="row" style={{ gap: 6 }}>
+            {d.phone && <a className="btn sm" href={waLink("", d.phone)} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
+            {d.phone && <a className="btn sm ghost" href={`tel:${d.phone}`}>Call</a>}
+            {d.email && <a className="btn sm ghost" href={`mailto:${d.email}`}>Email</a>}
+            <button className="btn sm ghost" onClick={onClose} aria-label="Close">✕</button>
+          </div>
+        </header>
+        <div className="pp-modal-body pp-modal-one">
+          <div className="pp-modal-main">
+            <span className="label">Contact</span>
+            <div className="pp-contact">
+              <span><b>{d.name}</b>{(d.phone || d.email || d.company) && <small>{[d.company, d.phone && localPhone(d.phone), d.email].filter(Boolean).join(" · ")}</small>}</span>
+              {d.contact_id && me.features?.crm && <Link className="btn sm ghost" to={`/contacts/${d.contact_id}`}>Open in CRM</Link>}
+            </div>
+            <span className="label">Opportunity details</span>
+            <dl className="pp-ro">{rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+            {fields.length > 0 && <>
+              <span className="label">Custom fields</span>
+              <dl className="pp-ro">{fields.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{Array.isArray(v) ? v.join(", ") : String(v ?? "—")}</dd></div>)}</dl>
+            </>}
+            {d.hub_lead_id && <p className="small muted">This opportunity started as an inquiry in the hub, and was sent to Employz.ai.</p>}
+          </div>
+        </div>
+        <footer className="pp-modal-foot">
+          <span className="small muted grow">Changes to this opportunity are made in Employz.ai, and show here within {board.sync?.every_minutes || 15} minutes.</span>
+          <button className="btn ghost" onClick={onClose}>Close</button>
+          {d.open_url && <a className="btn primary" href={d.open_url} target="_blank" rel="noopener noreferrer">Open in Employz.ai</a>}
+        </footer>
+      </div>
+    </div>
+  );
+}
+
 /* ───────────── add an opportunity ───────────── */
 function AddDeal({ board, stages, stage, onClose, onAdded }) {
   const [f, setF] = useState({ name: "", phone: "", email: "", company: "", value: "", pstage: stage || stages[0]?.id, source: "phone", follow_up_on: "", note: "" });
@@ -665,6 +720,7 @@ export default function Pipeline() {
   const [view, setView] = useState("board");
   const [adding, setAdding] = useState(null);         // null | stage id | "" (first stage)
   const [openId, setOpenId] = useState(params.get("deal"));
+  const [pipe, setPipe] = useState(params.get("pipeline") || "hub");   // "hub", or "employz:<id>" (view only)
   const [focus, setFocus] = useState(null);
   const [flt, setFlt] = useState({ q: "", source: "", status: "open", due: false, min: "" });
   const [sort, setSort] = useState("newest");
@@ -672,16 +728,19 @@ export default function Pipeline() {
   const [undo, setUndo] = useState(null);             // {deal, from, to} for a few seconds after a move
   const undoTimer = useRef(null);
 
-  const loadBoard = useCallback(() => api("/crm/deals").then(setBoard), []);
+  const loadBoard = useCallback(() => api(pipe === "hub" ? "/crm/deals" : `/crm/deals?pipeline=${encodeURIComponent(pipe)}`).then(setBoard)
+    .catch((e) => { if (pipe !== "hub" && e.status === 404) { setPipe("hub"); return; } throw e; }), [pipe]);
   const loadSetup = useCallback(() => api("/crm/pipeline").then(setSetup), []);
   useEffect(() => { Promise.all([loadSetup(), loadBoard()]).catch((e) => { if (!e.handled) toast(e.message, "err"); }); }, [loadSetup, loadBoard]);  // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => clearTimeout(undoTimer.current), []);
 
   // first visit, before the stages exist: the 4 questions (Pipeline tab) come first for whoever can set them up
   const tab = chosenTab || (setup && !setup.pipeline && setup.can_edit ? "pipeline" : "opportunities");
-  const openDeal = (id, why = null) => { if (id) { clearTimeout(undoTimer.current); setUndo(null); } setOpenId(id); setFocus(why); setParams(id ? { deal: id } : tab === "pipeline" ? { tab: "pipeline" } : {}, { replace: true }); };
+  const where = (extra = {}) => ({ ...(pipe !== "hub" ? { pipeline: pipe } : {}), ...extra });
+  const openDeal = (id, why = null) => { if (id) { clearTimeout(undoTimer.current); setUndo(null); } setOpenId(id); setFocus(why); setParams(id ? where({ deal: id }) : tab === "pipeline" ? { tab: "pipeline" } : where(), { replace: true }); };
+  const pickPipe = (k) => { setOpenId(null); setBoard(null); setPipe(k); setParams(k !== "hub" ? { pipeline: k } : {}, { replace: true }); };
   const ffLabel = useMemo(() => Object.fromEntries((setup?.options?.ff || []).map((f) => [f.key, f.label])), [setup]);
-  const stages = useMemo(() => (board?.stages || []).map((s, i) => ({ ...s, ff_label: ffLabel[s.ff] || s.ff, colour: STAGE_COLOURS[i % STAGE_COLOURS.length] })), [board, ffLabel]);
+  const stages = useMemo(() => (board?.stages || []).map((s, i) => ({ ...s, ff_label: board.readonly ? "" : ffLabel[s.ff] || s.ff, colour: STAGE_COLOURS[i % STAGE_COLOURS.length] })), [board, ffLabel]);
   const stageOf = useMemo(() => Object.fromEntries(stages.map((s) => [s.id, s])), [stages]);
 
   const head = { kicker: "Conversion · Pipeline & Opportunities", id: "CV-03", pillar: "Conversion" };
@@ -691,6 +750,9 @@ export default function Pipeline() {
   const built = !!setup.pipeline;
   const today = board.today;
   const showQuestions = asking || (!built && setup.can_edit && tab === "pipeline");
+  const ro = !!board.readonly;
+  const pipelines = board.pipelines || [];
+  const openedRo = ro && openId ? deals.find((d) => d.id === openId) : null;
 
   const merge = (x) => { if (x) setBoard((b) => ({ ...b, deals: b.deals.map((d) => (d.id === x.id ? { ...d, ...x } : d)) })); else loadBoard(); };
   const move = async (deal, pstage, quiet = false) => {
@@ -736,11 +798,12 @@ export default function Pipeline() {
 
   return (
     <Sheet {...head} title={title}
-      sub="Drag an opportunity to its next stage as the talk moves forward. Click a card to edit it, add notes, or mark it Won or Lost.">
+      sub={ro ? `Your ${board.pipeline_name || "Employz.ai"} pipeline from Employz.ai, to view. Click a card to see its details.`
+        : "Drag an opportunity to its next stage as the talk moves forward. Click a card to edit it, add notes, or mark it Won or Lost."}>
       <div className="pp-subnav" role="tablist">
         {[["opportunities", "Opportunities"], ["pipeline", "Pipeline"]].map(([k, l]) => (
           <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? "on" : ""}
-            onClick={() => { setTab(k); setAsking(false); setParams(k === "pipeline" ? { tab: "pipeline" } : {}, { replace: true }); }}>{l}</button>
+            onClick={() => { setTab(k); setAsking(false); if (k === "pipeline" && ro) pickPipe("hub"); setParams(k === "pipeline" ? { tab: "pipeline" } : where(), { replace: true }); }}>{l}</button>
         ))}
       </div>
 
@@ -756,7 +819,7 @@ export default function Pipeline() {
         )
       ) : (
         <>
-          {!built && setup.can_edit && (
+          {!built && setup.can_edit && !ro && (
             <div className="notice small pp-setup">
               <span>Your opportunities sit on the 5 steps of a sale until you set up your own stages. It takes 4 quick questions.</span>
               <button className="btn sm ai" onClick={() => { setTab("pipeline"); setParams({ tab: "pipeline" }, { replace: true }); }}>Set up the pipeline</button>
@@ -765,13 +828,21 @@ export default function Pipeline() {
           <div className="pp-toolbar">
             <div className="pp-tb-row">
             <div className="pp-tb-left">
-              <span className="pp-pipe-name" title="One pipeline per business"><b>Sales pipeline</b><small>{stages.length} stages</small></span>
+              {pipelines.length > 1 ? (
+                <label className="pp-pipe-name pp-pipe-pick">
+                  <select aria-label="Pipeline" value={board.pipeline || "hub"} onChange={(e) => pickPipe(e.target.value)}>
+                    {pipelines.map((p) => <option key={p.key} value={p.key}>{p.readonly ? `${p.name} · Employz.ai` : p.name}</option>)}
+                  </select>
+                  <small>{stages.length} stages</small>
+                </label>
+              ) : <span className="pp-pipe-name" title="One pipeline per business"><b>Sales pipeline</b><small>{stages.length} stages</small></span>}
               <div className="pp-viewtoggle" role="group" aria-label="View">
                 <button type="button" className={view === "board" ? "on" : ""} aria-pressed={view === "board"} aria-label="Board" title="Board" onClick={() => setView("board")}>{Icon.board}</button>
                 <button type="button" className={view === "list" ? "on" : ""} aria-pressed={view === "list"} aria-label="List" title="List" onClick={() => setView("list")}>{Icon.list}</button>
               </div>
             </div>
-            <button className="btn sm primary pp-add-main" onClick={() => setAdding("")}>+ Add opportunity</button>
+            {ro ? (board.open_url && <a className="btn sm pp-add-main" href={board.open_url} target="_blank" rel="noopener noreferrer">Open in Employz.ai</a>)
+              : <button className="btn sm primary pp-add-main" onClick={() => setAdding("")}>+ Add opportunity</button>}
             </div>
             <div className="pp-tb-row">
             <input className="input pp-search" type="search" value={flt.q} placeholder="Search opportunities" aria-label="Search opportunities"
@@ -806,6 +877,12 @@ export default function Pipeline() {
             </div>
           </div>
 
+          {ro && (
+            <div className="notice small pp-setup">
+              <span><b>From Employz.ai · view only.</b> {board.sync?.last_ok_at ? `Last synced ${ago(board.sync.last_ok_at)}.` : "Not synced yet."}
+                {" "}Changes are made in Employz.ai and show here within {board.sync?.every_minutes || 15} minutes.{board.sync?.error ? ` ${board.sync.error}` : ""}</span>
+            </div>
+          )}
           <div className="pp-summary">
             <span><b>{filtered.length}</b> {filtered.length === 1 ? "opportunity" : "opportunities"} · <span className="money">{rs(sumOf(filtered))}</span></span>
             <span className="muted">Won in the last 30 days: <span className="money">{short(t.won_30_value)}</span> · Follow-ups due: <b className={t.followups_due ? "pp-warn" : ""}>{t.followups_due}</b>
@@ -813,12 +890,13 @@ export default function Pipeline() {
           </div>
 
           {view === "board"
-            ? (deals.length ? <Board stages={stages} deals={filtered} today={today} sort={sort} onMove={move} onOpen={openDeal} onWon={won} onAddIn={(sid) => setAdding(sid)} />
+            ? (deals.length ? <Board stages={stages} deals={filtered} today={today} sort={sort} onMove={move} onOpen={openDeal} onWon={won} onAddIn={(sid) => setAdding(sid)} readonly={ro} />
+              : ro ? <div className="empty"><h2>No opportunities in this pipeline yet.</h2><p className="muted">Opportunities added in Employz.ai show here after the next sync.</p></div>
               : <div className="empty"><h2>No opportunities yet.</h2>
                 <p className="muted">Every inquiry from your website, your lead magnet, email or a pasted WhatsApp lands here by itself, in the first stage. You can also add one by hand.</p>
                 <button className="btn" onClick={() => setAdding("")}>+ Add opportunity</button></div>)
             : <List deals={filtered} stageOf={stageOf} today={today} sort={sort} onOpen={openDeal} />}
-          {view === "board" && deals.length > 0 && <p className="small muted">Drag a card to move it, or use its ⋯ menu. On a phone: press and hold a card, then drag; swipe sideways to see every stage.</p>}
+          {view === "board" && deals.length > 0 && !ro && <p className="small muted">Drag a card to move it, or use its ⋯ menu. On a phone: press and hold a card, then drag; swipe sideways to see every stage.</p>}
           {me.features?.crm && <p className="small muted">Every opportunity's contact is in your <Link to="/contacts">CRM</Link>, with their history and follow-ups.</p>}
         </>
       )}
@@ -829,7 +907,8 @@ export default function Pipeline() {
           <button className="btn sm ghost" onClick={() => { clearTimeout(undoTimer.current); setUndo(null); move({ ...undo.deal, pstage: undo.to }, undo.from, true); }}>Undo</button>
         </div>
       )}
-      {openId && <EditDeal id={openId} focus={focus} board={board} stages={stages} onClose={() => { openDeal(null); loadBoard(); }} onChanged={merge} />}
+      {openedRo && <ViewDeal deal={openedRo} board={board} stageOf={stageOf} onClose={() => openDeal(null)} />}
+      {openId && !ro && !String(openId).startsWith("x:") && <EditDeal id={openId} focus={focus} board={board} stages={stages} onClose={() => { openDeal(null); loadBoard(); }} onChanged={merge} />}
       {adding !== null && <AddDeal board={board} stages={stages} stage={adding || undefined} onClose={() => setAdding(null)}
         onAdded={(d) => { setAdding(null); toast(`${d.name} added`); loadBoard(); }} />}
     </Sheet>

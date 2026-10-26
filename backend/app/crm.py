@@ -46,7 +46,8 @@ OPEN = ("new", "contacted")
 SOURCE_LABEL = {"website": "Website", "guide": "Free guide", "lead_magnet": "Lead magnet", "whatsapp": "WhatsApp", "email": "Email",
                 "manual": "Added by hand", "import": "Imported", "phone": "Phone", "walk_in": "Walk-in", "referral": "Referral",
                 "marketplace": "IndiaMART / Justdial", "social": "Instagram / Facebook", "exhibition": "Exhibition", "other": "Other",
-                "customer": "Customer list", "event": "Event", "card": "Card / QR", "qr": "Card / QR", "gateway": "Payment"}
+                "customer": "Customer list", "event": "Event", "card": "Card / QR", "qr": "Card / QR", "gateway": "Payment",
+                "employz": "Employz.ai"}
 TAG_RE = re.compile(r"[^\w\s&+-]", re.UNICODE)
 
 

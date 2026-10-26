@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ago, api } from "../api.js";
 import { Busy, Copy, Field, FormError, Sheet, useHub, useLoad } from "../ui.jsx";
 import { Loading, Pill } from "../v2.jsx";
@@ -10,7 +10,7 @@ const OPTION = { twilio: "Cloud phone number", sip: "SIP trunk", demo: "Demo (te
 
 const WHAT = {
   whatsapp: "Connect the WhatsApp tool your business number runs on. Replies, reminders and follow-ups can then go out from your own number.",
-  employz: "Every inquiry lands in your CRM's pipeline, and moves when you move it in the hub.",
+  employz: "Every inquiry lands in your CRM's pipeline. Your CRM's contacts, pipelines and opportunities show in the hub to view (changes are made in Employz.ai).",
   voice: "The AI Telecaller calls new leads from your voice agent and its phone number.",
   tally: "Read sales and money owed from the accounting software on your office computer.",
   email: "Send emails from your own address.",
@@ -27,7 +27,10 @@ const HOOK_HINT = {
 };
 
 // WhatsApp tool: only the fields the chosen service needs (view.service_fields), so the form stays short.
+// CRM: the pipeline and its 5 stage ids are filled by the pipeline picker (EmployzImport), not typed in.
+const PICKED = /^(pipeline_id|stage_)/;
 const onlyFor = (view, vals) => {
+  if (view.kind === "employz") return view.fields.filter((f) => !PICKED.test(f.key));
   const allowed = view.service_fields?.[vals.provider || ""];
   return allowed ? view.fields.filter((f) => allowed.includes(f.key)) : view.kind === "whatsapp" ? view.fields.filter((f) => f.key === "provider") : view.fields;
 };
@@ -97,6 +100,96 @@ export function Webhook({ kind, url }) {
   );
 }
 
+const SYNC_STATE = {
+  never: ["Not imported yet", "off"], running: ["Importing…", ""], idle: ["Up to date", "on"], failed: ["Last import failed", "warn"],
+  needs_attention: ["Needs attention", "warn"], disconnected: ["Disconnected", "off"],
+};
+const KINDS = [["pipelines", "Pipelines"], ["contacts", "Contacts"], ["opportunities", "Opportunities"]];
+
+/** CRM (Employz.ai): which pipeline new hub leads go to, and the read-only import of its contacts, pipelines and opportunities. */
+export function EmployzImport() {
+  const { toast } = useHub();
+  const [st, reloadSt] = useLoad("/employz/import");
+  const [pipes, setPipes] = useState(null);
+  const [pipesErr, setPipesErr] = useState("");
+  const [pick, setPick] = useState("");
+  const [err, setErr] = useState("");
+  const loadPipes = () => api("/employz/remote-pipelines").then((r) => { setPipes(r.pipelines); setPick(r.selected || ""); setPipesErr(""); })
+    .catch((e) => setPipesErr(e.message || "Employz.ai couldn't be read just now."));
+  useEffect(() => { loadPipes(); }, []);
+  useEffect(() => {                          // while an import runs, its progress refreshes on its own
+    if (!st?.running) return undefined;
+    const t = setInterval(reloadSt, 3000);
+    return () => clearInterval(t);
+  }, [st?.running]);
+  const [label, kind] = SYNC_STATE[st?.state] || SYNC_STATE.never;
+  const chosen = (pipes || []).find((p) => p.id === pick);
+  return (
+    <div className="panel flat stack" style={{ gap: 12 }}>
+      <div className="stack" style={{ gap: 6 }}>
+        <span className="label">Where new hub leads go</span>
+        {pipesErr ? <p className="small" style={{ color: "var(--grey)" }}>{pipesErr}</p> : !pipes ? <Loading /> : (
+          <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+            <select className="select" value={pick} onChange={(e) => setPick(e.target.value)} aria-label="Pipeline for new leads">
+              <option value="">Choose a pipeline…</option>
+              {pipes.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.stages.length} stages</option>)}
+            </select>
+            <Busy className="btn" disabled={!pick} onError={setErr} run={async () => {
+              const r = await api("/employz/push-pipeline", { method: "POST", body: { pipeline_id: pick } });
+              toast(r.missing.length ? `Saved — ${r.missing.length} of the 5 stages didn't match by name` : `New leads go to ${r.pipeline.name}`,
+                r.missing.length ? "err" : "ok");
+            }}>Use this pipeline</Busy>
+          </div>
+        )}
+        {chosen && <span className="hint">Stages: {chosen.stages.map((s) => s.name).join(" → ")}</span>}
+      </div>
+      <div className="stack" style={{ gap: 6 }}>
+        <div className="row between">
+          <span className="label">Import from Employz.ai (view only)</span>
+          <Pill kind={kind}>{label}</Pill>
+        </div>
+        {st && (
+          <>
+            <p className="small muted">
+              {st.last_ok_at ? <>Last synced {ago(st.last_ok_at)}. </> : null}
+              Your contacts, pipelines and opportunities are copied in every {st.every_minutes} minutes. Change them in Employz.ai; the hub never changes anything there.
+            </p>
+            {st.running && st.step && <p className="small">Reading {st.step}… {Object.entries(st.pages || {}).map(([k, n]) => `${k}: ${n} ${n === 1 ? "page" : "pages"}`).join(" · ")}</p>}
+            {st.error && <p className="small" style={{ color: "var(--grey)" }}>{st.error.message}</p>}
+            <table className="t cards">
+              <thead><tr><th>Kind</th><th>In the hub</th><th>In Employz.ai</th><th>Skipped</th></tr></thead>
+              <tbody>{KINDS.map(([k, name]) => {
+                const cov = st.coverage?.[k] || {};
+                return (
+                  <tr key={k}>
+                    <td><b>{name}</b></td>
+                    <td data-l="In the hub">{st.in_hub?.[k] ?? 0}</td>
+                    <td data-l="In Employz.ai" className="small muted">{cov.source ?? "—"}</td>
+                    <td data-l="Skipped" className="small muted">{cov.rejected || 0}</td>
+                  </tr>
+                );
+              })}</tbody>
+            </table>
+            {st.rejected?.length > 0 && (
+              <details className="small muted"><summary style={{ cursor: "pointer" }}>Why some were skipped</summary>
+                <ul>{st.rejected.map((r, i) => <li key={i}>{r.type}: {r.reason}</li>)}</ul>
+              </details>
+            )}
+          </>
+        )}
+        <FormError msg={err} />
+        <div className="row">
+          <Busy className="btn primary" disabled={!!st?.running} onError={setErr} run={async () => {
+            await api("/employz/import", { method: "POST" });
+            toast("Import started");
+            reloadSt();
+          }}>{st?.running ? "Importing…" : "Import now"}</Busy>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function state(c) {
   if (!c.available) return ["Locked", "off"];
   if (c.status === "error") return ["Check failed", "warn"];
@@ -161,6 +254,7 @@ function Panel({ c, reload }) {
               {actions}
             </div>
           )}
+          {c.kind === "employz" && c.connected && <EmployzImport />}
           <Webhook kind={c.kind} url={c.webhook} />
         </>
       )}
