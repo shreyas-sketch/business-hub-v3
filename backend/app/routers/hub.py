@@ -160,6 +160,8 @@ class SiteContent(BaseModel):
     steps: list[Item] = Field(default_factory=list, max_length=6)
     faq: list[Faq] = Field(default_factory=list, max_length=10)
     photo_queries: list[str] = Field(default_factory=list, max_length=4)  # stock photo search terms the AI suggested
+    niche: str = Field(default="", max_length=30)        # the kind of business the AI read (site_looks.NICHES): picks the look
+    pains: list[str] = Field(default_factory=list, max_length=4)   # the customers' problems, only from the owner's own words
 
 
 class SiteIn(BaseModel):
@@ -206,7 +208,8 @@ async def _with_looks(view: dict | None, ws: str) -> dict:
         return {}
     from .. import site_looks
     b = await db().businesses.find_one({"owner_id": ws}) or {}
-    return {**view, "look": view.get("look") or "auto", **{f"look_{k}": v for k, v in site_looks.options(b).items()}}
+    site = await db().sites.find_one({"owner_id": ws}, {"content.niche": 1, "slug": 1}) or {}
+    return {**view, "look": view.get("look") or "auto", **{f"look_{k}": v for k, v in site_looks.options(b, site).items()}}
 
 
 @router.get("/site")
@@ -228,8 +231,12 @@ def _site_from_ai(result: dict) -> dict:
     r["photo_queries"] = [q.strip()[:60] for q in (r.get("photo_queries") if isinstance(r.get("photo_queries"), list) else [])
                           if isinstance(q, str) and q.strip()][:4]
     lists = {k: (r.get(k) if isinstance(r.get(k), list) else []) for k in ("offers", "why", "steps", "faq")}
+    from ..site_looks import NICHES
+    niche = str(r.get("niche") or "").strip().lower()
+    pains = [" ".join(str(x).split())[:90] for x in (r.get("pains") if isinstance(r.get("pains"), list) else []) if isinstance(x, str) and x.strip()][:4]
     return SiteContent.model_validate({**r, "offers": lists["offers"][:12], "why": lists["why"][:6],
-                                       "steps": lists["steps"][:6], "faq": lists["faq"][:10]}).model_dump()
+                                       "steps": lists["steps"][:6], "faq": lists["faq"][:10],
+                                       "niche": niche if niche in NICHES else "", "pains": pains}).model_dump()
 
 
 class GenerateIn(BaseModel):
@@ -329,6 +336,8 @@ async def save_site(body: SiteIn, ctx: Ctx = Depends(owner_ctx)):
     brand_primary = (await tokens_for(user["_id"])).get("primary")
     accent = body.accent if body.accent in ACCENTS or (brand_primary and body.accent.upper() == brand_primary.upper()) else ACCENTS[0]
     patch = {"content": body.content.model_dump(), "accent": accent, "showcase": body.showcase, "updated_at": now()}
+    if accent != site.get("accent", ACCENTS[0]):
+        patch["accent_chosen"] = True       # the owner picked a colour: it's used as is (no colour by kind of business)
     if body.look is not None:
         from .. import site_looks
         if body.look not in site_looks.LOOKS and body.look not in ("", "auto"):

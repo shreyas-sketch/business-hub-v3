@@ -92,6 +92,33 @@ JSON: {{"options": [{{"message": "...", "pitch": "..."}}, ...]}}""", mock, 1500)
 
 
 # ───────────────────────── Systems: website content ─────────────────────────
+def _niche_list() -> str:
+    from ..site_looks import NICHES
+    return ", ".join(NICHES)
+
+
+NICHE_WORDS = (("dental", ("dental", "dentist", "orthodont", "teeth")), ("clinic", ("clinic", "doctor", "hospital", "physio", "diagnostic", "skin", "eye care")),
+               ("wellness", ("wellness", "ayurved", "therapy", "spa")), ("salon_beauty", ("salon", "beauty", "makeup", "parlour")),
+               ("bakery_sweets", ("bakery", "cake", "sweets", "mithai", "farsan")), ("restaurant_cafe", ("restaurant", "cafe", "café", "cloud kitchen", "dhaba")),
+               ("catering", ("catering", "caterer", "tiffin")), ("interiors", ("interior", "modular", "wardrobe", "furnish")),
+               ("architecture", ("architect",)), ("real_estate", ("real estate", "property", "realty", "builder")),
+               ("fashion_jewellery", ("fashion", "boutique", "jewel", "saree", "apparel")), ("wedding", ("wedding", "bridal")),
+               ("photography_events", ("photograph", "event")), ("coaching_education", ("coach", "academy", "tuition", "classes", "training", "course", "school")),
+               ("fitness_yoga", ("fitness", "gym", "yoga", "zumba")), ("agency_marketing", ("agency", "marketing", "advertis", "digital")),
+               ("travel", ("travel", "tour", "holiday")), ("it_software", ("software", "app development", " it ", "saas")),
+               ("professional_services", ("chartered", "accountant", "legal", "lawyer", "advocate", "consult", "tax")),
+               ("manufacturing", ("manufactur", "factory", "plant", "production")), ("engineering", ("engineering", "fabricat", "machining", "industrial")),
+               ("auto_repair", ("garage", "car repair", "auto", "service centre")), ("construction", ("construction", "contractor", "civil")),
+               ("d2c_brand", ("brand", "d2c", "skincare", "online store")), ("trading_wholesale", ("wholesale", "trader", "trading", "distributor", "dealer", "supplier")),
+               ("retail_shop", ("shop", "store", "retail", "mart")), ("home_services", ("plumb", "electric", "pest", "cleaning", "repair", "ac service")))
+
+
+def guess_niche(p: dict) -> str:
+    """The niche from the words of what the business does (the test AI; and the real AI's answer when it gives none)."""
+    text = f" {p.get('industry', '')} {p.get('name', '')} {' '.join(o.get('name', '') for o in p.get('offers') or [])} ".lower()
+    return next((k for k, words in NICHE_WORDS if any(w in text for w in words)), "other")
+
+
 async def site_content(p: dict, brand: dict | None, rivals: list[dict] | None = None):
     from ..rivals import brief
     offers = [o for o in p.get("offers", []) if o.get("name")]
@@ -114,6 +141,7 @@ async def site_content(p: dict, brand: dict | None, rivals: list[dict] | None = 
             "photo_queries": [],
             "faq": [{"q": "How quickly do you reply?", "a": "Usually within a few hours on working days."},
                     {"q": "Which areas do you serve?", "a": f"We work across {city}." if city else "Message us with your location and we'll confirm."}],
+            "niche": guess_niche(p), "pains": [],
         }
     return await complete(RULES, f"""{profile_text(p)}
 Chosen brand message: {(brand or {}).get('message', '')}
@@ -131,6 +159,10 @@ JSON: {{
  "faq": [{{"q": "...", "a": "..."}}] (2-4 items, only questions answerable from the profile),
  "photo_queries": ["2-4 plain English words for a stock photo search: the main scene of this kind of business", "2-4 words: the work or product up close"]
 }}
+Also:
+ "niche": the ONE kind of business this is, from: {_niche_list()}
+ "pains": [] up to 4 short problems their customers have before they find this business (max 8 words each), ONLY if the profile
+          says them; else an empty list. Never invent.
 Include only the offers listed in the profile.{brief(rivals)}""", mock, 4000)
 
 

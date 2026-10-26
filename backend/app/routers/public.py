@@ -114,7 +114,15 @@ LOOK_FONTS = {"signboard": (("Bricolage Grotesque", "600;800"), ("Mukta", "400;5
               "bazaar": (("Rozha One", "400"), ("Mukta", "400;500;600")),
               "care": (("Nunito", "600;700;800"), ("Mukta", "400;500;600")),
               "works": (("Barlow Condensed", "600;700"), ("Barlow", "400;500;600")),
-              "atelier": (("Instrument Serif", "400"), ("Mukta", "300;400;500;600"))}
+              "atelier": (("Instrument Serif", "400"), ("Mukta", "300;400;500;600")),
+              "launch": (("Bricolage Grotesque", "600;700;800"), ("Instrument Sans", "400;500;600;700"))}
+# a second pairing per look (variant bit 1), so two businesses with the same look don't share their type too
+LOOK_FONTS_2 = {"signboard": (("Archivo", "600;800"), ("Inter", "400;500;600")),
+                "bazaar": (("Yeseva One", "400"), ("Hind", "400;500;600")),
+                "care": (("Plus Jakarta Sans", "600;700;800"), ("Inter", "400;500;600")),
+                "works": (("Oswald", "500;600;700"), ("Roboto", "400;500")),
+                "atelier": (("Fraunces", "400;600"), ("Inter", "300;400;500;600")),
+                "launch": (("Space Grotesk", "600;700"), ("Inter", "400;500;600;700"))}
 
 
 def _mix(a: str, b: str, t: float) -> str:
@@ -123,7 +131,7 @@ def _mix(a: str, b: str, t: float) -> str:
     return "#" + "".join(f"{round(ca[i] * t + cb[i] * (1 - t)):02X}" for i in range(3))
 
 
-async def site_theme(owner_id: str, accent: str, look: str = "signboard") -> dict:
+async def site_theme(owner_id: str, accent: str, look: str = "signboard", variant: int = 0) -> dict:
     """The website's colours and fonts from the owner's brand: the website's own colour leads, the brand kit adds its second
     colour, fonts and corners. Text on the brand colour is white or ink, whichever reads better."""
     from .. import brand_kit as bk
@@ -136,10 +144,11 @@ async def site_theme(owner_id: str, accent: str, look: str = "signboard") -> dic
         h, b = SITE_FONTS[fonts["heading"]], SITE_FONTS.get(fonts.get("body"), SITE_FONTS["mukta"])
         head, body = (h[0], h[1]), (b[0], b[2])
     else:
-        head, body = LOOK_FONTS.get(look, LOOK_FONTS["signboard"])
+        pairs = LOOK_FONTS_2 if variant & 2 else LOOK_FONTS
+        head, body = pairs.get(look, LOOK_FONTS["signboard"])
     families = {head[0]: head[1], body[0]: body[1]} if head[0] != body[0] else {head[0]: ";".join(sorted(set((head[1] + ";" + body[1]).split(";"))))}
     # corners: the look's own unless the owner moved the brand kit off its default ("soft")
-    look_r = {"signboard": "12px", "bazaar": "20px", "care": "26px", "works": "2px", "atelier": "4px"}.get(look, "12px")
+    look_r = {"signboard": "12px", "bazaar": "20px", "care": "26px", "works": "2px", "atelier": "4px", "launch": "22px"}.get(look, "12px")
     radius = {"square": "3px", "round": "22px"}.get(design.get("corners"), look_r)
     ink = _mix(primary, "#0E1116", .16)
     # dark sections: the brand's second colour when it is dark enough to carry white text, else a darker shade of the first
@@ -162,6 +171,8 @@ async def site_theme(owner_id: str, accent: str, look: str = "signboard") -> dic
             "ink": ink, "line": _mix(primary, "#E7E9EC", .1), "radius": radius,
             "pill": "3px" if design.get("corners") == "square" or (look == "works" and design.get("corners") != "round") else "999px",
             "head_font": head[0], "body_font": body[0],
+            # Launch's second colour for buttons and highlights: a warm yellow, or ink when the brand itself is light
+            "pop_colour": "#FFC21A" if bk.luminance(primary) < .45 and bk.contrast(primary, "#FFC21A") >= 2.2 else "#0F1236",
             "fonts_url": "https://fonts.googleapis.com/css2?" + "&".join(f"family={quote(f).replace('%20', '+')}:wght@{w}" for f, w in families.items()) + "&display=swap"}
 
 
@@ -184,6 +195,10 @@ async def member_site(slug: str, request: Request, preview: int = 0, sent: int =
     extras = await _extras(owner, owner["_id"])
     from ..site_looks import look_of
     look, variant = look_of(site, business)
+    accent = site.get("accent", "#1F4E79")
+    if accent == "#1F4E79" and not site.get("brand_accent") and not site.get("accent_chosen"):   # no brand colour of its own
+        from ..site_looks import niche_colour
+        accent = niche_colour(site, variant) or accent
     html = templates.get_template("site.html").render(
         c=site["content"], name=name, city=business.get("city", ""), accent=site.get("accent", "#1F4E79"), base=base,
         whatsapp_link=f"{base}/wa" if wa else None, email=business.get("email", ""), slug=site["slug"], sent=bool(sent),
@@ -192,7 +207,7 @@ async def member_site(slug: str, request: Request, preview: int = 0, sent: int =
         ladder=extras["ladder"], guide=extras["guide"], logo=extras["logo"], url=site_url(site["slug"]),
         program=settings.program_name, year=now().year, photos=photos_mod.resolved(site.get("photos"), base),
         industry=business.get("industry", ""), proof=(business.get("proof") or "").strip(),
-        theme=await site_theme(owner["_id"], site.get("accent", "#1F4E79"), look), look=look, variant=variant)
+        theme=await site_theme(owner["_id"], accent, look, variant), look=look, variant=variant)
     photos_mod.fill_later(site, business)
     return HTMLResponse(html, headers={"Cache-Control": "no-store" if preview else "no-cache"})  # edits and plan changes show at once
 

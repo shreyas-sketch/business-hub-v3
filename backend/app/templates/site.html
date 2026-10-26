@@ -355,8 +355,105 @@ footer .fname{font:700 22px/1.2 var(--head);color:#fff}footer a{color:rgba(255,2
 .look-atelier .steps li:before{content:counter(s);font:400 64px/1 var(--head);color:var(--p)}
 .look-atelier .contact{background:var(--ink);color:#fff}
 
+
+/* ═════════ LAUNCH — coaches, trainers, fitness, brands, events, agencies: chunky type, outlined cards with offset shadows,
+   a moving ticker, crossed-out problems and a sticky booking bar ═════════ */
+.look-launch{--pop:{{ theme.pop_colour }};--on-pop:#0F1236;--k:var(--ink)}
+body.look-launch{background:var(--soft)}
+.look-launch h1,.look-launch h2,.look-launch h3{font-weight:800;letter-spacing:-.025em}
+.look-launch h2{font-size:clamp(34px,4.8vw,64px);line-height:1}
+.look-launch .kicker{display:inline-block;justify-self:start;background:var(--k);color:#fff;padding:6px 14px;border-radius:999px;font-size:13px;letter-spacing:.02em}
+.btn.pop{background:var(--pop);color:var(--on-pop);border:2px solid var(--k);box-shadow:4px 4px 0 var(--k);font-weight:800;font-family:var(--head);font-size:18px;min-height:58px;padding:0 10px 0 26px}
+.btn.pop:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 var(--k);filter:none}.btn.pop:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--k)}
+.btn.pop .go{width:40px;height:40px;border-radius:50%;background:var(--k);color:var(--pop);display:grid;place-items:center;transition:transform .25s}
+.btn.pop:hover .go{transform:rotate(-45deg)}
+.hl{background:var(--p);color:var(--on-p);position:relative;overflow:hidden}
+.hl:before{content:"";position:absolute;inset:0;background-image:radial-gradient(currentColor 1.4px,transparent 1.6px);background-size:26px 26px;opacity:.14;pointer-events:none}
+.hl .wrap{position:relative;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:clamp(32px,5vw,64px);align-items:center;padding-top:clamp(40px,6vw,80px);padding-bottom:clamp(72px,9vw,128px)}
+.v1 .hl .wrap>div:first-child{order:2}
+.hl .where{background:var(--k);color:#fff;opacity:1;padding:8px 16px 8px 12px;border-radius:999px;font-size:14px}
+.hl .where i{background:var(--pop);opacity:1;animation:lpulse 1.6s infinite}
+@keyframes lpulse{0%{box-shadow:0 0 0 0 rgba(255,194,26,.6)}100%{box-shadow:0 0 0 10px rgba(255,194,26,0)}}
+.hl h1{font-size:clamp(40px,5.2vw,72px);line-height:1}
+.hl .rotline{display:block;margin-top:14px;font:800 clamp(26px,3.4vw,44px)/1.1 var(--head);letter-spacing:-.02em}
+.rot{display:inline-block;background:var(--pop);color:var(--on-pop);padding:.02em .3em .1em;border-radius:.2em;transform:rotate(-2deg);border:2px solid var(--k);box-shadow:4px 4px 0 var(--k);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+.rot span{display:inline-block;transition:transform .35s cubic-bezier(.2,.8,.2,1),opacity .25s}
+.rot.out span{transform:translateY(-110%);opacity:0}
+.hl .hero-sub{opacity:.92;font-size:clamp(17px,1.6vw,20px)}
+.chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+.chips span{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:14px;background:rgba(0,0,0,.14);border:1px solid rgba(255,255,255,.22);font-weight:600;font-size:15px}
+.chips svg{width:18px;height:18px;opacity:.85}
+.hl .ctas{margin-top:30px}.hl .btn.ghost{border-width:2px}
+.lframe{position:relative;margin:0;max-width:440px;justify-self:center;width:100%}
+.lframe img,.lframe .art-panel{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:200px 200px 26px 26px;border:3px solid var(--k);box-shadow:10px 10px 0 var(--k);background:var(--pop)}
+.v1 .lframe img,.v1 .lframe .art-panel{border-radius:26px 26px 200px 200px}
+.lframe .art-panel{display:grid;align-content:end;gap:10px;padding:30px;color:var(--on-pop)}
+.lframe .art-panel b{font:800 clamp(30px,3.4vw,44px)/1 var(--head);letter-spacing:-.02em}
+.lframe .art-panel span{display:block;background:#fff;border:2px solid var(--k);border-radius:12px;padding:7px 12px;font-weight:600;font-size:15px;line-height:1.3;box-shadow:3px 3px 0 var(--k);color:var(--k);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lstamp{position:absolute;left:-18px;top:-14px;width:124px;height:124px;z-index:2}
+.lstamp svg{width:100%;height:100%}.lstamp .ring{animation:turn 18s linear infinite;transform-origin:50% 50%}
+.lname{position:absolute;right:-10px;bottom:28px;background:#fff;color:var(--k);border:2px solid var(--k);border-radius:14px;padding:10px 16px;box-shadow:4px 4px 0 var(--k);max-width:75%}
+.lname b{display:block;font:800 18px/1.15 var(--head)}.lname span{font-size:13px;color:var(--muted)}
+.tickwrap{overflow:hidden;margin-top:-38px;padding:14px 0;position:relative;z-index:5}
+.ticker{background:var(--pop);color:var(--on-pop);border-top:3px solid var(--k);border-bottom:3px solid var(--k);transform:rotate(-1.6deg);margin:0 -40px;overflow:hidden}
+.ticker .lane{display:flex;width:max-content;animation:lmarq 30s linear infinite}
+.ticker span{display:flex;align-items:center;gap:24px;padding:14px 12px;font:800 clamp(20px,2.4vw,28px)/1 var(--head);white-space:nowrap}
+.ticker span:after{content:"";width:14px;height:14px;background:currentColor;transform:rotate(45deg)}
+@keyframes lmarq{to{transform:translateX(-50%)}}
+.look-launch .promises{background:transparent;border:0;padding-top:28px}
+.look-launch .promises ul{gap:12px}
+.look-launch .promises li,.look-launch .promises li+li{background:#fff;border:2px solid var(--k);border-radius:16px;padding:16px 18px;box-shadow:4px 4px 0 var(--k)}
+.look-launch .promises svg{color:var(--pt)}
+.pains .wrap{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:clamp(28px,5vw,64px);align-items:center}
+.strike{list-style:none;margin:28px 0 0;padding:0;display:grid;gap:12px}
+.strike li{position:relative;width:max-content;max-width:100%;font:700 clamp(21px,2.4vw,30px)/1.2 var(--head);transition:color .4s}
+.strike li:after{content:"";position:absolute;left:-4px;right:-4px;top:54%;height:5px;background:#FF6B8B;border-radius:3px;transform:scaleX(0);transform-origin:left;transition:transform .5s cubic-bezier(.6,0,.2,1)}
+.pains.on .strike li{color:#9EA2BC}.pains.on .strike li:after{transform:scaleX(1)}
+.pains.on .strike li:nth-child(2),.pains.on .strike li:nth-child(2):after{transition-delay:.4s}
+.pains.on .strike li:nth-child(3),.pains.on .strike li:nth-child(3):after{transition-delay:.8s}
+.pains.on .strike li:nth-child(4),.pains.on .strike li:nth-child(4):after{transition-delay:1.2s}
+.verdict{background:var(--k);color:#fff;border-radius:22px;padding:clamp(24px,3vw,36px);font:800 clamp(24px,2.6vw,34px)/1.15 var(--head);letter-spacing:-.01em;transform:rotate(-1deg);box-shadow:8px 8px 0 var(--pop)}
+.verdict b{color:var(--pop)}.verdict .btn{margin-top:22px;font-size:16px}
+.lcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:20px}
+.lcards article{position:relative;background:#fff;border:3px solid var(--k);border-radius:24px;padding:28px 26px 24px;box-shadow:6px 6px 0 var(--k);display:grid;gap:10px;align-content:start;transition:transform .15s,box-shadow .15s}
+.lcards article:hover{transform:translate(-2px,-2px);box-shadow:8px 8px 0 var(--k)}
+.lcards article:nth-child(3n+2){background:var(--pop);color:var(--on-pop)}.lcards article:nth-child(3n+2) p{color:inherit;opacity:.8}
+.lcards article:nth-child(3n+3){background:var(--p);color:var(--on-p)}.lcards article:nth-child(3n+3) p{color:inherit;opacity:.85}
+.lcards .n{font:800 15px/1 var(--head);opacity:.7}
+.lcards h3{font-size:clamp(22px,2.2vw,28px);line-height:1.08}
+.lcards p{color:var(--muted);font-size:16px}
+.lcards img{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:14px;border:2px solid var(--k)}
+.lcards .foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:8px}
+.lcards .price{display:inline-block;background:#fff;color:var(--k);border:2px solid var(--k);border-radius:10px;padding:4px 10px;transform:rotate(-3deg);box-shadow:3px 3px 0 var(--k)}
+.lcards .price.ask{transform:none;box-shadow:none;border-style:dashed}
+.lcards .askl{background:var(--k);color:#fff}
+.look-launch .about .text,.look-launch .why .cols div{background:#fff;border:3px solid var(--k);border-radius:24px;padding:clamp(24px,3vw,40px);box-shadow:6px 6px 0 var(--k)}
+.look-launch .about{background:transparent}.look-launch .about .pic img{border:3px solid var(--k);box-shadow:8px 8px 0 var(--pop);border-radius:24px}
+.look-launch .why .cols div:nth-child(2){background:var(--pop);color:var(--on-pop)}.look-launch .why .cols div:nth-child(2) p{color:inherit;opacity:.8}
+.look-launch .how{background:var(--deep);color:var(--on-deep)}
+.look-launch .how:before{content:"";position:absolute;inset:0;background-image:radial-gradient(currentColor 1.3px,transparent 1.5px);background-size:26px 26px;opacity:.1;pointer-events:none}
+.look-launch .how .kicker{background:var(--pop);color:var(--on-pop)}
+.look-launch .steps{gap:18px;position:relative}
+.look-launch .steps li{border:3px solid var(--k);border-radius:24px;background:#fff;color:var(--ink);padding:26px;box-shadow:8px 8px 0 var(--pop)}
+.look-launch .steps li:before{content:counter(s);width:44px;height:44px;border-radius:12px;background:var(--pop);color:var(--on-pop);border:2px solid var(--k);display:grid;place-items:center;font:800 20px/1 var(--head)}
+.look-launch .steps h3{font-size:24px}
+.look-launch details{background:#fff;border:2px solid var(--k);border-radius:18px;margin-bottom:12px;padding:0 20px}
+.look-launch details:first-of-type{border-top:2px solid var(--k)}
+.look-launch details[open]{box-shadow:5px 5px 0 var(--k)}
+.look-launch details[open] summary:after{background:var(--pop);color:var(--on-pop)}
+.look-launch .contact{background:var(--k)}
+.look-launch .contact form{border:3px solid var(--pop);box-shadow:8px 8px 0 var(--pop)}
+.look-launch .gallery figure{border:3px solid var(--k)}
+.dock{position:fixed;left:50%;bottom:16px;z-index:46;width:min(640px,calc(100% - 24px));display:flex;align-items:center;justify-content:space-between;gap:14px;padding:8px 8px 8px 22px;border-radius:999px;background:#fff;border:3px solid var(--k);box-shadow:5px 5px 0 var(--k);transform:translate(-50%,170%);transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+.dock.show{transform:translate(-50%,0)}
+.dock b{display:block;font:800 18px/1.15 var(--head);color:var(--k)}.dock small{font-size:13px;color:var(--muted)}
+.dock .btn.pop{min-height:48px;font-size:16px;box-shadow:none}
+.look-launch .float-wa{display:none}
+
 @media (max-width:980px){
   nav.links{display:none}
+  .hl .wrap,.pains .wrap{grid-template-columns:minmax(0,1fr)}.v1 .hl .wrap>div:first-child{order:0}
+  .lframe{max-width:360px}
   .hs .wrap,.hb .wrap,.hc .wrap,.hw .wrap,.ha .below,.about .wrap,.faq .wrap,.contact .wrap{grid-template-columns:minmax(0,1fr)}
   .v1 .hs .wrap>div:first-child,.v1 .hb .wrap>div:first-child,.v1 .hc .wrap>div:first-child,.v1 .hw .wrap>div:first-child,.v1 .ha .below>div:first-child{order:0}
   .frame img{aspect-ratio:4/3}
@@ -385,7 +482,9 @@ footer .fname{font:700 22px/1.2 var(--head);color:#fff}footer a{color:rgba(255,2
   .spec thead{display:none}.spec tr{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;padding:18px 0;border-bottom:1px solid var(--line)}
   .spec td{border:0;padding:0}.spec td.name{width:auto}.spec td.det,.spec td.pr{grid-column:2;text-align:left}
   .marks:before{left:-6px;top:-6px}.marks:after{right:-6px;bottom:-6px}
-  .float-wa{display:none}
+  .float-wa{display:none}.dock{display:none}
+  .lstamp{width:96px;height:96px;left:-6px}.lname{right:0}
+  .tickwrap{margin-top:-30px}.ticker{margin:0 -20px}
   .actionbar{display:grid;grid-template-columns:1fr 1fr;gap:10px;position:fixed;left:0;right:0;bottom:0;z-index:45;background:rgba(255,255,255,.97);
     -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
   .actionbar .btn{min-height:52px;padding:0 12px;font-size:15px}.actionbar.one{grid-template-columns:1fr}
@@ -394,7 +493,7 @@ footer .fname{font:700 22px/1.2 var(--head);color:#fff}footer a{color:rgba(255,2
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
-<body class="look-{{ look }} v{{ variant }}">
+<body class="look-{{ look }} v{{ variant % 2 }} f{{ variant // 2 }}">
 {% set wa_icon %}<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.5 3.5A11.8 11.8 0 0 0 1.9 17.6L.5 23.5l6-1.6a11.8 11.8 0 0 0 14-18.4Zm-8.4 18a9.8 9.8 0 0 1-5-1.4l-.4-.2-3.6.9 1-3.5-.2-.4a9.8 9.8 0 1 1 8.2 4.6Zm5.4-7.3c-.3-.1-1.8-.9-2-1s-.5-.1-.7.1-.8 1-1 1.2-.4.2-.7.1a8 8 0 0 1-2.4-1.5 9 9 0 0 1-1.6-2c-.2-.3 0-.5.1-.6l.5-.6.3-.5v-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6a1.1 1.1 0 0 0-.8.4 3.3 3.3 0 0 0-1 2.5 5.8 5.8 0 0 0 1.2 3.1 13.2 13.2 0 0 0 5.1 4.5c1.9.8 2.6.9 3.6.7a3 3 0 0 0 2-1.4 2.5 2.5 0 0 0 .2-1.4c-.1-.1-.3-.2-.6-.4Z"/></svg>{% endset %}
 {% set tick %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke-width="1.8"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>{% endset %}
 {% set pin %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg>{% endset %}
@@ -474,6 +573,25 @@ footer .fname{font:700 22px/1.2 var(--head);color:#fff}footer a{color:rgba(255,2
     {% else %}<div class="art-panel frame" role="img" aria-label="{{ name }}"><b>{{ name }}</b></div>{% endif %}
   </div>
 </div></section>
+{% elif look == "launch" %}
+{% set words = (offers|map(attribute="name")|list)[:6] if offers else [] %}
+<section class="hl" style="padding:0"><div class="wrap">
+  <div>
+    {{ where_line() }}
+    <h1 class="hero-h1">{{ c.headline }}{% if words %}<span class="rotline"><span class="rot" id="lrot" data-words="{{ words|tojson|forceescape }}"><span>{{ words[0] }}</span></span></span>{% endif %}</h1>
+    {% if c.subheadline %}<p class="hero-sub">{{ c.subheadline }}</p>{% endif %}
+    <div class="chips">{% if city %}<span>{{ pin }}{{ city }}</span>{% endif %}{% if whatsapp_link %}<span>{{ wa_icon }}Replies on WhatsApp</span>{% endif %}{% for w in (c.why or [])[:1] %}<span>{{ tick }}{{ w.title }}</span>{% endfor %}</div>
+    <div class="ctas">{% if whatsapp_link %}<a class="btn pop" href="{{ whatsapp_link }}" target="_blank" rel="noopener"><span>{{ c.cta or "Get a quote on WhatsApp" }}</span><span class="go" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>{% endif %}<a class="btn ghost" href="#contact">Send an inquiry</a></div>
+  </div>
+  <figure class="lframe">
+    <div class="lstamp" aria-hidden="true"><svg viewBox="0 0 124 124"><circle cx="62" cy="62" r="60" fill="{{ theme.pop_colour }}" stroke="{{ theme.ink }}" stroke-width="3"/><g class="ring"><defs><path id="lring" d="M62 62m-44 0a44 44 0 1 1 88 0a44 44 0 1 1-88 0"/></defs><text font-size="10.5" font-weight="700" letter-spacing="2.4" fill="{{ theme.ink }}"><textPath href="#lring">{{ (name ~ (" ✦ " ~ city if city else "") ~ " ✦ ")|upper|truncate(46, true, "") }}</textPath></text></g><circle cx="62" cy="62" r="24" fill="{{ theme.ink }}"/><text x="62" y="70" text-anchor="middle" font-size="22" font-weight="800" fill="{{ theme.pop_colour }}">{{ initial }}</text></svg></div>
+    {% if photos.hero %}<img src="{{ photos.hero.src }}" alt="{{ photos.hero.alt or name }}" fetchpriority="high">{{ credit(photos.hero) }}
+    {% else %}<div class="art-panel" role="img" aria-label="{{ name }}"><b>{{ name }}</b>{% for o in offers[:3] %}<span>{{ o.name }}{% if o.price %} · {{ o.price }}{% endif %}</span>{% endfor %}</div>{% endif %}
+    {% if photos.hero %}<div class="lname"><b>{{ name }}</b><span>{{ what[:60] or city }}</span></div>{% endif %}
+  </figure>
+</div></section>
+{% set tick_words = ((offers|map(attribute="name")|list) + ((c.why or [])|map(attribute="title")|list))[:8] %}
+{% if tick_words %}<div class="tickwrap"><div class="ticker" aria-hidden="true"><div class="lane">{% for _ in range(2) %}{% for t in tick_words %}<span>{{ t }}</span>{% endfor %}{% for t in tick_words %}<span>{{ t }}</span>{% endfor %}{% endfor %}</div></div></div>{% endif %}
 {% else %}
 <section class="hs" style="padding:0"><div class="wrap">
   <div>
@@ -494,6 +612,10 @@ footer .fname{font:700 22px/1.2 var(--head);color:#fff}footer a{color:rgba(255,2
 
 {% if c.why %}<div class="promises"><div class="wrap"><ul style="--n:{{ [c.why|length, 3]|min }}">{% for w in c.why[:3] %}<li>{{ tick }}<span>{{ w.title }}</span></li>{% endfor %}</ul></div></div>{% endif %}
 {% if proof %}<div class="proofline"><div class="wrap"><p>{{ proof }}</p></div></div>{% endif %}
+{% if look == "launch" and c.pains %}<section class="pains" id="pains"><div class="wrap">
+  <div><h2>Sound familiar?</h2><ul class="strike">{% for x in c.pains[:4] %}<li>{{ x }}</li>{% endfor %}</ul></div>
+  <div class="verdict">That's where <b>{{ name }}</b> comes in.{% if whatsapp_link %}<br><a class="btn pop" href="{{ whatsapp_link }}" target="_blank" rel="noopener"><span>Talk to us</span><span class="go" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>{% endif %}</div>
+</div></section>{% endif %}
 
 {# ───────────── services, one layout per look ───────────── #}
 {% if offers %}
@@ -513,6 +635,11 @@ footer .fname{font:700 22px/1.2 var(--head);color:#fff}footer a{color:rgba(255,2
   <table class="spec"><thead><tr><th>Code</th><th>Product or service</th><th>Details</th><th style="text-align:right">Price</th></tr></thead><tbody>
   {% for o in offers %}<tr><td class="code">{{ "%s%d"|format("ABCDEFGH"[loop.index0 // 9], loop.index0 % 9 + 1) }}</td><td class="name">{{ o.name }}</td><td class="det">{{ o.description }}</td><td class="pr">{{ price(o) }} {{ ask(o) }}</td></tr>{% endfor %}
   </tbody></table>
+</div></section>
+{% elif look == "launch" %}
+<section id="services"><div class="wrap">
+  <div class="sec-head"><span class="kicker">What we offer</span><h2>Pick what you need</h2><p class="lede">Ask us anything before you decide. You get a clear answer and the price.</p></div>
+  <div class="lcards">{% for o in offers %}{% set op = photos.offers.get(o.name) %}<article>{% if op %}<img src="{{ op.thumb or op.src }}" alt="" loading="lazy">{% endif %}<span class="n">{{ "%02d"|format(loop.index) }}</span><h3>{{ o.name }}</h3>{% if o.description %}<p>{{ o.description }}</p>{% endif %}<div class="foot">{{ price(o) }}{{ ask(o) }}</div></article>{% endfor %}</div>
 </div></section>
 {% elif look == "atelier" %}
 <section id="services"><div class="wrap">
@@ -551,7 +678,7 @@ footer .fname{font:700 22px/1.2 var(--head);color:#fff}footer a{color:rgba(255,2
 </div></section>{% endif %}
 
 {% if c.steps %}<section class="how"><div class="wrap">
-  <div class="sec-head"><span class="kicker">How it works</span><h2>{% if look == "care" %}Your visit, step by step{% elif look == "bazaar" %}Ordering is simple{% elif look == "works" %}From your drawing to delivery{% else %}From your first message to the finished job{% endif %}</h2></div>
+  <div class="sec-head"><span class="kicker">How it works</span><h2>{% if look == "care" %}Your visit, step by step{% elif look == "bazaar" %}Ordering is simple{% elif look == "works" %}From your drawing to delivery{% elif look == "launch" %}{{ c.steps|length }} steps. The right order.{% else %}From your first message to the finished job{% endif %}</h2></div>
   <ol class="steps">{% for s in c.steps %}<li><h3>{{ s.title }}</h3><p>{{ s.text }}</p></li>{% endfor %}</ol>
 </div></section>{% endif %}
 
@@ -596,5 +723,20 @@ footer .fname{font:700 22px/1.2 var(--head);color:#fff}footer a{color:rgba(255,2
   {% if whatsapp_link %}<a class="btn wa" href="{{ whatsapp_link }}" target="_blank" rel="noopener">{{ wa_icon }}WhatsApp</a>{% endif %}
   <a class="btn primary" href="#contact">{% if look == "care" %}Book a visit{% else %}Send an inquiry{% endif %}</a>
 </nav>
+{% if look == "launch" and whatsapp_link %}<div class="dock" id="ldock"><div><b>{{ name }}</b><small>{{ c.cta or "Get a quote on WhatsApp" }}</small></div><a class="btn pop" href="{{ whatsapp_link }}" target="_blank" rel="noopener"><span>WhatsApp us</span><span class="go" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a></div>{% endif %}
+{% if look == "launch" %}<script>
+(function(){
+  var calm=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var r=document.getElementById("lrot");
+  if(r&&!calm){var w=[];try{w=JSON.parse(r.getAttribute("data-words")||"[]")}catch(e){}var i=0,s=r.firstElementChild;
+    if(w.length>1)setInterval(function(){r.classList.add("out");setTimeout(function(){i=(i+1)%w.length;s.textContent=w[i];r.classList.remove("out")},300)},2400)}
+  var p=document.getElementById("pains");
+  if(p){if("IntersectionObserver" in window){var io=new IntersectionObserver(function(e){if(e[0].isIntersecting){p.classList.add("on");io.disconnect()}},{threshold:.35});io.observe(p)}else p.classList.add("on")}
+  var d=document.getElementById("ldock"),h=document.querySelector(".hl"),c=document.getElementById("contact");
+  if(d&&h&&"IntersectionObserver" in window){var past=false,near=false,u=function(){d.classList.toggle("show",past&&!near)};
+    new IntersectionObserver(function(e){past=!e[0].isIntersecting&&e[0].boundingClientRect.top<0;u()}).observe(h);
+    if(c)new IntersectionObserver(function(e){near=e[0].isIntersecting;u()},{threshold:.15}).observe(c)}
+})();
+</script>{% endif %}
 </body>
 </html>
