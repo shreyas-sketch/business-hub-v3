@@ -1,8 +1,9 @@
 """The member website's design, put together from parts (see templates/site.html): a first screen (hero), a services layout,
 a finish (how the sections below are styled) and a font pairing, plus the colour and a variant bit that swaps the picture side
 and the pattern. Each kind of business has the parts that suit it; the AI picks among them when it writes the page, else the
-web address does, so a room of clinics or coaches gets many different pages, not six. The six named looks are the original
-bundles of parts, still there for an owner who wants one of them exactly."""
+web address does, so a room of clinics or coaches gets many different pages, not six. The first screen is always the kind of
+business's own (a design studio and a machine shop never open the same way); the rest varies. Nothing here is picked by the
+owner: the page is put together for them."""
 import hashlib
 import re
 
@@ -23,7 +24,7 @@ NICHES = {
     "bakery_sweets": "bazaar", "catering": "bazaar", "interiors": "atelier", "architecture": "atelier", "real_estate": "atelier",
     "fashion_jewellery": "atelier", "photography_events": "launch", "wedding": "atelier", "coaching_education": "launch",
     "fitness_yoga": "launch", "d2c_brand": "launch", "agency_marketing": "launch", "travel": "launch", "it_software": "launch",
-    "professional_services": "atelier", "manufacturing": "works", "engineering": "works", "auto_repair": "works",
+    "design_studio": "atelier", "professional_services": "atelier", "manufacturing": "works", "engineering": "works", "auto_repair": "works",
     "construction": "works", "gaming": "launch", "retail_shop": "signboard", "trading_wholesale": "signboard", "home_services": "signboard",
     "other": "",
 }
@@ -49,6 +50,7 @@ NICHE_COLOURS = {
     "agency_marketing": ("#2B3BEA", "#7C3AED", "#DB2777", "#E4572E", "#0F172A"),
     "travel": ("#0369A1", "#EA580C", "#0F766E", "#2B3BEA", "#B45309"),
     "it_software": ("#4338CA", "#0F766E", "#2B3BEA", "#7C3AED", "#0369A1"),
+    "design_studio": ("#111827", "#DB2777", "#7C3AED", "#0F766E", "#C2410C"),
     "professional_services": ("#1E3A8A", "#334155", "#14532D", "#7C2D12", "#0F766E"),
     "manufacturing": ("#B45309", "#1F4E79", "#C2410C", "#334155", "#B91C1C"),
     "engineering": ("#C2410C", "#0F766E", "#1F4E79", "#B45309", "#374151"),
@@ -61,12 +63,6 @@ NICHE_COLOURS = {
     "other": ("#2B3BEA", "#0F766E", "#C2410C", "#7C3AED", "#B91C1C", "#047857", "#B45309", "#DB2777"),
 }
 # ── the parts ──
-HEROES = {"signboard": "the brand colour as a shop sign, with a price board",
-          "bazaar": "a block-print pattern, a round stamp and an arched picture",
-          "care": "soft curves and a book-a-visit card",
-          "works": "a dark blueprint grid with a spec panel",
-          "atelier": "an oversized headline on paper, wide margins",
-          "launch": "chunky type, a framed picture, a moving ticker"}
 SERVICES = {"board": "a price board, one row each", "menu": "a menu card with dotted price lines",
             "tiles": "soft tiles with an icon each", "spec": "a spec table with item codes",
             "index": "a large-type index", "cards": "outlined cards with offset shadows"}
@@ -91,29 +87,24 @@ FONT_PAIRS = {
 FINISH_FONTS = {"signboard": ("grotesk", "archivo", "space", "sora"), "bazaar": ("rozha", "yeseva", "fraunces", "dm"),
                 "care": ("nunito", "jakarta", "sora"), "works": ("barlow", "oswald", "space"),
                 "atelier": ("serif", "fraunces", "dm"), "launch": ("bricolage", "space", "sora", "jakarta")}
-# each named look as its bundle of parts (hero, services, finish, first font pairing)
-LOOK_PARTS = {"signboard": ("signboard", "board", "signboard", "grotesk"), "bazaar": ("bazaar", "menu", "bazaar", "rozha"),
-              "care": ("care", "tiles", "care", "nunito"), "works": ("works", "spec", "works", "barlow"),
-              "atelier": ("atelier", "index", "atelier", "serif"), "launch": ("launch", "cards", "launch", "bricolage")}
-# the parts that suit each kind of business, by the look its niche maps to; a niche can narrow or widen its own
+# the parts that suit each kind of business, by the look its niche maps to; a niche can narrow or widen its own. The first
+# screen isn't among them: it is always the kind's own (design_of), so two kinds of business never open alike.
 FAMILY_PARTS = {
-    "care": {"hero": ("care", "atelier", "signboard"), "services": ("tiles", "index", "board"), "finish": ("care", "atelier")},
-    "bazaar": {"hero": ("bazaar", "signboard", "launch"), "services": ("menu", "cards", "board"), "finish": ("bazaar", "signboard")},
-    "works": {"hero": ("works", "signboard", "atelier"), "services": ("spec", "board", "index"), "finish": ("works", "signboard")},
-    "atelier": {"hero": ("atelier", "care", "signboard"), "services": ("index", "tiles", "board"), "finish": ("atelier", "care")},
-    "signboard": {"hero": ("signboard", "launch", "bazaar"), "services": ("board", "cards", "tiles", "menu"),
-                  "finish": ("signboard", "launch", "bazaar")},
-    "launch": {"hero": ("launch", "signboard", "atelier"), "services": ("cards", "tiles", "index", "board"),
-               "finish": ("launch", "signboard", "atelier")},
+    "care": {"services": ("tiles", "index", "board"), "finish": ("care", "atelier")},
+    "bazaar": {"services": ("menu", "cards", "board"), "finish": ("bazaar", "signboard")},
+    "works": {"services": ("spec", "board"), "finish": ("works", "signboard")},
+    "atelier": {"services": ("index", "tiles", "cards"), "finish": ("atelier", "care")},
+    "signboard": {"services": ("board", "cards", "tiles", "menu"), "finish": ("signboard", "launch", "bazaar")},
+    "launch": {"services": ("cards", "tiles", "index", "board"), "finish": ("launch", "signboard", "atelier")},
 }
 NICHE_PARTS = {
-    "gaming": {"hero": ("launch", "works"), "services": ("cards", "spec"), "finish": ("launch", "works")},
-    "it_software": {"hero": ("launch", "works", "atelier"), "services": ("cards", "spec", "index"), "finish": ("launch", "works", "atelier")},
-    "wellness": {"hero": ("care", "atelier", "bazaar"), "services": ("tiles", "index", "menu"), "finish": ("care", "atelier", "bazaar")},
-    "fitness_yoga": {"hero": ("launch", "care", "signboard"), "services": ("cards", "tiles", "board"), "finish": ("launch", "care")},
-    "auto_repair": {"hero": ("works", "signboard", "launch"), "services": ("board", "spec", "cards"), "finish": ("works", "signboard")},
+    "gaming": {"services": ("cards", "spec"), "finish": ("launch", "works")},
+    "it_software": {"services": ("cards", "spec", "index"), "finish": ("launch", "works", "atelier")},
+    "wellness": {"services": ("tiles", "index", "menu"), "finish": ("care", "atelier", "bazaar")},
+    "fitness_yoga": {"services": ("cards", "tiles", "board"), "finish": ("launch", "care")},
+    "auto_repair": {"services": ("board", "spec", "cards"), "finish": ("works", "signboard")},
 }
-AXES = ("hero", "services", "finish", "fonts")
+AXES = ("services", "finish", "fonts")
 
 # the Launch look's highlight colour, one of these per page (each reads with dark text)
 POP_COLOURS = ("#FFC21A", "#FF8FA3", "#5EE6B0", "#FFB347", "#B9E769", "#7FD6FF")
@@ -156,31 +147,29 @@ def _bucket(slug: str, n: int) -> int:
 
 
 def look_of(site: dict, business: dict) -> tuple[str, int]:
-    """The look the page's kind of business maps to (or the owner's own pick), and the variant 0-3: bit 0 swaps the picture
-    side and the pattern. The look sets the page's wording ("Our menu", "Book a visit"); the parts are design_of's."""
-    chosen = site.get("look")
-    look = chosen if chosen in LOOKS else auto_look(business, niche_of(site), site.get("slug") or "")
-    return look, _bucket(site.get("slug") or "", 4)
+    """The look the page's kind of business maps to, and the variant 0-3: bit 0 swaps the picture side and the pattern. The
+    look is the page's first screen and its wording ("Our menu", "Book a visit"); the other parts are design_of's. A look an
+    owner picked before pages were put together from parts is no longer used."""
+    return auto_look(business, niche_of(site), site.get("slug") or ""), _bucket(site.get("slug") or "", 4)
 
 
 def parts_for(look: str, niche: str = "") -> dict:
-    """The parts that suit a kind of business: its niche's own, else its look's family, plus the fonts its finishes carry."""
-    allowed = dict(NICHE_PARTS.get(niche) or FAMILY_PARTS.get(look) or FAMILY_PARTS["signboard"])
-    return {**allowed, "fonts": tuple(dict.fromkeys(f for fin in allowed["finish"] for f in FINISH_FONTS[fin]))}
+    """The parts that suit a kind of business: its own first screen, its niche's parts (else its look's family's), and the fonts
+    its finishes carry."""
+    look = look if look in FAMILY_PARTS else "signboard"
+    allowed = dict(NICHE_PARTS.get(niche) or FAMILY_PARTS[look])
+    return {"hero": (look,), **allowed, "fonts": tuple(dict.fromkeys(f for fin in allowed["finish"] for f in FINISH_FONTS[fin]))}
 
 
 def design_of(site: dict, business: dict) -> dict:
-    """The page's parts. An owner's chosen look is its original bundle. Otherwise each part is the AI's pick when it suits the
+    """The page's parts. The first screen is its kind of business's own; each other part is the AI's pick when it suits the
     business (content.design), else one picked from the web address among those that suit it, so pages of one kind vary."""
     voice, variant = look_of(site, business)
     slug = site.get("slug") or ""
-    if site.get("look") in LOOKS:
-        hero, services, finish, fonts = LOOK_PARTS[voice]
-        return {"voice": voice, "variant": variant, "hero": hero, "services": services, "finish": finish, "fonts": fonts}
     allowed = parts_for(voice, niche_for(site, business))
     ai = ((site.get("content") or {}).get("design") or {})
-    out = {"voice": voice, "variant": variant}
-    for axis in ("hero", "services", "finish"):
+    out = {"voice": voice, "variant": variant, "hero": voice}
+    for axis in ("services", "finish"):
         opts = allowed[axis]
         out[axis] = ai.get(axis) if ai.get(axis) in opts else opts[_bucket(f"{slug}:{axis}", len(opts))]
     fonts = FINISH_FONTS[out["finish"]]           # the pairing must carry the finish's heading weights
@@ -190,7 +179,7 @@ def design_of(site: dict, business: dict) -> dict:
 
 def design_choices(raw) -> dict:
     """The AI's design picks, kept only where each names a real part (whether it suits the business is design_of's call)."""
-    valid = {"hero": HEROES, "services": SERVICES, "finish": FINISHES, "fonts": FONT_PAIRS}
+    valid = {"services": SERVICES, "finish": FINISHES, "fonts": FONT_PAIRS}
     raw = raw if isinstance(raw, dict) else {}
     picks = {k: str(raw.get(k) or "").strip().lower() for k in AXES}
     return {k: v for k, v in picks.items() if v in valid[k]}
@@ -204,7 +193,7 @@ def design_menu() -> str:
     """The parts, for the AI's prompt: it picks the ones that fit this business."""
     def line(d):
         return "; ".join(f"{k} ({v})" for k, v in d.items())
-    return (f'"hero": one of {line(HEROES)}\n "services": one of {line(SERVICES)}\n'
+    return (f'"services": one of {line(SERVICES)}\n'
             f' "finish": how the sections below look, one of {", ".join(FINISHES)}\n "fonts": one of {", ".join(FONT_PAIRS)}')
 
 
@@ -229,8 +218,3 @@ def niche_colour(site: dict, variant: int = 0, business: dict | None = None) -> 
 
 def pop_colour(site: dict) -> str:
     return POP_COLOURS[_bucket((site.get("slug") or "") + ":pop", len(POP_COLOURS))]
-
-
-def options(business: dict, site: dict | None = None) -> dict:
-    return {"auto": auto_look(business, niche_of(site or {}), (site or {}).get("slug") or ""),
-            "looks": [{"key": k, "name": n, "about": a} for k, (n, a) in LOOKS.items()]}

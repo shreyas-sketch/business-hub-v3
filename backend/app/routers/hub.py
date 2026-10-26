@@ -170,7 +170,6 @@ class SiteIn(BaseModel):
     accent: str = Field(default=ACCENTS[0])
     slug: str | None = Field(default=None, max_length=40)
     showcase: bool = False
-    look: str | None = Field(default=None, max_length=20)   # one of site_looks.LOOKS, or "auto" / empty for the business's kind
 
 
 def _slugify(name: str) -> str:
@@ -203,19 +202,9 @@ def site_view(site: dict | None, user: dict) -> dict | None:
     return out
 
 
-async def _with_looks(view: dict | None, ws: str) -> dict:
-    """The site with the looks the owner can pick, and the one their kind of business gets automatically."""
-    if not view:
-        return {}
-    from .. import site_looks
-    b = await db().businesses.find_one({"owner_id": ws}) or {}
-    site = await db().sites.find_one({"owner_id": ws}, {"content.niche": 1, "slug": 1}) or {}
-    return {**view, "look": view.get("look") or "auto", **{f"look_{k}": v for k, v in site_looks.options(b, site).items()}}
-
-
 @router.get("/site")
 async def get_site(ctx: Ctx = Depends(get_ctx)):
-    return await _with_looks(site_view(await db().sites.find_one({"owner_id": ctx.ws}), ctx.owner), ctx.ws)
+    return site_view(await db().sites.find_one({"owner_id": ctx.ws}), ctx.owner) or {}
 
 
 def _blank_nulls(value):
@@ -341,11 +330,6 @@ async def save_site(body: SiteIn, ctx: Ctx = Depends(owner_ctx)):
     patch = {"content": body.content.model_dump(), "accent": accent, "showcase": body.showcase, "updated_at": now()}
     if accent != site.get("accent", ACCENTS[0]):
         patch["accent_chosen"] = True       # the owner picked a colour: it's used as is (no colour by kind of business)
-    if body.look is not None:
-        from .. import site_looks
-        if body.look not in site_looks.LOOKS and body.look not in ("", "auto"):
-            raise HTTPException(400, "Pick one of the looks shown")
-        patch["look"] = body.look if body.look in site_looks.LOOKS else None
     if body.slug and body.slug != site["slug"]:
         slug = body.slug.strip().lower()
         if not SLUG.match(slug) or slug in RESERVED:
@@ -357,7 +341,7 @@ async def save_site(body: SiteIn, ctx: Ctx = Depends(owner_ctx)):
         await db().sites.update_one({"_id": site["_id"]}, {"$set": patch})
     except DuplicateKeyError:
         raise HTTPException(409, "That web address is taken. Try another.")
-    return await _with_looks(site_view(await db().sites.find_one({"_id": site["_id"]}), user), user["_id"])
+    return site_view(await db().sites.find_one({"_id": site["_id"]}), user) or {}
 
 
 @router.post("/site/publish")

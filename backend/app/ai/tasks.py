@@ -112,6 +112,8 @@ NICHE_WORDS = (("dental", ("dental", "dentist", "orthodont", "teeth")), ("clinic
                ("catering", ("catering", "caterer", "tiffin")), ("interiors", ("interior", "modular", "wardrobe", "furnish")),
                ("architecture", ("architect",)), ("real_estate", ("real estate", "property", "realty", "builder")),
                ("fashion_jewellery", ("fashion", "boutique", "jewel", "saree", "apparel")), ("wedding", ("wedding", "bridal")),
+               # a design studio, not a D2C label: "branding" would otherwise match "brand"
+               ("design_studio", ("graphic design", "design studio", "design agency", "branding", "logo design", "web design", "ui ux", "ux design")),
                ("photography_events", ("photograph", "event")),
                # before coaching: a yoga studio's "courses" don't make it a tuition class
                ("fitness_yoga", ("fitness", "gym", "yoga", "zumba")), ("coaching_education", ("coach", "academy", "tuition", "classes", "training", "course", "school")),

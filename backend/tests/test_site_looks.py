@@ -3,7 +3,7 @@ and the colours stay legible on every look."""
 from app import site_looks
 from app import brand_kit as bk
 from app.routers.public import site_theme
-from tests.conftest import go_live, login
+from tests.conftest import PROFILE, go_live, login
 
 
 def test_auto_look_follows_the_trade():
@@ -18,27 +18,23 @@ def test_auto_look_follows_the_trade():
 def test_variant_is_stable_per_address():
     assert site_looks.look_of({"slug": "abc"}, {})[1] == site_looks.look_of({"slug": "abc"}, {})[1]
     assert {site_looks.look_of({"slug": f"s{i}"}, {})[1] for i in range(40)} == {0, 1, 2, 3}
-    assert site_looks.look_of({"slug": "x", "look": "care"}, {"industry": "Sweets"})[0] == "care"
+    # a look an owner picked before pages were put together from parts no longer applies
+    assert site_looks.look_of({"slug": "x", "look": "care"}, {"industry": "Sweets"})[0] == "bazaar"
 
 
-async def test_owner_picks_a_look_and_the_page_changes(client):
+async def test_owners_get_no_look_to_pick_the_page_is_put_together_for_them(client):
     await login(client, "9827200001")
     site = await go_live(client)
     got = (await client.get("/api/site")).json()
-    assert got["look"] == "auto" and got["look_auto"] in site_looks.LOOKS and len(got["look_looks"]) == len(site_looks.LOOKS)
+    assert not any(k == "look" or k.startswith("look_") for k in got)
     body = {"content": got["content"], "accent": got["accent"], "slug": got["slug"]}
-    for look in site_looks.LOOKS:
-        r = await client.put("/api/site", json={**body, "look": look})
-        assert r.status_code == 200 and r.json()["look"] == look
-        page = (await client.get(f"/s/{site['slug']}")).text
-        assert f'class="look-{look} ' in page
-    assert (await client.put("/api/site", json={**body, "look": "neon"})).status_code == 400
-    r = await client.put("/api/site", json={**body, "look": "auto"})
-    assert r.json()["look"] == "auto"
-    # automatic: a mix of the parts that suit the business, not one of the six bundles as is
-    allowed = site_looks.parts_for(r.json()["look_auto"], got["content"].get("niche", ""))
-    page = (await client.get(f"/s/{site['slug']}")).text
-    assert any(f'class="look-{f} hero-{h} svc-{v} ' in page for f in allowed["finish"] for h in allowed["hero"] for v in allowed["services"])
+    before = (await client.get(f"/s/{site['slug']}")).text
+    r = await client.put("/api/site", json={**body, "look": "atelier"})      # an older app still sending one: ignored
+    assert r.status_code == 200 and "look" not in r.json()
+    assert (await client.get(f"/s/{site['slug']}")).text.split("<body")[1][:120] == before.split("<body")[1][:120]
+    allowed = site_looks.parts_for(site_looks.look_of({"slug": site["slug"], "content": got["content"]}, {**PROFILE})[0],
+                                   got["content"].get("niche", ""))
+    assert any(f'class="look-{f} hero-{h} svc-{v} ' in before for f in allowed["finish"] for h in allowed["hero"] for v in allowed["services"])
 
 
 async def test_brand_colour_reads_on_white_and_on_dark_panels(client):
@@ -124,7 +120,7 @@ def test_pages_are_put_together_from_parts_so_one_kind_of_business_varies():
         assert d["voice"] == "care" and d["hero"] in allowed["hero"] and d["services"] in allowed["services"]
         assert d["finish"] in allowed["finish"] and d["fonts"] in site_looks.FINISH_FONTS[d["finish"]]   # weights it can carry
     combos = {(d["hero"], d["services"], d["finish"], d["fonts"]) for d in clinics}
-    assert len(combos) > 15                                                            # not one page in six colours
+    assert len(combos) > 10                                                            # not one page in six colours
     assert {d["hero"] for d in clinics} == set(allowed["hero"])
     # never a part that doesn't suit: no menu for a clinic, no spec table for a bakery
     assert all(d["services"] != "menu" for d in clinics)
@@ -135,19 +131,34 @@ def test_pages_are_put_together_from_parts_so_one_kind_of_business_varies():
     assert site_looks.design_of(one, {}) == site_looks.design_of(one, {})
 
 
-def test_the_ai_picks_parts_that_suit_and_the_owner_can_pin_a_bundle():
+def test_the_ai_picks_parts_that_suit_but_never_the_first_screen():
     picked = {"slug": "x", "content": {"niche": "gaming", "design": {"hero": "works", "services": "spec", "finish": "works", "fonts": "oswald"}}}
     d = site_looks.design_of(picked, {})
-    assert (d["hero"], d["services"], d["finish"], d["fonts"]) == ("works", "spec", "works", "oswald")
+    assert (d["hero"], d["services"], d["finish"], d["fonts"]) == ("launch", "spec", "works", "oswald")   # the hero is gaming's own
     # a pick that doesn't suit the business (a menu for a gaming arena) or fonts the finish can't carry fall back
     odd = {"slug": "x", "content": {"niche": "gaming", "design": {"services": "menu", "finish": "launch", "fonts": "serif"}}}
     d = site_looks.design_of(odd, {})
     assert d["services"] in ("cards", "spec") and d["fonts"] in site_looks.FINISH_FONTS["launch"]
-    # the owner's own look is that look's bundle, exactly
-    d = site_looks.design_of({"slug": "x", "look": "atelier", "content": {"niche": "gaming"}}, {})
-    assert (d["hero"], d["services"], d["finish"], d["fonts"]) == site_looks.LOOK_PARTS["atelier"]
-    # only real parts are kept from the AI's answer
-    assert site_looks.design_choices({"hero": "Care", "services": "carousel", "fonts": 3}) == {"hero": "care"}
+    # only real parts are kept from the AI's answer, and the first screen isn't its to pick
+    assert site_looks.design_choices({"hero": "care", "services": "Tiles", "finish": "neon", "fonts": 3}) == {"services": "tiles"}
+
+
+def test_two_kinds_of_business_never_open_alike():
+    """A design studio and a machine shop were getting the same first screen and services layout."""
+    kinds = {"Interior design studio": "interiors", "Graphic design and branding studio": "design_studio",
+             "Precision machined components manufacturer": "manufacturing", "Dental clinic": "dental",
+             "Bakery and sweets": "bakery_sweets", "Mobile phone shop": "retail_shop", "Business coaching": "coaching_education"}
+    from app.ai.tasks import guess_niche
+    heroes = {}
+    for industry, niche in kinds.items():
+        assert guess_niche({"industry": industry}) == niche, industry
+        pages = {(d["hero"]) for d in (site_looks.design_of({"slug": f"b{i}", "content": {"niche": niche}}, {}) for i in range(60))}
+        assert len(pages) == 1, industry                   # one first screen per kind...
+        heroes.setdefault(pages.pop(), set()).add(site_looks.NICHES[niche])
+    assert all(len(v) == 1 for v in heroes.values())       # ...and no two kinds share one
+    studio = {(d["hero"], d["services"]) for d in (site_looks.design_of({"slug": f"s{i}", "content": {"niche": "interiors"}}, {}) for i in range(60))}
+    works = {(d["hero"], d["services"]) for d in (site_looks.design_of({"slug": f"s{i}", "content": {"niche": "manufacturing"}}, {}) for i in range(60))}
+    assert not studio & works
 
 
 async def test_every_part_renders_with_the_kind_of_business_words(client):
