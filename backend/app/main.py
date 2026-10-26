@@ -14,10 +14,13 @@ from .db import connect, ensure_indexes
 from . import files as files_store, mailer
 from .routers import (admin, admin_config, agents, auth, bankreader, billing, brandkit, cashflow, competitors, leadresponse, reputation, winback, compliance, dashboard, day1, desk, event, followups, domains, growth, hooks, hub, inquiries, gateway, kits, knowledge, leadideas, sitemagnets, membership, money,
                       expenses, gstsetaside, moneyinsights, office, onboard, program, public, recordings, rhythm, social, sopset, team, tools, workforce)
+from .routers import audit, brochures, crm, expenseai, inputs, keyperson, multiplier, onboarding as onboarding_admin, socialmedia
 from .sites import rewrite_to_site, slug_from_host
 
 FEATURE_ROUTERS = (kits, membership, team, billing, agents, money, office, recordings, admin_config, onboard, tools, rhythm,
                    program, desk, growth, hooks, workforce, domains, day1, knowledge, compliance, cashflow, followups, brandkit, sopset, social, leadideas, dashboard, inquiries, gateway, sitemagnets, event, expenses, moneyinsights, gstsetaside, bankreader, competitors, reputation, winback, leadresponse)
+# v2.3 (OwnerDesk): each module has `router`, and may have `admin` (admin pages) and `public` (no login) routers too
+V23_ROUTERS = (audit, crm, keyperson, brochures, socialmedia, multiplier, expenseai, inputs, onboarding_admin)
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
 DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
@@ -27,10 +30,13 @@ DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 async def lifespan(_: FastAPI):
     connect()
     await ensure_indexes()
-    for module in (*FEATURE_ROUTERS, files_store, mailer):
-        if hasattr(module, "ensure_indexes"):
-            await module.ensure_indexes()
+    # every module's indexes at once (one after another took several seconds on a fresh database)
+    await asyncio.gather(*(module.ensure_indexes() for module in (*FEATURE_ROUTERS, *V23_ROUTERS, files_store, mailer)
+                           if hasattr(module, "ensure_indexes")))
     await plans.load(force=True)
+    if settings.env != "test" and settings.v23_auto_apply:   # the first start on v2.3 switches the hub to the OwnerDesk setup (once; tests apply it themselves)
+        from . import v23
+        await v23.apply_once()
     scheduler_task = day1_task = event_task = None
     if settings.run_scheduler and settings.env != "test":
         from .agents import scheduler
@@ -90,6 +96,11 @@ app.include_router(day1.admin)
 app.include_router(event.admin)
 app.include_router(compliance.admin)
 app.include_router(dashboard.admin)
+for _module in V23_ROUTERS:
+    app.include_router(_module.router)
+    for _extra in ("admin", "public"):
+        if hasattr(_module, _extra):
+            app.include_router(getattr(_module, _extra))
 
 if (DIST / "assets").exists():
     app.mount("/assets", StaticFiles(directory=DIST / "assets"), name="assets")

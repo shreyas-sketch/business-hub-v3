@@ -1,6 +1,11 @@
 # OwnerDesk · v2.3 (formerly Business AI Action Hub)
 
-> v2.3 is the OwnerDesk rename and restyle to the Akshat Dani design system: see `docs/OWNERDESK_RESTYLE.md`.
+> v2.3 is the OwnerDesk rename and restyle to the Akshat Dani design system (`docs/OWNERDESK_RESTYLE.md`) **and the 6-engine
+> build** (`docs/V23_ENGINES_HANDOFF.md`): a menu of the 6 engines of a business (Lead, Sales, Conversion, Operations, Brand,
+> Data) with only the agreed features, the engines opening day by day at the 3-day event, the Engine Audit, a full CRM with a
+> drag-and-drop pipeline, key-person knowledge capture, and one paid plan — OwnerDesk Membership, ₹1,999 a month or ₹19,999 a
+> year, paid on Razorpay and switched on in Admin → Onboarding. The six-plan ladder below is still in the code; the v2.3
+> setup (`backend/app/v23.py`, applied once on the first start) switches the hub to the engine menu.
 
 The hub every owner leaves the 2-day Business AI workshop with. It is free on day one, and the same hub grows with the owner through six plans: from a live website and an AI Writer, to a weekly rhythm, the Action Program's frameworks filled in with their own numbers, sales and cash on a system, 6 AI staff on their own WhatsApp and Employz.ai, and finally a 30-strong AI workforce.
 

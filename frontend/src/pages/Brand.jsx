@@ -31,7 +31,7 @@ export default function Brand() {
       actions={options.length > 0 && <button className="btn ghost sm ai" disabled={generating} onClick={generate}>{generating ? "Writing…" : "Write 3 new options"}</button>}>
       {generating && !options.length && <div className="panel"><span className="label">Writing</span><p>Reading your Business Brain and drafting three options…</p></div>}
       {!generating && !options.length && !biz?.brand && (
-        <div className="empty"><h2>Let the AI draft it.</h2><p className="muted">Uses 1 AI run.</p><button className="btn primary ai" onClick={generate}>Write my brand message</button></div>
+        <div className="empty"><h2>Let the AI draft it.</h2><p className="muted">Uses 1 AI token.</p><button className="btn primary ai" onClick={generate}>Write my brand message</button></div>
       )}
       {options.length > 0 && (
         <div className="grid3">

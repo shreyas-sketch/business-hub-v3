@@ -78,7 +78,18 @@ class Settings:
     ai_concurrency: int = _int("AI_CONCURRENCY", 32)        # AI calls in flight at once, per server process; the rest wait their turn
     ai_retries: int = _int("AI_RETRIES", 2)                 # a "too many requests" / "overloaded" answer is tried again this many times
 
-    # Messaging: WhatsApp via AiSensy (the hub's own number), SMS fallback via MSG91. Empty = development mode (logged, not sent)
+    # Messaging: the hub's own WhatsApp number, through a WhatsApp tool (v2.3: any of aisensy | wati | interakt | meta; aisensy
+    # is the default, so an existing setup changes nothing), with SMS fallback via MSG91 for login codes. Empty = development
+    # mode (logged, not sent). The template names below keep their old AISENSY_* names; with another tool they are that tool's
+    # template names (each template's variables numbered {{1}}, {{2}}… in the order given next to each one).
+    whatsapp_provider: str = os.getenv("WHATSAPP_PROVIDER", "aisensy").strip().lower()
+    whatsapp_template_language: str = os.getenv("WHATSAPP_TEMPLATE_LANGUAGE", "en").strip()   # Interakt and Meta need it
+    wati_api_url: str = os.getenv("WATI_API_URL", "").rstrip("/")          # Wati → API Docs: your API endpoint, https://live-mt-server.wati.io/<id>
+    wati_api_token: str = os.getenv("WATI_API_TOKEN", "")                 # Wati → API Docs: the access token (with or without "Bearer ")
+    interakt_api_key: str = os.getenv("INTERAKT_API_KEY", "")             # Interakt → Settings → Developer settings: the secret key
+    interakt_api_url: str = os.getenv("INTERAKT_API_URL", "https://api.interakt.ai/v1/public/message/")
+    whatsapp_hub_phone_number_id: str = os.getenv("WHATSAPP_HUB_PHONE_NUMBER_ID", "")   # Meta Cloud API directly: the hub number's id
+    whatsapp_hub_access_token: str = os.getenv("WHATSAPP_HUB_ACCESS_TOKEN", "")         # Meta Cloud API directly: a permanent token
     aisensy_api_key: str = os.getenv("AISENSY_API_KEY", "")
     aisensy_otp_campaign: str = os.getenv("AISENSY_OTP_CAMPAIGN", "")
     aisensy_otp_button: bool = os.getenv("AISENSY_OTP_BUTTON", "true").lower() in ("1", "true", "yes")
@@ -106,6 +117,9 @@ class Settings:
 
     # Agents
     run_scheduler: bool = os.getenv("RUN_SCHEDULER", "true").lower() in ("1", "true", "yes")
+    # the OwnerDesk v2.3 setup on a hub's first start (app/v23.py). Off only for the demo seed (which builds the old plans'
+    # demo accounts first) and for browser checks of the pre-v2.3 menu.
+    v23_auto_apply: bool = os.getenv("V23_AUTO_APPLY", "true").lower() in ("1", "true", "yes")
     followup_days: tuple = tuple(int(d) for d in os.getenv("FOLLOWUP_DAYS", "1,3,7").split(",") if d.strip().isdigit())
     review_delay_days: int = _int("REVIEW_REQUEST_DELAY_DAYS", 2)
     reminder_gap_days: int = _int("PAYMENT_REMINDER_GAP_DAYS", 3)

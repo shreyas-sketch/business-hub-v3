@@ -90,7 +90,7 @@ function Practice({ session, onUpdate, onClose }) {
               refresh();
             }}>Finish and score</Busy>
           </div>
-          <span className="small muted">Each customer reply uses one AI run, and so does the score. A voice note is turned into text first (one run).</span>
+          <span className="small muted">Each customer reply uses one AI token, and so does the score. A voice note is turned into text first (one run).</span>
         </div>
       )}
       {session.score && <ScoreCard s={session.score} />}
@@ -115,7 +115,7 @@ function ScoreCall({ onScored }) {
           setT("");
           refresh();
         }}>Score this call</Busy>
-        <span className="small muted">Uses one AI run.</span>
+        <span className="small muted">Uses one AI token.</span>
       </div>
     </div>
   );

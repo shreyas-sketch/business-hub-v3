@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ago, api, rs } from "../api.js";
 import { Busy, Field, FormError, Sheet, Switch, useHub, useLoad } from "../ui.jsx";
 import { Loading, Num, Pill } from "../v2.jsx";
+import SharedInputs from "../components/SharedInputs.jsx";
 import "./knowledge.css";
 
 /* Knowledge Hub (the Business Brain, v2.1, 3.1): fill it once; the website, brand kit, compliance calendar, cash flow,
@@ -29,7 +30,7 @@ function SectionHead({ s, children }) {
   );
 }
 
-/** "Update my hub": what was built from the old details, and the AI runs bringing it up to date will use — shown before
+/** "Update my hub": what was built from the old details, and the AI tokens bringing it up to date will use — shown before
     anything runs. Saving the Knowledge Hub never spends runs on its own. */
 function UpdateHub({ updates, onChange }) {
   const { toast, refresh } = useHub();
@@ -43,7 +44,7 @@ function UpdateHub({ updates, onChange }) {
       <div className="stack" style={{ gap: 4 }}>
         <span className="label">Update my hub</span>
         <p className="small">Built from your old details: {plan.items.map((i) => i.label).join(", ")}.</p>
-        <p className="small muted">Updating uses {plan.runs} AI {plan.runs === 1 ? "run" : "runs"} — you have {plan.runs_left} left this month. Anything you edited yourself is kept.</p>
+        <p className="small muted">Updating uses {plan.runs} AI {plan.runs === 1 ? "token" : "tokens"} — you have {plan.runs_left} left this month. Anything you edited yourself is kept.</p>
       </div>
       <div className="row">
         <Busy className="btn primary ai" disabled={short} run={async () => {
@@ -51,8 +52,8 @@ function UpdateHub({ updates, onChange }) {
           onChange(r.updates); setPlan(r.plan); refresh();
           const done = Object.values(r.result).filter((v) => v.startsWith("refreshed")).length;
           toast(done ? `Updated ${done} ${done === 1 ? "thing" : "things"}` : "Nothing could be updated just now", done ? "ok" : "warn");
-        }}>Update my hub · {plan.runs} {plan.runs === 1 ? "run" : "runs"}</Busy>
-        {short && <span className="small" style={{ color: "var(--amber)" }}>Not enough runs left this month for all of it.</span>}
+        }}>Update my hub · {plan.runs} {plan.runs === 1 ? "token" : "tokens"}</Busy>
+        {short && <span className="small" style={{ color: "var(--amber)" }}>Not enough tokens left this month for all of it.</span>}
       </div>
     </div>
   );
@@ -78,7 +79,7 @@ function Updates({ updates, onChange }) {
           </div>
           {confirm === u.key ? (
             <div className="stack" style={{ gap: 8 }}>
-              <span className="small">{u.reason === "edited" ? "This replaces your own edits with a fresh version from the Knowledge Hub. It may use 1 AI run." : "This tries the refresh again. It may use 1 AI run."}</span>
+              <span className="small">{u.reason === "edited" ? "This replaces your own edits with a fresh version from the Knowledge Hub. It may use 1 AI token." : "This tries the refresh again. It may use 1 AI token."}</span>
               <div className="row">
                 <Busy className="btn sm primary ai" run={async () => { onChange(await api(`/knowledge/updates/${u.key}/refresh`, { method: "POST" })); setConfirm(null); toast(`${u.label} refreshed`); }}>
                   {u.reason === "edited" ? "Yes, replace my edits" : "Try again"}
@@ -265,7 +266,7 @@ export default function Knowledge() {
   const [loaded, reload, err] = useLoad("/knowledge");
   const [d, setD] = useState(null);
   useEffect(() => { if (loaded) setD(loaded); }, [loaded]);
-  // After a save, what costs no AI run updates in the background; look again shortly for what waits for "Update my hub".
+  // After a save, what costs no AI token updates in the background; look again shortly for what waits for "Update my hub".
   const saved = (next) => { setD(next); setTimeout(() => reload(), 4000); };
 
   const head = { kicker: "Structure · Knowledge Hub", id: "KH-01", pillar: "Structure", title: <>Your <em>Knowledge Hub</em>.</>,
@@ -294,6 +295,10 @@ export default function Knowledge() {
 
       <UpdateHub updates={d.updates} onChange={(updates) => setD({ ...d, updates })} />
       <Updates updates={d.updates} onChange={(updates) => setD({ ...d, updates })} />
+
+      <section id="kh-inputs" className="panel">
+        <SharedInputs title="Your website, a competitor, and 4 quick questions" showQuestions="always" />
+      </section>
 
       <section id="kh-basics" className="panel">
         <SectionHead s={sec.basics}><Link className="btn sm ghost" to="/start">Edit</Link></SectionHead>

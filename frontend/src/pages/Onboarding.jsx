@@ -55,6 +55,10 @@ export default function Onboarding() {
   const [err, setErr] = useState("");
   const [scan, setScan] = useState(null);   // the website that was read: {url, checks, logo, colour}
   const [filled, setFilled] = useState(""); // "website" | "words" once a draft has filled the form
+  // v2.3 shared inputs: a competitor's website and their customers' pain points (saved with the profile, asked once)
+  const [rival, setRival] = useState("");
+  const [pains, setPains] = useState("");
+  useEffect(() => { api("/inputs").then((v) => { setRival(v.inputs.competitor_url || ""); setPains(v.inputs.pains || ""); }).catch(() => {}); }, []);
   useEffect(() => { api("/business").then((d) => d.name && setB({ ...EMPTY, ...d, offers: d.offers?.length ? d.offers : EMPTY.offers })).catch(() => {}); }, []);
   const set = (k) => (e) => setB({ ...b, [k]: e.target.value });
   const setOffer = (i, k) => (e) => setB({ ...b, offers: b.offers.map((o, j) => (j === i ? { ...o, [k]: e.target.value } : o)) });
@@ -91,6 +95,10 @@ export default function Onboarding() {
     setBusy(true);
     try {
       await api("/business", { method: "PUT", body: { ...b, offers: b.offers.filter((o) => o.name.trim()) } });
+      const inputs = { competitors: rival.trim() ? [rival.trim()] : [] };
+      if (pains.trim()) inputs.pains = pains.trim();
+      if (scan?.url) inputs.website_url = scan.url;
+      await api("/inputs", { method: "PUT", body: inputs }).catch(() => {});   // never blocks saving the profile
       await refresh();
       if (me.progress.brand) { toast("Business Brain saved"); nav("/home", { replace: true }); }
       else nav("/brand?auto=1", { replace: true });
@@ -124,7 +132,7 @@ export default function Onboarding() {
 
           {mode === "website" && (
             <div className="stack" id="fr-way-panel">
-              <Field label="Your website address" hint="We read the home, about, services and contact pages. Uses one AI run.">
+              <Field label="Your website address" hint="We read the home, about, services and contact pages. Uses 1 AI token.">
                 <input className="input" inputMode="url" autoComplete="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="www.yourbusiness.in" autoFocus /></Field>
               <FormError msg={err} />
               <div><Busy className="btn primary ai" disabled={url.trim().length < 4} onError={setErr} run={readWebsite}>Read my website</Busy></div>
@@ -136,7 +144,7 @@ export default function Onboarding() {
               <VoiceInput purpose="onboarding" label="Your voice note"
                 hint="Say what you sell, where, to whom, your prices if you like, and why customers choose you."
                 onText={(t) => setWords((w) => (w ? `${w}\n${t}` : t))} />
-              {words && <Field label="What we heard" hint="Correct anything we misheard. Filling your Business Brain uses one more AI run.">
+              {words && <Field label="What we heard" hint="Correct anything we misheard. Filling your Business Brain uses 1 more AI token.">
                 <textarea className="textarea" maxLength={8000} value={words} onChange={(e) => setWords(e.target.value)} /></Field>}
               <FormError msg={err} />
               {words && <div><Busy className="btn primary ai" disabled={words.trim().length < 20} onError={setErr} run={readWords}>Fill my Business Brain</Busy></div>}
@@ -145,7 +153,7 @@ export default function Onboarding() {
 
           {mode === "type" && (
             <div className="stack" id="fr-way-panel">
-              <Field label="Your business in your words" hint="Any language is fine. A few lines are enough. Uses one AI run.">
+              <Field label="Your business in your words" hint="Any language is fine. A few lines are enough. Uses 1 AI token.">
                 <textarea className="textarea" style={{ minHeight: 140 }} maxLength={8000} value={words} onChange={(e) => setWords(e.target.value)} autoFocus
                   placeholder="We are Shree Ganesh Interiors in Thane. We make modular kitchens and wardrobes with our own carpenters, from ₹1,500 per sq ft. Most customers are families who just got a new flat. They choose us for fixed timelines and a clear quotation." /></Field>
               <FormError msg={err} />
@@ -174,6 +182,8 @@ export default function Onboarding() {
             <Field label="City or area you serve"><input className="input" value={b.city} onChange={set("city")} placeholder="Thane, Mumbai" /></Field>
             <Field label="What does your business do?" hint="One line, the way you'd say it to a customer.">
               <input className="input" value={b.industry} onChange={set("industry")} placeholder="Home and office interiors with our own carpenters" /></Field>
+            <Field label="A competitor's website (optional)" hint="So your website and ideas can stand out. We never copy their words.">
+              <input className="input" inputMode="url" value={rival} onChange={(e) => setRival(e.target.value)} placeholder="www.theirbusiness.in" /></Field>
             <button type="button" className="linkbtn small" style={{ justifySelf: "start" }} onClick={() => choose("choose")}>Read it from your website or a voice note instead</button>
           </>}
           {step === 1 && <>
@@ -194,6 +204,8 @@ export default function Onboarding() {
           {step === 2 && <>
             <h1 style={{ fontSize: 36 }}>Who buys, and <em>why</em> you?</h1>
             <Field label="Your best customers" hint="e.g. Families who just got possession of a 2/3BHK"><input className="input" value={b.ideal_customer} onChange={set("ideal_customer")} /></Field>
+            <Field label="What problems do they come to you with?" hint="Their worries, in their words. Your lead magnet and website use this.">
+              <textarea className="textarea" style={{ minHeight: 64 }} maxLength={500} value={pains} onChange={(e) => setPains(e.target.value)} placeholder="Delays, hidden costs, poor finishing" /></Field>
             <Field label="Why customers choose you" hint="One reason per line. Only things that are true."><textarea className="textarea" value={b.why_us} onChange={set("why_us")} placeholder={"Fixed timelines\nTransparent quotation\nOwn factory"} /></Field>
             <Field label="Proof you can show (optional)" hint="Years in business, projects done, certifications — only if true."><input className="input" value={b.proof} onChange={set("proof")} /></Field>
           </>}

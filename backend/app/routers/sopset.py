@@ -176,7 +176,7 @@ async def write(body: WriteIn, ctx: Ctx = Depends(feature("sop_library", "manage
     need = len(procs) * RUNS_PER_SOP
     left = (await runs_status(ctx.owner))["left"]
     if left < need:
-        raise HTTPException(402, {"code": "not_enough_runs", "message": f"Writing {len(procs)} SOPs uses {need} AI runs; you have {left} left this month.",
+        raise HTTPException(402, {"code": "not_enough_runs", "message": f"Writing {len(procs)} SOPs uses {need} AI tokens; you have {left} left this month.",
                                   "need": need, "left": left})
     r = await db().sop_maps.update_one({"_id": ctx.ws, "$or": [{"batch.running": {"$ne": True}}, {"batch.started_at": {"$lt": stale}}]},
                                        {"$set": {"batch": {"total": len(procs), "done": 0, "failed": 0, "running": True, "started_at": now(), "runs": need}}})

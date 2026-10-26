@@ -132,7 +132,7 @@ function NewForm({ kind, inputs, inputsExtra, cta, onCreated }) {
       ))}
       {inputsExtra && inputsExtra(setV)}
       <Busy className="btn primary ai" disabled={!ready} run={async () => { const d = await api(`/kits/${kind}`, { method: "POST", body: { inputs: v } }); setV(Object.fromEntries(inputs.map((i) => [i.key, ""]))); onCreated(d); }}>{cta}</Busy>
-      <span className="small muted">Uses one AI run. You can edit everything after.</span>
+      <span className="small muted">Uses one AI token. You can edit everything after.</span>
     </div>
   );
 }

@@ -147,7 +147,7 @@ function OfficeInner() {
         <div className="row" style={{ gap: 6 }}>{EXAMPLES.map((x) => <button key={x} className="btn sm ghost chip" onClick={() => setText(x)}>{x}</button>)}</div>
         <div className="row">
           <Busy className="btn primary ai" disabled={text.trim().length < 5} run={async () => { const run = await api("/office/runs", { method: "POST", body: { instruction: text } }); setText(""); follow(run); }}>Give instruction</Busy>
-          <span className="small muted">Planning uses one AI run; each step that writes something uses one more.</span>
+          <span className="small muted">Planning uses one AI token; each step that writes something uses one more.</span>
         </div>
       </div>
       {current && <Run run={current} />}

@@ -68,17 +68,27 @@ async def _count(site: dict, field: str) -> None:
 
 async def _extras(owner: dict, ws: str) -> dict:
     """Optional website sections: the offer ladder and the guide, when the owner has switched them on."""
-    out = {"ladder": None, "guide": None, "logo": ""}
+    out = {"ladder": None, "guide": None, "logo": "", "fonts": None}
     if plans.has(owner, "offer_ladder"):
         ladder = await db().offer_ladders.find_one({"_id": ws, "show": True})
         if ladder:
             out["ladder"] = ladder.get("content")
     if plans.has(owner, "lead_magnet"):
-        g = await db().lead_magnets.find_one({"_id": ws, "published": True})
-        if g:
+        # v2.3: the lead magnet the hub built for them comes first; its button opens its own download page
+        built = await db().magnet_files.find_one({"owner_id": ws, "published": True, "source": "ai"}, {"title": 1, "slug": 1, "landing": 1},
+                                                 sort=[("created_at", -1)])
+        g = None if built else await db().lead_magnets.find_one({"_id": ws, "published": True})
+        if built:
+            land = built.get("landing") or {}
+            out["guide"] = {"title": built["title"], "subtitle": land.get("who_for") or land.get("headline") or "", "slug": built["slug"]}
+        elif g:
             out["guide"] = g.get("content")
     scan = await db().site_scans.find_one({"_id": ws}, {"logo": 1})
     out["logo"] = (scan or {}).get("logo", "")
+    # v2.3: the brand kit's heading and body fonts on the website (when the owner has a brand kit)
+    kit = await db().brand_kits.find_one({"_id": ws}, {"design.fonts": 1}) or {}
+    fonts = (kit.get("design") or {}).get("fonts") or {}
+    out["fonts"] = {k: WEB_FONTS[v] for k, v in fonts.items() if k in ("heading", "body") and v in WEB_FONTS} or None
     return out
 
 
@@ -152,7 +162,12 @@ async def site_theme(owner_id: str, accent: str, look: str = "signboard") -> dic
             "ink": ink, "line": _mix(primary, "#E7E9EC", .1), "radius": radius,
             "pill": "3px" if design.get("corners") == "square" or (look == "works" and design.get("corners") != "round") else "999px",
             "head_font": head[0], "body_font": body[0],
-            "fonts_url": "https://fonts.googleapis.com/css2?" + "&".join(f"family={quote(f)}:wght@{w}" for f, w in families.items()) + "&display=swap"}
+            "fonts_url": "https://fonts.googleapis.com/css2?" + "&".join(f"family={quote(f).replace('%20', '+')}:wght@{w}" for f, w in families.items()) + "&display=swap"}
+
+
+# brand kit font keys → their Google Fonts family names (v2.3's _extras; the looks above pick the fonts the page loads)
+WEB_FONTS = {"poppins": "Poppins", "mukta": "Mukta", "hind": "Hind", "baloo2": "Baloo 2", "martel": "Martel", "yatra": "Yatra One",
+             "playfair": "Playfair Display", "inter": "Inter", "noto": "Noto Sans Devanagari"}
 
 
 @router.api_route("/s/{slug}", methods=["GET", "HEAD"], response_class=HTMLResponse)
@@ -226,6 +241,8 @@ async def save_lead(site: dict | None, owner: dict, business: dict, name: str, p
     from ..agents import hooks
     patch.update(await hooks.on_new_lead(owner, business, site, lead))
     await db().leads.update_one({"_id": lead["_id"]}, {"$set": patch})
+    from .. import crm   # v2.3: the lead's contact in the CRM and its first pipeline stage (never fails the lead)
+    await crm.on_new_lead(owner["_id"], lead)
     return lead
 
 

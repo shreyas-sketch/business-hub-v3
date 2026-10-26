@@ -13,9 +13,9 @@ const AREAS = [["lead", "Lead"], ["sales", "Sales"], ["brand", "Brand"], ["opera
 const STATUS = { queued: ["Waiting", "off"], rules: ["Reading", "warn"], ai_queued: ["Waiting for AI", "off"], ai: ["Writing", "warn"], done: ["Ready", "on"], failed: ["Failed", "warn"] };
 
 function Preset() {
-  const { toast } = useHub();
+  const { toast, me } = useHub();
   const [s, reload] = useLoad("/admin/config/presets/membership-v22");
-  if (!s) return null;
+  if (!s || me?.ui?.menu === "engines") return null;   // v2.3: the OwnerDesk setup has already placed every feature
   return (
     <div className={`panel ${s.applied ? "" : "active"}`}>
       <div className="row between">
@@ -78,7 +78,7 @@ function WrongAddress({ link }) {
 
 function Settings({ e, reload }) {
   const { toast } = useHub();
-  const [f, setF] = useState({ open: e.open, ai: e.ai, pack_cap: e.pack_cap, ai_cap: e.ai_cap, trial_until: e.trial_until || "" });
+  const [f, setF] = useState({ open: e.open, ai: e.ai, pack_cap: e.pack_cap, ai_cap: e.ai_cap, trial_until: e.trial_until || "", tokens: e.tokens, images: e.images });
   const [err, setErr] = useState("");
   return (
     <div className="stack">
@@ -92,14 +92,48 @@ function Settings({ e, reload }) {
         <Field label="Membership features open until" hint="The last day of the event. Empty: none.">
           <input className="input" type="date" value={f.trial_until} onChange={(x) => setF({ ...f, trial_until: x.target.value })} />
         </Field>
+        <Field label="AI tokens per attendee" hint="For the whole event."><input className="input" type="number" min={1} max={10000} value={f.tokens} onChange={(x) => setF({ ...f, tokens: x.target.value })} /></Field>
+        <Field label="Social images per attendee" hint="Paid members get 30 a month."><input className="input" type="number" min={0} max={1000} value={f.images} onChange={(x) => setF({ ...f, images: x.target.value })} /></Field>
       </div>
       <FormError msg={err} />
       <div className="row">
         <Busy className="btn primary" onError={setErr} run={async () => {
-          await api(`/admin/event/${e.code}`, { method: "PUT", body: { open: f.open, ai: f.ai, pack_cap: Number(f.pack_cap), ai_cap: Number(f.ai_cap), trial_until: f.trial_until || null } });
+          await api(`/admin/event/${e.code}`, { method: "PUT", body: { open: f.open, ai: f.ai, pack_cap: Number(f.pack_cap), ai_cap: Number(f.ai_cap), trial_until: f.trial_until || null,
+            tokens: Number(f.tokens) || null, images: f.images === "" ? null : Number(f.images) } });
           toast(f.open ? "Saved. The link is open." : "Saved. The link is closed."); reload();
         }}>Save</Busy>
         <span className="small muted">Built so far: {e.counters.packs} packs, {e.counters.ai} with AI.</span>
+      </div>
+    </div>
+  );
+}
+
+const DAYS = [[0, "Not started", "Nothing open yet"], [1, "Day 1", "Lead + Sales"], [2, "Day 2", "+ Conversion + Operations"], [3, "Day 3", "+ Brand + Data"]];
+
+/* v2.3: which engines the room has open. Attendees on the event's access see later engines locked with their day; paying
+   members have everything. Ending access closes it for everyone who hasn't paid (their work stays). */
+function EventDay({ e, reload }) {
+  const { toast } = useHub();
+  return (
+    <div className="panel">
+      <div className="stack" style={{ gap: 4 }}>
+        <span className="label">Event day · which engines are open</span>
+        <span className="small muted">{e.day == null ? "Not set: everything is open to attendees. Pick Day 1 before the room starts." : `Open now: ${DAYS[e.day][2]}.`}</span>
+      </div>
+      <div className="row" style={{ flexWrap: "wrap" }}>
+        {DAYS.map(([d, label, what]) => (
+          <Busy key={d} className={`btn sm ${e.day === d ? "primary" : "ghost"}`} run={async () => {
+            await api(`/admin/event/${e.code}/day`, { method: "POST", body: { day: d } }); toast(`${label}: ${what}`); reload();
+          }}>{label}</Busy>
+        ))}
+      </div>
+      <hr className="rule" />
+      <div className="row between" style={{ flexWrap: "wrap" }}>
+        <span className="small muted">{e.ended_at ? `Event access ended ${ago(e.ended_at)}.` : "At the end of Day 3: close the event's access for everyone who hasn't paid. Their work stays in their hub."}</span>
+        <Busy className="btn sm ghost" run={async () => {
+          if (!window.confirm("End event access now for everyone who hasn't paid? Paying members keep everything. This also closes the event link.")) return;
+          const r = await api(`/admin/event/${e.code}/end-access`, { method: "POST" }); toast(`Ended for ${r.ended} attendee${r.ended === 1 ? "" : "s"}`); reload();
+        }}>End event access</Busy>
       </div>
     </div>
   );
@@ -202,9 +236,10 @@ export default function AdminEvent() {
                 <div className="row"><Copy text={e.link} label="Copy link" /><button className="btn sm" onClick={() => setQr(e)}>Show the QR</button></div>
               </div>
               <WrongAddress link={e.link} />
-              <Settings key={e.code + String(e.open) + e.pack_cap + e.ai_cap + (e.trial_until || "")} e={e} reload={reload} />
+              <Settings key={e.code + String(e.open) + e.pack_cap + e.ai_cap + (e.trial_until || "") + e.tokens + e.images} e={e} reload={reload} />
             </div>
           )}
+          {e && <EventDay e={e} reload={reload} />}
           {e && (
             <>
               <div className="tabs">{[["live", "Live numbers"], ["runs", "Packs"]].map(([k, l]) => <button key={k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>{l}</button>)}</div>

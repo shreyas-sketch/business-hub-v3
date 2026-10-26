@@ -4,7 +4,7 @@ import { Busy, Copy, FormError, Modal } from "../ui.jsx";
 import "./templates.css";
 
 /**
- * "Use a template": 20 ready WhatsApp messages (no AI run), filled with the customer's name and your business's details.
+ * "Use a template": 20 ready WhatsApp messages (no AI token), filled with the customer's name and your business's details.
  * Pick one, change any word, then send it from your own WhatsApp.
  *   onUse(text)          put the message into a reply box on this page instead of opening WhatsApp (Chats)
  *   onSend(id, text)     record the send first; returns { link } to open (Inquiries)
@@ -59,7 +59,7 @@ function Picker({ name, phone, onUse, onSend, onClose }) {
               </button>
             ))}
           </div>
-          <p className="small muted">No AI run. Pick one, change anything you like, then send.</p>
+          <p className="small muted">No AI token. Pick one, change anything you like, then send.</p>
         </>
       )}
       {pick && (

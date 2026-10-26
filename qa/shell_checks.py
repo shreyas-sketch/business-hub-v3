@@ -86,7 +86,7 @@ with sync_playwright() as p:
         pg.keyboard.press("Escape")
     check("a locked page shows which plan it's on", locked)
     def account():
-        pg.click(".me-btn"); expect(pg.locator(".me-menu")).to_contain_text("AI runs this month")
+        pg.click(".me-btn"); expect(pg.locator(".me-menu")).to_contain_text("AI tokens this month")
         pg.mouse.click(700, 500); expect(pg.locator(".me-menu")).to_have_count(0)
         pg.click(".me-btn"); pg.click(".me-menu a:has-text('Plans & billing')"); pg.wait_for_url("**/plans")
     check("account menu opens, closes on an outside click, and links work", account)

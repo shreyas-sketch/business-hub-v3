@@ -28,7 +28,7 @@ BY_KEY = {s["key"]: s for s in STAFF}
 SETUP_STEPS = [
     ("m1_employz", 1, "Employz.ai account: CRM, Football Field pipeline, team users and calendar"),
     ("m1_domain", 1, "Your own domain, with the multi-page website"),
-    ("m1_whatsapp", 1, "Your WhatsApp number connected (AiSensy), templates approved"),
+    ("m1_whatsapp", 1, "Your WhatsApp number connected (WhatsApp tool), templates approved"),
     ("m1_brain", 1, "Company Brain loaded: price list, catalogue, FAQs, past quotations"),
     ("m1_customers", 1, "Old customer list imported, cleaned and sorted A, B and C"),
     ("m2_sales", 2, "Sales Executive live: replies on WhatsApp 24×7"),

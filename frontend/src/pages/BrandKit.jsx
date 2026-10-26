@@ -4,8 +4,9 @@ import { api, upload } from "../api.js";
 import { Busy, Copy, Field, FormError, Sheet, canAct, useHub, useLoad } from "../ui.jsx";
 import { Loading, Pill, Tabs } from "../v2.jsx";
 import "./brandkit.css";
+import Brochures from "./BrandBrochures.jsx";
 
-/* Brand kit (v2.1, 3.11): the message system (one AI run, every line editable), the design system (colours, fonts,
+/* Brand kit (v2.1, 3.11): the message system (one AI token, every line editable), the design system (colours, fonts,
    corners, spacing, logo) and designs drawn in the brand on the server. The primary colour is the website's accent,
    so the website, the launch kit and the next invoice all follow it. */
 
@@ -93,10 +94,10 @@ function Messages({ kit, onKit, canEdit }) {
     return (
       <div className="panel active">
         <h3>Write your brand kit</h3>
-        <p className="muted">One AI run reads your Knowledge Hub and writes your brand message, and its versions for your website, ads, sales and social media, plus your tone of voice.</p>
+        <p className="muted">One AI token reads your Knowledge Hub and writes your brand message, and its versions for your website, ads, sales and social media, plus your tone of voice.</p>
         <p className="small muted">It uses only what's in your Knowledge Hub. Nothing is invented — change any line after.</p>
         <FormError msg={err} />
-        {canEdit ? <div className="row"><Busy className="btn primary ai" run={write} onError={setErr}>Write my brand kit</Busy><span className="small muted">Uses one AI run.</span></div>
+        {canEdit ? <div className="row"><Busy className="btn primary ai" run={write} onError={setErr}>Write my brand kit</Busy><span className="small muted">Uses one AI token.</span></div>
           : <p className="small muted">Ask the business owner to write it.</p>}
       </div>
     );
@@ -343,7 +344,7 @@ function Designs({ kit, initial }) {
                   <Busy className="btn primary" run={() => make("png")} onError={setErr}>Make the design</Busy>
                   {t.pdf && <Busy className="btn" run={() => make("pdf")} onError={setErr}>Download PDF to print</Busy>}
                 </div>
-                <span className="small muted">Drawn in your brand colours and fonts. Hindi and Marathi work. No AI run used.</span>
+                <span className="small muted">Drawn in your brand colours and fonts. Hindi and Marathi work. No AI token used.</span>
               </>
             )}
             {img && (
@@ -369,22 +370,26 @@ export default function BrandKit() {
     params.forEach((v, name) => { if (name !== "design") fields[name] = v; });
     return { key: k, fields };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const [tab, setTab] = useState(deep ? "designs" : "messages");
+  const [tab, setTab] = useState(deep ? "designs" : params.get("tab") === "brochures" ? "brochures" : "messages");
   const [kitLoaded, , err] = useLoad("/brand-kit");
   const [kit, setKit] = useState(null);
   useEffect(() => { if (kitLoaded) setKit(kitLoaded); }, [kitLoaded]);
   const canEdit = canAct(me, "owner");
-  const head = { kicker: "Structure · Brand kit", id: "ST-10", pillar: "Structure",
+  const head = { kicker: "Brand · Brand kit", id: "BR-01", pillar: "Brand",
     title: <>One voice, one look, <em>everywhere</em>.</>,
     sub: "Your brand message for every place you speak, your colours and fonts, and ready designs for social media, WhatsApp and print." };
   if (!kit) return <Sheet {...head}>{err ? <FormError msg={err.message} /> : <Loading />}</Sheet>;
   return (
     <Sheet {...head} actions={kit.exists ? <a className="btn sm" href="/api/brand-kit/pdf">Download brand kit PDF</a> : null}>
-      <Tabs tabs={[["messages", "Messages"], ["design", "Design"], ["designs", "Designs"]]} value={tab} onChange={setTab} />
+      <Tabs tabs={[["messages", "Messages"], ["design", "Design"], ["designs", "Designs"], ["brochures", "Brochures"]]} value={tab} onChange={setTab} />
       {tab === "messages" && <Messages kit={kit} onKit={setKit} canEdit={canEdit} />}
       {tab === "design" && <Design kit={kit} onKit={setKit} canEdit={canEdit} />}
       {tab === "designs" && <Designs kit={kit} initial={deep} />}
-      {tab !== "designs" && me?.features?.content_calendar && (
+      {tab === "brochures" && <Brochures />}
+      {tab !== "designs" && tab !== "brochures" && me?.features?.social_media && (
+        <p className="small muted">Want posts ready to go? Open <Link to="/social">Social media</Link> — images in your colours, with captions.</p>
+      )}
+      {tab !== "designs" && tab !== "brochures" && !me?.features?.social_media && me?.features?.content_calendar && (
         <p className="small muted">Want a post designed? Open <Link to="/calendar">your content calendar</Link> and press "Make the design" on any post.</p>
       )}
     </Sheet>

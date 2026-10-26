@@ -29,7 +29,7 @@ function Sample({ d, reload }) {
         <Pill kind={d.on ? "on" : ""}>{d.on ? "On" : "Off"}</Pill>
       </div>
       <p className="small muted">{s.for_name ? `For ${s.for_name} (${s.kind_label.toLowerCase()}).` : "An example."} Each week the AI writes a fresh,
-        short message like this for each kind of customer — 1 AI run a week. It never adds a price or a discount; only the offer you type below goes in, word for word.</p>
+        short message like this for each kind of customer — 1 AI token a week. It never adds a price or a discount; only the offer you type below goes in, word for word.</p>
       <div className="prompt">{s.text}</div>
       <p className="small muted">By email, the subject is “{s.subject}”, with your business name at the end and a line saying they can reply to stop these.</p>
       {owner ? (d.on ? (

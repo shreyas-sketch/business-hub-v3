@@ -61,6 +61,10 @@
 .rail .find-btn svg { width: 16px; height: 16px; flex: none; }
 
 .nav .group > span:first-child { display: inline-flex; align-items: center; gap: 10px; }
+/* v2.3: an engine that opens on a later event day: a small "Day 2" chip that never pushes the name onto two lines */
+.nav .group > span:first-child { min-width: 0; white-space: nowrap; }
+.nav .group .meta { flex: none; display: inline-flex; align-items: center; gap: 6px; }
+.nav .group .meta .tier { font: 700 10px/1 var(--body); letter-spacing: .02em; padding: 3px 6px; white-space: nowrap; }
 .nav .group svg { width: 15px; height: 15px; flex: none; color: var(--gold-deep); }
 .nav .group:hover svg, .nav-group.open .group svg { color: var(--gold); }
 .nav .items { border-left: 1px solid var(--hairline); }

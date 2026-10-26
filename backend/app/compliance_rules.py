@@ -123,11 +123,26 @@ DEFAULT_KEYS = [r["key"] for r in DEFAULT_RULES]
 DUE_TYPES = ("monthly", "month_end", "quarterly", "qrmp_payment", "dates", "owner_date")
 
 
+# v2.3: the TDS filings. Once the owner has answered the TAN question (the compliance pop-up), a TAN decides them: with a
+# TAN they apply to any business type, without one they don't (a company without a TAN sees a "check with your CA" note).
+# Until the question is answered, they follow the business type as before.
+TDS_KEYS = ("tds_payment", "tds_return")
+TAN_RE = r"^[A-Z]{4}\d{5}[A-Z]$"
+
+
+def tan_answered(identity: dict) -> bool:
+    return isinstance((identity or {}).get("has_tan"), bool)
+
+
 def applies(rule: dict, identity: dict) -> bool:
     """Does this rule apply to a business with this identity? Every condition given must hold."""
     if not rule.get("on", True):
         return False
     a = rule.get("applies") or {}
+    if (rule.get("tds") or rule.get("key") in TDS_KEYS) and tan_answered(identity):
+        if not identity["has_tan"]:
+            return False
+        a = {k: v for k, v in a.items() if k != "entity"}   # a TAN means TDS, whatever the business type
     regs = set(identity.get("registrations") or [])
     if a.get("registration"):
         return a["registration"] in regs

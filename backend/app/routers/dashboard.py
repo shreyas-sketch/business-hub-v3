@@ -95,6 +95,8 @@ async def get_dashboard(ctx: Ctx = Depends(feature("smart_dashboard", "manager")
             f = w.features[0]
             tier = plans.tier_of(f)
             tile.update(feature=f, tier=tier, tier_name=plans.PLANS[tier]["name"], feature_label=plans.label_of(f))
+            if plans.day_locked(ctx.owner, f):   # v2.3: at the live event, a tile whose engine opens later says which day
+                tile.update(opens_day=plans.feature_day(f))
         out.append(tile)
     return {"tiles": out, "hidden": [{"key": w.key, "title": w.title, "state": st} for w, st in tiles if w.key in hidden],
             "cached": cached, "compute_ms": ms, "refresh_seconds": settings.dashboard_cache_seconds, "customised": bool(layout)}
@@ -124,7 +126,10 @@ async def reset_layout(ctx: Ctx = Depends(feature("smart_dashboard", "manager"))
 
 
 async def landing_for(owner: dict, role: str, knowledge_percent: int) -> str:
-    """Where an owner lands after login: Home (onboarding steps) until the Knowledge Hub is 60% complete, then the dashboard."""
+    """Where an owner lands after login: Home (onboarding steps) until the Knowledge Hub is 60% complete, then the dashboard.
+    v2.3 (engine menu): the dashboard straight away; once event access has ended without paying, Plans & billing."""
+    if plans.engines_on() and ROLES.index(role) >= ROLES.index("manager"):
+        return "/dashboard" if plans.has(owner, "smart_dashboard") else "/plans"
     if plans.has(owner, "smart_dashboard") and ROLES.index(role) >= ROLES.index("manager") and knowledge_percent >= LANDING_AT:
         return "/dashboard"
     return "/home"

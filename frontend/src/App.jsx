@@ -79,6 +79,16 @@ const Research = lazy(() => import("./pages/Research.jsx"));
 const Reputation = lazy(() => import("./pages/Reputation.jsx"));
 const WinBack = lazy(() => import("./pages/WinBack.jsx"));
 const LeadResponse = lazy(() => import("./pages/LeadResponse.jsx"));
+// v2.3 (OwnerDesk)
+const Audit = lazy(() => import("./pages/Audit.jsx"));
+const AdminAudit = lazy(() => import("./pages/AdminAudit.jsx"));
+const Contacts = lazy(() => import("./pages/Contacts.jsx"));
+const LeadIdeas = lazy(() => import("./pages/LeadIdeas.jsx"));
+const Social = lazy(() => import("./pages/Social.jsx"));
+const KeyPerson = lazy(() => import("./pages/KeyPerson.jsx"));
+const KeyPersonForm = lazy(() => import("./pages/KeyPersonForm.jsx"));
+const Engine = lazy(() => import("./pages/Engine.jsx"));
+const AdminOnboarding = lazy(() => import("./pages/AdminOnboarding.jsx"));
 const kit = (name) => lazy(() => import("./pages/Kits.jsx").then((m) => ({ default: m[name] })));
 const [Competence, Culture, Decisions, Hiring, Reviews, Roles, Sops] = ["Competence", "Culture", "Decisions", "Hiring", "Reviews", "Roles", "Sops"].map(kit);
 
@@ -110,6 +120,10 @@ const PAGES = [
   ["/customer-risk", CustomerRisk, "customer_risk", "manager"], ["/getting-paid", GettingPaid, "getting_paid", "manager"],
   ["/competitors", Competitors, "competitor_watch", "manager"], ["/research", Research, "market_research", "manager"],
   ["/reputation", Reputation, "reputation", "manager"], ["/win-back", WinBack, "win_back", "manager"], ["/lead-response", LeadResponse, "lead_response", "manager"],
+  // v2.3 (OwnerDesk)
+  ["/audit", Audit, "engine_audit", "owner"], ["/contacts", Contacts, "crm", "staff"], ["/contacts/:id", Contacts, "crm", "staff"],
+  ["/lead-ideas", LeadIdeas, "lead_ideas", "manager"], ["/social", Social, "social_media", "staff"], ["/key-person", KeyPerson, "key_person", "owner"],
+  ["/engine/:key", Engine, null, "staff"],
 ];
 
 const NAV_KEY = "ah_nav_open";
@@ -128,14 +142,20 @@ function Nav({ me, pathname }) {
     { key: "a-pulse", label: "Pulse", path: "/admin" }, { key: "a-features", label: "Features & plans", path: "/admin/features" },
     { key: "a-event", label: "Live event", path: "/admin/event" }, { key: "a-day1", label: "Day-1 reports", path: "/admin/day1" },
     { key: "a-calls", label: "Manage member calls", path: "/admin/calls" }, { key: "a-rec", label: "Manage recordings", path: "/admin/recordings" },
-    { key: "a-compliance", label: "Compliance rules", path: "/admin/compliance" }, { key: "a-email", label: "Email", path: "/admin/email" }] }] : [];
-  const groups = [...admin, ...(me.menu || [])];
+    { key: "a-compliance", label: "Compliance rules", path: "/admin/compliance" }, { key: "a-email", label: "Email", path: "/admin/email" },
+    { key: "a-onboarding", label: "Onboarding", path: "/admin/onboarding" }, { key: "a-audit", label: "Engine Audit", path: "/admin/audit" }] }] : [];
+  // v2.3: each engine's own page comes first in its group; an engine that opens on a later event day says so
+  const groups = [...admin, ...(me.menu || []).map((g) => (g.engine
+    ? { ...g, items: [{ key: `engine-${g.section}`, label: `About the ${g.group}`, path: `/engine/${g.section}` }, ...g.items] } : g))];
+  const shut = (g) => (g.engine ? (me.engines || []).find((x) => x.key === g.section && !x.open) : null);
   const usable = groups.reduce((n, g) => n + g.items.filter((it) => !it.locked).length, 0);
   const crowded = usable > 24; // with most of the menu unlocked, start with only the current group and Start open
 
   return (
     <nav className="nav" aria-label="Main">
-      {groups.map(({ group, items }, gi) => {
+      {groups.map((g, gi) => {
+        const { group, items, section } = g;
+        const later = shut(g);
         const open_ = items.filter((it) => !it.locked);
         const locked = items.filter((it) => it.locked);
         const here = items.some((it) => isOn(it.path));
@@ -145,7 +165,9 @@ function Nav({ me, pathname }) {
         const link = (it) => (
           <NavLink key={it.key} to={it.path} end={it.path === "/admin"} className={({ isActive }) => `${isActive ? "on" : ""} ${it.locked ? "locked" : ""}`}>
             <span>{it.label}{it.sub && <small className="nav-sub">{it.sub}</small>}</span>
-            {it.locked ? <span className="tier" title={`Unlocks with ${it.tier_name}`}>{it.tier_short || it.tier_name.split(" ")[0]}</span>
+            {it.locked && it.lock === "day" ? <span className="tier" title={`Opens on Day ${it.opens_day} of the event`}>Day {it.opens_day}</span>
+              : it.locked && me.ui?.menu === "engines" ? <span className="tier" title="Part of OwnerDesk Membership">Member</span>
+              : it.locked ? <span className="tier" title={`Unlocks with ${it.tier_name}`}>{it.tier_short || it.tier_name.split(" ")[0]}</span>
               : it.path === "/approvals" && me.approvals_waiting ? <span className="count" aria-label={`${me.approvals_waiting} waiting`}>{me.approvals_waiting}</span>
               : it.path === "/tasks" && me.my_open_tasks ? <span className="count" aria-label={`${me.my_open_tasks} open`}>{me.my_open_tasks}</span>
               : it.path === "/leads" && me.progress.first_lead ? <span className="dot" aria-hidden="true" /> : null}
@@ -155,7 +177,8 @@ function Nav({ me, pathname }) {
           <div key={group} className={`nav-group ${expanded ? "open" : ""}`}>
             <button type="button" className="group" aria-expanded={expanded} onClick={() => !here && toggle(group, !expanded)} disabled={here}>
               <span><Icon name={group} />{group}</span>
-              <span className="meta">{!expanded && <span className="n">{open_.length || items.length}</span>}{!here && <i className="chev" aria-hidden="true" />}</span>
+              <span className="meta">{later ? <span className="tier" title={`Opens on Day ${g.day} of the event`}>Day {g.day}</span>
+                : !expanded && <span className="n">{open_.length || items.length}</span>}{!here && <i className="chev" aria-hidden="true" />}</span>
             </button>
             {expanded && (
               <div className="items">
@@ -163,6 +186,10 @@ function Nav({ me, pathname }) {
                 {locked.length > 0 && (open_.length === 0 || showLocked || locked.some((it) => isOn(it.path))
                   ? <>{locked.map(link)}{open_.length > 0 && <button type="button" className="more" onClick={() => toggle(`${group}:locked`, false)}>Hide locked</button>}</>
                   : <button type="button" className="more" onClick={() => toggle(`${group}:locked`, true)} title="Pages that unlock on a bigger plan">Show {locked.length} locked</button>)}
+                {section === "account" && me.links?.community_link && (
+                  <a href={me.links.community_link} target="_blank" rel="noopener noreferrer"><span>WhatsApp community</span><span className="muted">↗</span></a>)}
+                {section === "account" && me.links?.support_email && (
+                  <a href={`mailto:${me.links.support_email}`}><span>Email support</span><span className="muted">↗</span></a>)}
               </div>
             )}
             {gi === admin.length - 1 && admin.length > 0 && <hr className="nav-rule" />}
@@ -201,7 +228,8 @@ function Shell({ me, children }) {
     return () => { document.removeEventListener("mousedown", click); window.removeEventListener("keydown", esc); };
   }, [account]);
   const logout = async () => { await api("/auth/logout", { method: "POST" }); window.location.href = "/"; };
-  const who = me.workspace.is_team ? `${me.user.name || "Team"} · ${me.workspace.role}` : me.user.plan_name;
+  const who = me.workspace.is_team ? `${me.user.name || "Team"} · ${me.workspace.role}`
+    : me.event ? `Event access${me.event.day ? ` · Day ${me.event.day}` : ""}` : me.user.plan_name;
   const name = me.business_name || "Your business";
   const initials = (me.user.name || name).trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "AH";
   const runsPct = Math.min(100, (me.runs.left / Math.max(me.runs.allowance + me.runs.bonus, 1)) * 100);
@@ -223,8 +251,8 @@ function Shell({ me, children }) {
         <Nav me={me} pathname={loc.pathname} />
         <div className="foot">
           <div className="runs">
-            <span>AI runs this month</span><b>{me.runs.left.toLocaleString("en-IN")} left</b>
-            <div className="meter ai-meter" role="meter" aria-label="AI runs left this month" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(runsPct)}><i style={{ width: `${runsPct}%` }} /></div>
+            <span>{me.event ? "AI tokens for the event" : "AI tokens this month"}</span><b>{me.runs.left.toLocaleString("en-IN")} left</b>
+            <div className="meter ai-meter" role="meter" aria-label="AI tokens left" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(runsPct)}><i style={{ width: `${runsPct}%` }} /></div>
           </div>
           <button type="button" className="logout" onClick={logout}><Icon name="logout" />Log out</button>
         </div>
@@ -243,7 +271,7 @@ function Shell({ me, children }) {
             <div className="me-menu" role="menu">
               <div className="who"><b>{me.user.name || name}</b><span className="small muted">{me.user.plan_name}{me.workspace.is_team ? ` · ${me.workspace.role}` : ""}</span></div>
               <div className="stack" style={{ gap: 6 }}>
-                <span className="small muted">AI runs this month: {me.runs.left} left</span>
+                <span className="small muted">AI tokens this month: {me.runs.left} left</span>
                 <div className="meter ai-meter"><i style={{ width: `${runsPct}%` }} /></div>
               </div>
               <div>
@@ -270,9 +298,29 @@ function Shell({ me, children }) {
 }
 
 function LimitModal({ detail, me, onClose, upgrade }) {
+  if (me.ui?.menu === "engines") {   // v2.3: tokens, one paid plan, no invite rewards
+    return (
+      <Modal onClose={onClose}>
+        <span className="kicker">AI tokens</span>
+        <h2>You've used your <em>AI tokens</em>.</h2>
+        <p className="sub">{me.event ? "That's every token for the event." : "Your tokens refill on the 1st of next month."}{" "}
+          Everything you've made is saved, and pages that don't use AI keep working.</p>
+        {!me.paid && (
+          <div className="panel">
+            <span className="label">{me.membership?.name || "OwnerDesk Membership"}</span>
+            <p>{me.membership?.runs} AI tokens every month, and every engine open. <span className="money">{rupees(me.membership?.price_minor)}/month</span>
+              {me.membership?.price_year_minor ? <> or <span className="money">{rupees(me.membership.price_year_minor)}/year</span></> : null}.</p>
+            <button className="btn money" onClick={() => { onClose(); upgrade("lite", "runs"); }}>How to join</button>
+          </div>
+        )}
+        {me.paid && me.links?.support_email && <p className="small muted">Need more this month? Email <a href={`mailto:${me.links.support_email}`}>{me.links.support_email}</a>.</p>}
+        <button className="btn ghost" onClick={onClose}>Close</button>
+      </Modal>
+    );
+  }
   return (
     <Modal onClose={onClose}>
-      <span className="kicker">AI runs</span>
+      <span className="kicker">AI tokens</span>
       <h2>You've used this month's <em>runs</em>.</h2>
       <p className="sub">Two ways to keep going. Your runs refill on the 1st of next month either way.</p>
       <div className="panel">
@@ -318,6 +366,8 @@ export default function App() {
     page = <Suspense fallback={<div className="main muted">Loading…</div>}><Day1 /></Suspense>;
   } else if (path === "/event" || path.startsWith("/event/")) {   // the live event link: no login until they save their pack
     page = <Suspense fallback={<div className="main muted">Loading…</div>}><Event /></Suspense>;
+  } else if (path.startsWith("/k/")) {   // v2.3: the key-person questionnaire an employee fills in on their phone (no login)
+    page = <Suspense fallback={<div className="main muted">Loading…</div>}><KeyPersonForm /></Suspense>;
   } else if (!me) {
     page = publicPaths.includes(path) ? (
       <Routes><Route path="/login" element={<Login />} /><Route path="*" element={<Landing />} /></Routes>
@@ -357,6 +407,8 @@ export default function App() {
           {me.user.role === "admin" && <Route path="/admin/recordings" element={<AdminRecordings />} />}
           {me.user.role === "admin" && <Route path="/admin/compliance" element={<AdminCompliance />} />}
           {me.user.role === "admin" && <Route path="/admin/email" element={<AdminEmail />} />}
+          {me.user.role === "admin" && <Route path="/admin/onboarding" element={<AdminOnboarding />} />}
+          {me.user.role === "admin" && <Route path="/admin/audit" element={<AdminAudit />} />}
           <Route path="*" element={<Navigate to={me.landing || "/home"} replace />} />
         </Routes>
         </Suspense>
@@ -382,7 +434,7 @@ export default function App() {
         <Modal onClose={() => setContact(null)}>
           <span className="kicker">Upgrade</span>
           <h2>Our team will <em>call</em> you.</h2>
-          <p className="sub">We've noted your interest. Someone from the Business AI team will reach you on {localPhone(me?.user.phone)} to set it up.</p>
+          <p className="sub">We've noted your interest. Someone from the OwnerDesk team will reach you on {localPhone(me?.user.phone)} to set it up.</p>
           <button className="btn" onClick={() => setContact(null)}>Done</button>
         </Modal>
       )}

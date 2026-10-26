@@ -153,7 +153,7 @@ function NotConnected({ owner }) {
   return (
     <div className="panel active">
       <span className="label">Your WhatsApp number isn't connected yet</span>
-      <p className="small">Our team connects your own WhatsApp Business number (through AiSensy) as part of your setup. Once it's connected, every
+      <p className="small">Our team connects your own WhatsApp Business number (through its WhatsApp tool) as part of your setup. Once it's connected, every
         customer chat shows here, the AI replies within seconds, day and night, and your team can reply from this page.</p>
       {owner ? <div><Link className="btn sm" to="/connections">See connections</Link></div>
         : <p className="small muted">Ask the business owner to finish the connection.</p>}
@@ -201,7 +201,7 @@ export default function Chats() {
           {!data.connected && <NotConnected owner={owner} />}
           {data.connected && !data.ai_on && (
             <p className="small muted">{data.opt_in
-              ? "On your plan, AI replies stay off until you switch them on. Then the AI answers every customer on your number, 24×7 — each reply uses an AI run."
+              ? "On your plan, AI replies stay off until you switch them on. Then the AI answers every customer on your number, 24×7 — each reply uses an AI token."
               : "AI replies are switched off for every chat. Customers wait for your team until you switch them back on."}</p>
           )}
           {!data.threads.length ? (

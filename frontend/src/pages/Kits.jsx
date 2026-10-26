@@ -133,7 +133,7 @@ function SopActions({ doc, onRestored }) {
 
 const clean = (procs) => procs.map(({ key, function: fn, title, selected }) => ({ key: key || null, function: fn, title: title.trim(), selected: !!selected }));
 
-/** The whole business, mapped: every process by function, ticked, then written in a batch (2 AI runs each). */
+/** The whole business, mapped: every process by function, ticked, then written in a batch (2 AI tokens each). */
 function SopSet({ onWritten }) {
   const { me, refresh, toast } = useHub();
   const [d, setD] = useState(null);
@@ -157,7 +157,7 @@ function SopSet({ onWritten }) {
     if (wasRunning.current && !running && d?.batch) {
       refresh();
       onWritten?.();
-      toast(`${d.batch.done} SOP${d.batch.done === 1 ? "" : "s"} written${d.batch.failed ? `, ${d.batch.failed} couldn't be written (their runs were refunded)` : ""}`);
+      toast(`${d.batch.done} SOP${d.batch.done === 1 ? "" : "s"} written${d.batch.failed ? `, ${d.batch.failed} couldn't be written (their tokens were refunded)` : ""}`);
     }
     wasRunning.current = running;
   }, [d]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -174,7 +174,7 @@ function SopSet({ onWritten }) {
     return r;
   };
   const map = async () => {
-    if (d.exists && !window.confirm("Map your processes again from your Knowledge Hub? SOPs you've already written stay. Uses one AI run.")) return;
+    if (d.exists && !window.confirm("Map your processes again from your Knowledge Hub? SOPs you've already written stay. Uses one AI token.")) return;
     const r = await api("/sop-set/map", { method: "POST" });
     setDirty(false); setEditing(false); setD(r); setProcs(r.processes || []);
     refresh();
@@ -193,9 +193,9 @@ function SopSet({ onWritten }) {
     return (
       <div className="panel active">
         <h3>Map every process in your business</h3>
-        <p className="muted">One AI run reads your Knowledge Hub and lists the processes a business like yours runs — sales, marketing, delivery, accounts, HR and customer care. You tick the ones that apply, then the hub writes an SOP for each.</p>
+        <p className="muted">One AI token reads your Knowledge Hub and lists the processes a business like yours runs — sales, marketing, delivery, accounts, HR and customer care. You tick the ones that apply, then the hub writes an SOP for each.</p>
         <FormError msg={err} />
-        {canWrite ? <div className="row"><Busy className="btn primary ai" run={map} onError={setErr}>Map my processes</Busy><span className="small muted">Uses one AI run.</span></div>
+        {canWrite ? <div className="row"><Busy className="btn primary ai" run={map} onError={setErr}>Map my processes</Busy><span className="small muted">Uses one AI token.</span></div>
           : <p className="small muted">Ask the business owner or a manager to map your processes.</p>}
       </div>
     );
@@ -222,11 +222,11 @@ function SopSet({ onWritten }) {
               <div className="meter" role="progressbar" aria-valuemin={0} aria-valuemax={b.total} aria-valuenow={b.done + b.failed}>
                 <i style={{ width: `${Math.round(((b.done + b.failed) / Math.max(b.total, 1)) * 100)}%` }} />
               </div>
-              <span className="small muted">Each SOP takes two AI runs: the steps, then the words to use. You can leave this page.</span>
+              <span className="small muted">Each SOP takes two AI tokens: the steps, then the words to use. You can leave this page.</span>
             </>
           ) : (
             <span className="small muted">
-              Last batch{b.finished_at ? ` (${ago(b.finished_at)})` : ""}: {b.done} written{b.failed ? `, ${b.failed} couldn't be written — their runs were refunded, so you can try them again` : ""}.
+              Last batch{b.finished_at ? ` (${ago(b.finished_at)})` : ""}: {b.done} written{b.failed ? `, ${b.failed} couldn't be written — their tokens were refunded, so you can try them again` : ""}.
             </span>
           )}
         </div>
@@ -286,8 +286,8 @@ function SopSet({ onWritten }) {
           <b>{toWrite.length ? `Write ${toWrite.length} SOP${toWrite.length === 1 ? "" : "s"}` : "Tick the processes you want SOPs for"}</b>
           {toWrite.length > 0 && (
             <span className={`small ${short ? "sop-short" : "muted"}`}>
-              That uses {runs} AI runs ({d.runs_per_sop || 2} for each SOP). You have {left} left this month.
-              {short ? " Untick a few, or wait for next month's runs." : " A run that fails is refunded."}
+              That uses {runs} AI tokens ({d.runs_per_sop || 2} for each SOP). You have {left} left this month.
+              {short ? " Untick a few, or wait for next month's tokens." : " A token that fails is refunded."}
             </span>
           )}
           <div className="row">
@@ -438,7 +438,7 @@ export function Reviews() {
         refresh();
         setVersion((v) => v + 1);
       }}>Write this month's review now</Busy>
-      <span className="small muted" style={{ marginLeft: 12 }}>Uses one AI run.</span>
+      <span className="small muted" style={{ marginLeft: 12 }}>Uses one AI token.</span>
     </span></>
   );
   return (

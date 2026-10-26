@@ -135,7 +135,7 @@ function MeetingView({ id, people, onChanged, onDeleted }) {
             }}>Pull out actions</Busy>
           )}
         </div>
-        {editor && <p className="small muted">Uses one AI run. The AI reads your notes, lists what you decided, and turns each action into a task for the person named. Running it again only adds new ones.</p>}
+        {editor && <p className="small muted">Uses one AI token. The AI reads your notes, lists what you decided, and turns each action into a task for the person named. Running it again only adds new ones.</p>}
         <Field label="What we decided">
           {editor ? (
             <textarea className="textarea" rows={Math.max(3, Math.min(10, (decisions.match(/\n/g) || []).length + 2))} value={decisions} placeholder="One decision per line"

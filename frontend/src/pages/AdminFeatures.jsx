@@ -1,14 +1,38 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ago, api, day, inr, localPhone, rupees } from "../api.js";
-import { Busy, Field, FormError, Modal, Sheet, Switch, useHub } from "../ui.jsx";
+import { Busy, Field, FormError, Modal, Sheet, Switch, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Num, Pill, Tabs } from "../v2.jsx";
 import "./admin.css";
 import "./admin-widgets.css";
 
 const ROLE_NAMES = { staff: "everyone in the team", manager: "managers and the owner", owner: "only the owner" };
-const FIELD_NAMES = { tier: "plan", label: "name", what: "description", on: "on/off", teaser: "show when locked", group: "menu group", order: "menu position" };
-const PLAN_FIELDS = { name: "name", short: "short name", price_minor: "price", runs: "AI runs", team_size: "team size", access_days: "days of access", pitch: "pitch",
+const FIELD_NAMES = { tier: "plan", label: "name", what: "description", on: "on/off", teaser: "show when locked", group: "menu group", order: "menu position",
+  engine: "engine", show: "in the menu", paid_only: "members only", day: "event day" };
+
+/* v2.3: the OwnerDesk setup — the engine menu, only the agreed features, Membership at ₹1,999 / ₹19,999. */
+function V23Setup({ changed }) {
+  const { toast } = useHub();
+  const [s, reload] = useLoad("/admin/config/presets/v23");
+  if (!s) return null;
+  return (
+    <div className={`panel ${s.applied ? "" : "active"}`}>
+      <div className="row between" style={{ flexWrap: "wrap" }}>
+        <div className="stack" style={{ gap: 4 }}>
+          <span className="label">OwnerDesk v2.3 setup</span>
+          <span className="small">{s.applied ? `Applied${s.applied_at ? ` on ${new Date(s.applied_at).toLocaleDateString("en-IN")}` : ""}: the 6-engine menu, only the agreed features, Membership at ₹1,999 a month or ₹19,999 a year.`
+            : "Switches the hub to the 6-engine menu with only the agreed features, and sets the Membership prices."}</span>
+          <span className="small muted">Applying it again puts back any of its settings you've changed here. Your own names and descriptions stay.</span>
+        </div>
+        <Busy className={`btn ${s.applied ? "ghost sm" : "primary"}`} run={async () => {
+          if (s.applied && !window.confirm("Apply the v2.3 setup again? Features you switched on or moved since will go back to the setup.")) return;
+          const r = await api("/admin/config/presets/v23", { method: "POST" }); toast(`Done. ${r.features_changed} features changed.`); reload(); await changed();
+        }}>{s.applied ? "Apply again" : "Apply the v2.3 setup"}</Busy>
+      </div>
+    </div>
+  );
+}
+const PLAN_FIELDS = { name: "name", short: "short name", price_minor: "price", runs: "AI tokens", team_size: "team size", access_days: "days of access", pitch: "pitch",
   promise: "promise", razorpay_plan_id: "Razorpay plan id" };
 const BILLING = { free: "Free", subscription: "Monthly subscription", one_time: "Paid once" };
 
@@ -97,12 +121,16 @@ function FeatureCard({ f, tiers, dragging, onDrag, onPatch, onMove, onEdit }) {
         {f.core ? <LockIcon /> : <span className="fcard-grip" aria-hidden="true">⠿</span>}
         <b>{f.label}</b>
       </div>
-      <span className="fcard-meta">{f.group} · {f.path ? f.path : "inside a page"}{f.role !== "staff" ? ` · ${f.role}` : ""}</span>
+      <span className="fcard-meta">{f.engine && f.engine !== "more" ? `${f.engine} · ` : ""}{f.group} · {f.path ? f.path : "inside a page"}{f.role !== "staff" ? ` · ${f.role}` : ""}{f.paid_only ? " · members only" : ""}</span>
       {f.core && <span className="fcard-meta">In every plan. Can't be moved or switched off.</span>}
       {diff.length > 0 && <span className="fcard-changed">Changed: {diff.map((k) => FIELD_NAMES[k] || k).join(", ")}</span>}
       <div className="fcard-switches">
         <Switch checked={f.on} disabled={f.core} label={f.on ? "On" : "Off for everyone"}
           onChange={(on) => onPatch(f, { on }, on ? `${f.label} is on again.` : `${f.label} is off for everyone.`)} />
+        {f.path && f.on && (
+          <Switch checked={f.show !== false} label={f.show !== false ? "In the menu" : "Behind the scenes"}
+            onChange={(show) => onPatch(f, { show }, show ? `${f.label} shows in the menu.` : `${f.label} works behind other pages, out of the menu.`)} />
+        )}
         {f.path && f.tier !== "free" && (
           <Switch checked={f.teaser} label={f.teaser ? "Shown locked" : "Hidden when locked"}
             onChange={(teaser) => onPatch(f, { teaser }, teaser ? `${f.label} shows locked in lower plans' menus.` : `${f.label} is hidden from lower plans' menus.`)} />
@@ -122,13 +150,16 @@ function FeatureCard({ f, tiers, dragging, onDrag, onPatch, onMove, onEdit }) {
 
 function EditFeature({ f, cfg, names, onClose, changed }) {
   const { toast } = useHub();
-  const [v, setV] = useState({ label: f.label, what: f.what, group: f.group, tier: f.tier });
+  const [v, setV] = useState({ label: f.label, what: f.what, group: f.group, tier: f.tier, engine: f.engine || "more", paid_only: !!f.paid_only, day: f.day ?? -1 });
   const [err, setErr] = useState("");
   const body = {};
   if (v.label.trim() !== f.label) body.label = v.label.trim();
   if (v.what.trim() !== f.what) body.what = v.what.trim();
   if (v.group !== f.group) body.group = v.group;
   if (v.tier !== f.tier) body.tier = v.tier;
+  if (v.engine !== (f.engine || "more")) body.engine = v.engine;
+  if (v.paid_only !== !!f.paid_only) body.paid_only = v.paid_only;
+  if (Number(v.day) !== (f.day ?? -1)) body.day = Number(v.day);
   return (
     <Modal onClose={onClose}>
       <span className="kicker">Edit feature</span>
@@ -151,6 +182,22 @@ function EditFeature({ f, cfg, names, onClose, changed }) {
           </select>
         </Field>
       </div>
+      {cfg.sections && (
+        <div className="grid2 fields-top">
+          <Field label="Engine (v2.3 menu)">
+            <select className="select" value={v.engine} onChange={(e) => setV({ ...v, engine: e.target.value })}>
+              {cfg.sections.map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}
+            </select>
+          </Field>
+          <Field label="Opens on event day" hint="During a live event. Members always have it.">
+            <select className="select" value={v.day} onChange={(e) => setV({ ...v, day: e.target.value })}>
+              <option value={-1}>The engine's own day</option><option value={0}>From the start</option>
+              <option value={1}>Day 1</option><option value={2}>Day 2</option><option value={3}>Day 3</option>
+            </select>
+          </Field>
+        </div>
+      )}
+      <Switch checked={v.paid_only} label="Members only (closed during a free or event trial)" onChange={(paid_only) => setV({ ...v, paid_only })} />
       <p className="small muted">
         Who can open it: {ROLE_NAMES[f.role] || f.role}. {f.path ? <>Page address: <span className="mono">{f.path}</span>.</> : "It works inside another page, so it has no menu item."}
       </p>
@@ -349,7 +396,8 @@ function MenuOrder({ cfg, changed }) {
 function PlanForm({ t, changed }) {
   const { toast } = useHub();
   const init = useCallback(() => ({ name: t.name, short: t.short || "", price: t.price_minor / 100, runs: t.runs, team_size: t.team_size, access_days: t.access_days ?? "",
-    pitch: t.pitch || "", promise: t.promise || "", razorpay_plan_id: t.razorpay_plan_id || "" }), [t]);
+    pitch: t.pitch || "", promise: t.promise || "", razorpay_plan_id: t.razorpay_plan_id || "",
+    year: (t.price_year_minor || 0) / 100, images: t.images ?? 30, extra_runs: t.extra_runs ?? 0 }), [t]);
   const [v, setV] = useState(init);
   const [err, setErr] = useState("");
   useEffect(() => { setV(init()); setErr(""); }, [init]);
@@ -365,6 +413,9 @@ function PlanForm({ t, changed }) {
   if (v.pitch.trim() !== (t.pitch || "")) body.pitch = v.pitch.trim();
   if (v.promise.trim() !== (t.promise || "")) body.promise = v.promise.trim();
   if (t.tier === "lite" && v.razorpay_plan_id.trim() !== (t.razorpay_plan_id || "")) body.razorpay_plan_id = v.razorpay_plan_id.trim();
+  if (t.tier === "lite" && v.year !== "" && Math.round(Number(v.year) * 100) !== (t.price_year_minor || 0)) body.price_year_minor = Math.round(Number(v.year) * 100);
+  if (t.tier === "lite" && v.extra_runs !== "" && int(v.extra_runs) !== (t.extra_runs ?? 0)) body.extra_runs = int(v.extra_runs);
+  if (v.images !== "" && int(v.images) !== (t.images ?? 30)) body.images = int(v.images);
   const dirty = Object.keys(body).length > 0;
   return (
     <div className={`panel ${dirty ? "active" : ""}`}>
@@ -384,7 +435,10 @@ function PlanForm({ t, changed }) {
         <Field label="Price (₹)" hint={t.tier === "free" ? "The free plan stays free." : t.tier === "lite" ? "A new price needs a new Razorpay plan id below." : "New prices apply to new purchases."}>
           <Num min="0" step="1" value={v.price} disabled={t.tier === "free"} onChange={set("price")} />
         </Field>
-        <Field label="AI runs a month"><Num min="0" step="1" value={v.runs} onChange={set("runs")} /></Field>
+        <Field label="AI tokens a month"><Num min="0" step="1" value={v.runs} onChange={set("runs")} /></Field>
+        {t.tier === "lite" && <Field label="Price a year (₹)" hint="v2.3: the yearly option on Plans & billing."><Num min="0" step="1" value={v.year} onChange={set("year")} /></Field>}
+        {t.tier === "lite" && <Field label="Extra AI tokens a month" hint="The members' bonus, on top of the month's tokens."><Num min="0" step="1" value={v.extra_runs} onChange={set("extra_runs")} /></Field>}
+        <Field label="Social images a month" hint={t.tier === "free" ? "Also for event accounts unless the event sets its own." : undefined}><Num min="0" step="1" value={v.images} onChange={set("images")} /></Field>
         <Field label="Team logins" hint="How many team members the owner can add."><Num min="0" max="500" step="1" value={v.team_size} onChange={set("team_size")} /></Field>
         {t.billing === "one_time" && (
           <Field label="Days of access" hint="How long one payment lasts."><Num min="1" max="3650" step="1" value={v.access_days} onChange={set("access_days")} /></Field>
@@ -609,6 +663,7 @@ export default function AdminFeatures() {
   return (
     <Sheet kicker="Admin · Features & plans" id="A-03" pillar="Admin" title={<>Every feature, in the right <em>plan</em>.</>}
       sub="Move features between plans, switch them on or off for everyone, rename them, reorder the menu and set each plan's price and limits. Owners see every change at once.">
+      <V23Setup changed={changed} />
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
       <FormError msg={err} />
       {!cfg ? (!err && <Loading />)

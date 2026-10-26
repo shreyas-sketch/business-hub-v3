@@ -1,0 +1,110 @@
+/* v2.3 CRM + Pipeline & Opportunities (Conversion engine). Phone-first: the board scrolls sideways inside itself, never the page. */
+
+/* ── questions ── */
+.crm-q { display: grid; gap: 14px; }
+.crm-q-card { border: 1px solid var(--hairline); border-radius: var(--radius-card); padding: 16px; display: grid; gap: 12px; background: var(--panel); min-width: 0; }
+.crm-q-card h3 { margin: 0; font: 700 16px/1.35 var(--head); display: flex; gap: 10px; align-items: baseline; }
+.crm-q-card h3 .n { color: var(--gold); font-variant-numeric: tabular-nums; }
+.crm-from { font-size: 12px; color: var(--teal); }
+.crm-chips { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.crm-chip { border: 1px solid var(--hairline); background: transparent; color: var(--ivory-70); border-radius: 999px; padding: 8px 13px; font: 600 13px/1.2 var(--body);
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; }
+.crm-chip:hover { border-color: var(--ivory-35); color: var(--ivory); }
+.crm-chip.on { border-color: var(--gold); color: var(--gold); background: var(--gold-wash); }
+.crm-chip .ord { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--gold); color: #14151A; font-size: 11px; font-weight: 800; }
+.crm-chip.x { padding-right: 8px; }
+.crm-chip.x button { background: none; border: 0; color: inherit; cursor: pointer; font-size: 15px; line-height: 1; padding: 0 2px; }
+.crm-seg { display: inline-flex; border: 1px solid var(--hairline); border-radius: 999px; overflow: hidden; width: fit-content; max-width: 100%; }
+.crm-fit { width: fit-content; }
+.crm-seg button { background: none; border: 0; color: var(--ivory-70); padding: 8px 16px; font: 600 13px var(--body); cursor: pointer; min-height: 36px; }
+.crm-seg button.on { background: var(--gold); color: #14151A; }
+
+/* ── the stage strip and editor ── */
+.crm-strip { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.crm-strip .st { border: 1px solid var(--hairline); border-radius: 8px; padding: 6px 10px; font-size: 13px; display: grid; gap: 1px; }
+.crm-strip .st small { color: var(--ivory-35); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+.crm-strip .arrow { color: var(--ivory-35); }
+.crm-edit-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 200px) auto; gap: 8px; align-items: center; }
+.crm-edit-row .btns { display: flex; gap: 4px; }
+.crm-icon { min-width: 36px; min-height: 36px; border: 1px solid var(--hairline); background: transparent; color: var(--ivory-70); border-radius: 10px; cursor: pointer; font-size: 15px; }
+.crm-icon:hover:not(:disabled) { color: var(--ivory); border-color: var(--ivory-35); }
+.crm-icon:disabled { opacity: .35; cursor: default; }
+
+/* ── toolbar ── */
+.crm-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; min-width: 0; max-width: 100%; }
+.crm-bar .input, .crm-bar .select { width: auto; min-width: 0; flex: 1 1 160px; }
+.crm-bar .grow { flex: 2 1 200px; }
+.crm-bar .tabs { flex: 0 1 auto; min-width: 0; }
+
+/* ── the board ── */
+.crm-board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(248px, 1fr); gap: 12px; overflow-x: auto; padding-bottom: 10px;
+  max-width: 100%; overscroll-behavior-x: contain; scroll-snap-type: x proximity; }
+.crm-col { background: var(--panel); border: 1px solid var(--hairline); border-radius: var(--radius-card); padding: 10px; display: grid; gap: 8px;
+  align-content: start; min-height: 220px; scroll-snap-align: start; transition: border-color .15s var(--ease-state), background .15s var(--ease-state); }
+.crm-col.over { border-color: var(--gold); background: var(--gold-wash); }
+.crm-col-head { display: grid; gap: 2px; padding: 2px 4px 6px; border-bottom: 1px solid var(--hairline); }
+.crm-col-head b { font: 700 14px/1.3 var(--head); color: var(--ivory); }
+.crm-col-head .ff { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--ivory-35); }
+.crm-col-head .n { font-size: 12px; color: var(--ivory-70); }
+.crm-card { background: var(--panel-raised); border: 1px solid var(--hairline); border-radius: 12px; padding: 10px 12px; display: grid; gap: 5px;
+  cursor: grab; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: manipulation; min-width: 0; }
+.crm-card:hover, .crm-card:focus-visible { border-color: var(--ivory-35); outline: none; }
+.crm-card b { overflow-wrap: anywhere; }
+.crm-card.lifted { opacity: .35; }
+.crm-ghost { position: fixed; z-index: 60; pointer-events: none; margin: 0; box-shadow: var(--shadow-float); border-color: var(--gold) !important;
+  transform-origin: 0 0; rotate: 2deg; opacity: .95; }
+.crm-due { color: var(--ivory-70); }
+.crm-due.today { color: var(--gold); font-weight: 700; }
+.crm-due.over { color: var(--alert); font-weight: 700; }
+.crm-drop { border: 1px dashed var(--hairline); border-radius: 10px; padding: 14px; text-align: center; font-size: 12px; color: var(--ivory-35); }
+
+/* ── list rows ── */
+.crm-rows { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; min-width: 0; }
+.crm-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 12px 14px;
+  border: 1px solid var(--hairline); border-radius: 12px; background: var(--panel); cursor: pointer; text-align: left; color: inherit; font: inherit; width: 100%; }
+.crm-row:hover { border-color: var(--ivory-35); }
+.crm-row .who { display: grid; gap: 2px; min-width: 0; }
+.crm-row .who b, .crm-row .who span { overflow-wrap: anywhere; }
+.crm-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.crm-tag { border: 1px solid var(--teal-line); color: var(--teal); border-radius: 999px; padding: 1px 8px; font-size: 11px; font-weight: 700; }
+
+/* ── the deal drawer ── */
+.crm-drawer { position: fixed; z-index: 41; top: 0; right: 0; bottom: 0; width: min(500px, 100vw); background: var(--bg); border-left: 1px solid var(--hairline);
+  overflow-y: auto; padding: 20px; display: grid; gap: 16px; align-content: start; box-shadow: var(--shadow-float); animation: crm-in .22s var(--ease-enter); }
+.crm-scrim { position: fixed; inset: 0; z-index: 40; background: rgba(10,10,12,.6); }
+@keyframes crm-in { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.crm-drawer h2 { margin: 0; font: 800 22px/1.2 var(--head); overflow-wrap: anywhere; }
+.crm-drawer .section { display: grid; gap: 10px; border-top: 1px solid var(--hairline); padding-top: 14px; }
+.crm-two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+
+/* ── history ── */
+.crm-timeline { display: grid; gap: 0; }
+.crm-ev { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 10px; padding: 8px 0; }
+.crm-ev i { width: 9px; height: 9px; border-radius: 50%; background: var(--ivory-35); margin-top: 6px; }
+.crm-ev.won i { background: var(--gold); }
+.crm-ev.lost i { background: var(--alert); }
+.crm-ev.call i, .crm-ev.meeting i { background: var(--teal); }
+.crm-ev p { margin: 0; overflow-wrap: anywhere; }
+
+/* ── contact page ── */
+.crm-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.crm-quick { display: flex; flex-wrap: wrap; gap: 8px; }
+.crm-side { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+
+@media (max-width: 760px) {
+  .crm-side { grid-template-columns: minmax(0, 1fr); }
+  .crm-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .crm-row .hide-sm { display: none; }
+}
+@media (max-width: 520px) {
+  .crm-board { grid-auto-columns: minmax(236px, 82vw); }
+  .crm-edit-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .crm-edit-row .select { grid-column: 1 / -1; grid-row: 2; }
+  .crm-two { grid-template-columns: minmax(0, 1fr); }
+  .crm-drawer { padding: 16px; }
+}
+
+/* phones: a removable chip's × gets a finger-sized target without making the chip look bigger */
+@media (pointer: coarse), (max-width: 640px) {
+  .crm-chip.x button { min-width: 32px; min-height: 32px; margin: -8px -8px -8px 0; display: inline-grid; place-items: center; }
+}

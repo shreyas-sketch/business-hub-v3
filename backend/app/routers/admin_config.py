@@ -29,6 +29,11 @@ class FeaturePatch(BaseModel):
     order: int | None = Field(default=None, ge=0, le=100_000)
     on: bool | None = None
     teaser: bool | None = None
+    # v2.3: the engine it sits under, whether it shows in the menu, closed during a trial, the event day it opens on
+    engine: str | None = Field(default=None, pattern="^(start|lead|sales|conversion|operations|brand|data|more|account)$")
+    show: bool | None = None
+    paid_only: bool | None = None
+    day: int | None = Field(default=None, ge=-1, le=3)
 
 
 class MenuIn(BaseModel):
@@ -46,6 +51,10 @@ class PlanPatch(BaseModel):
     pitch: str | None = Field(default=None, max_length=160)
     promise: str | None = Field(default=None, max_length=160)
     razorpay_plan_id: str | None = Field(default=None, max_length=60, pattern=r"^(plan_[A-Za-z0-9]{6,40})?$")
+    # v2.3: social media images a month, extra AI tokens a month for paying members, the yearly price
+    images: int | None = Field(default=None, ge=0, le=10_000)
+    extra_runs: int | None = Field(default=None, ge=0, le=100_000)
+    price_year_minor: int | None = Field(default=None, ge=0, le=10_000_000_000)
 
 
 class GrantIn(BaseModel):
@@ -93,7 +102,9 @@ async def overview():
         p = plans.PLANS[t]
         tiers.append({"tier": t, **{k: v for k, v in p.items()}, "changed": sorted((plan_over.get(t) or {}).keys()),
                       "features": sum(1 for m in plans.META.values() if m["tier"] == t)})
-    return {"tiers": tiers, "features": features, "groups": plans.GROUPS}
+    return {"tiers": tiers, "features": features, "groups": plans.GROUPS,
+            # v2.3: the engine menu's sections, and whether the engine menu is on
+            "sections": [{"key": k, "label": plans.SECTION_LABEL[k]} for k in plans.SECTIONS], "engines_on": plans.engines_on()}
 
 
 # ───────────────────────── features ─────────────────────────
@@ -174,6 +185,46 @@ def _preset_state(keys: tuple) -> dict:
             "applied": all(plans.rank(plans.META[k]["tier"]) <= plans.rank("lite") for k in keys)}
 
 
+@router.get("/presets/v23")
+async def v23_state():
+    from .. import v23
+    return await v23.state()
+
+
+@router.post("/presets/v23")
+async def apply_v23(admin: dict = Depends(require_admin)):
+    """The OwnerDesk v2.3 setup: the engine menu, the hidden features, Membership at ₹1,999 / ₹19,999. Safe to run again."""
+    from .. import v23
+    out = await v23.apply(admin["_id"], admin.get("phone", ""))
+    await track("preset_v23", admin["_id"], changed=out["features_changed"])
+    return out
+
+
+class UiPatch(BaseModel):
+    """v2.3: the account links every member sees (Account section and Plans & billing) and the menu style."""
+    menu: str | None = Field(default=None, pattern="^(groups|engines)$")
+    community_link: str | None = Field(default=None, max_length=300, pattern=r"^(https://\S+)?$")
+    support_email: str | None = Field(default=None, max_length=120, pattern=r"^([^@\s]+@[^@\s]+\.[^@\s]+)?$")
+    pay_monthly_link: str | None = Field(default=None, max_length=300, pattern=r"^(https://\S+)?$")
+    pay_yearly_link: str | None = Field(default=None, max_length=300, pattern=r"^(https://\S+)?$")
+
+
+@router.get("/ui")
+async def ui_settings():
+    return {k: plans.UI.get(k) for k in plans.UI_EDITABLE}
+
+
+@router.patch("/ui")
+async def patch_ui(body: UiPatch, admin: dict = Depends(require_admin)):
+    patch = body.model_dump(exclude_none=True)
+    if patch:
+        before = {k: plans.UI.get(k) for k in patch}
+        await db().config.update_one({"_id": "ui"}, {"$set": {**patch, "updated_at": now()}}, upsert=True)
+        await plans.load(force=True)
+        await _log(admin, "ui", "ui", before, patch)
+    return await ui_settings()
+
+
 @router.get("/presets/membership-v22")
 async def membership_v22_state():
     return _preset_state(MEMBERSHIP_V22)
@@ -202,7 +253,7 @@ async def apply_membership_v22(admin: dict = Depends(require_admin)):
 # For a live event, on top of the v2.2 Membership: the agents that sit in higher plans, so every pack made in the room has
 # them. WhatsApp chats brings the owner's own number (and with it Lead Response's first reply); its two agents wait for the
 # owner's own switch on Membership (agents.jobs.OPT_IN). Moved back after the event in one tap.
-EVENT_EXTRAS = ("win_back", "market_research", "whatsapp_ai", "lead_response")
+EVENT_EXTRAS = ("win_back", "market_research", "whatsapp_ai", "whatsapp_tool", "lead_response")   # whatsapp_tool: connecting their number
 
 
 @router.get("/presets/event-extras")

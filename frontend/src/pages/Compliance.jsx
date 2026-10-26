@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, rs, upload } from "../api.js";
-import { Busy, Copy, Field, FormError, Gate, Sheet, useHub, useLoad } from "../ui.jsx";
+import { Busy, Copy, Field, FormError, Gate, Modal, Sheet, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Pill, Tabs } from "../v2.jsx";
 import "./compliance.css";
 
@@ -247,10 +247,116 @@ function Documents() {
   );
 }
 
+/* v2.3: the GST and TAN pop-up. The GST number gives the state, the PAN and (mostly) the business type; the TAN decides
+   the TDS filings. Saved into the Knowledge Hub's business identity. Dates still come from the rules table. */
+function Choice({ value, onChange, options }) {
+  return (
+    <div className="row" role="radiogroup">
+      {options.map(([v, l]) => (
+        <button key={v} type="button" role="radio" aria-checked={value === v} className={`btn sm ${value === v ? "primary" : "ghost"}`} onClick={() => onChange(v)}>{l}</button>
+      ))}
+    </div>
+  );
+}
+
+function SetupModal({ setup, onClose, onSaved }) {
+  const k = setup.known || {};
+  const [gst, setGst] = useState(k.gst_registered === false ? "no" : "yes");
+  const [gstin, setGstin] = useState(k.gstin || "");
+  const [check, setCheck] = useState(null);
+  const [scheme, setScheme] = useState(k.gst_scheme || "monthly");
+  const [entity, setEntity] = useState(k.entity || "");
+  const [state, setState] = useState(k.state || "");
+  const [tanMode, setTanMode] = useState(k.has_tan === false ? "no" : "yes");
+  const [tan, setTan] = useState(k.tan || "");
+  const [staff, setStaff] = useState("");
+  const [err, setErr] = useState("");
+  const clean = gstin.replace(/\s+/g, "").toUpperCase();
+  useEffect(() => {
+    if (gst !== "yes" || clean.length !== 15) { setCheck(null); return; }
+    let live = true;
+    api("/compliance/setup/gstin", { method: "POST", body: { gstin: clean } }).then((r) => live && setCheck(r)).catch(() => {});
+    return () => { live = false; };
+  }, [clean, gst]);
+  const choices = gst === "yes" ? (check?.valid ? check.entities : []) : setup.entities;
+  const askEntity = gst === "yes" ? !!(check?.valid && check.ask_entity && !check.entities.some((e) => e.value === k.entity)) : !k.entity;
+  useEffect(() => { if (check?.valid && check.entities.length === 1) setEntity(check.entities[0].value); }, [check]);
+  const tanClean = tan.replace(/\s+/g, "").toUpperCase();
+  const ready = (gst === "no" || check?.valid) && (!askEntity || entity) && (gst === "yes" || state) && (tanMode === "no" || /^[A-Z]{4}\d{5}[A-Z]$/.test(tanClean))
+    && (!setup.ask_staff || staff !== "");
+  return (
+    <Modal onClose={onClose}>
+      <span className="kicker">Compliance calendar</span>
+      <h2>Two numbers, and your calendar is <em>exact</em>.</h2>
+      <p className="sub">Your GST number and TAN tell the hub which filings are yours. It takes a minute. The dates come from the rules table, never from AI.</p>
+      <div className="stack">
+        <Field label="Are you registered for GST?">
+          <Choice value={gst} onChange={setGst} options={[["yes", "Yes"], ["no", "Not GST registered"]]} />
+        </Field>
+        {gst === "yes" && (
+          <Field label="GST number" hint={check?.valid ? `${check.state || "State not known"} · ${check.pan_kind}` : "15 characters, like 27ABCDE1234F1Z5. It's on your GST certificate."}>
+            <input className="input mono" maxLength={20} autoCapitalize="characters" value={gstin} onChange={(e) => setGstin(e.target.value)} placeholder="27ABCDE1234F1Z5" />
+          </Field>
+        )}
+        {gst === "yes" && check && !check.valid && <FormError msg={check.error} />}
+        {gst === "yes" && check?.valid && (
+          <Field label="GST returns">
+            <select className="select" value={scheme} onChange={(e) => setScheme(e.target.value)}>
+              <option value="monthly">Every month</option><option value="qrmp">Every quarter (QRMP)</option>
+            </select>
+          </Field>
+        )}
+        {askEntity && (
+          <Field label="Your business type">
+            <select className="select" value={entity} onChange={(e) => setEntity(e.target.value)}>
+              <option value="">Pick one</option>{choices.map((e) => <option key={e.value} value={e.value}>{e.label}</option>)}
+            </select>
+          </Field>
+        )}
+        {gst === "no" && (
+          <Field label="Your state">
+            <select className="select" value={state} onChange={(e) => setState(e.target.value)}>
+              <option value="">Pick your state</option>{setup.states.map((x) => <option key={x} value={x}>{x}</option>)}
+            </select>
+          </Field>
+        )}
+        <Field label="Do you have a TAN (TDS number)?">
+          <Choice value={tanMode} onChange={setTanMode} options={[["yes", "Yes"], ["no", "No TAN"]]} />
+        </Field>
+        {tanMode === "yes" && (
+          <Field label="TAN" hint="10 characters, like MUMA12345B. It's on your TDS challans and returns.">
+            <input className="input mono" maxLength={14} autoCapitalize="characters" value={tan} onChange={(e) => setTan(e.target.value)} placeholder="MUMA12345B" />
+          </Field>
+        )}
+        {setup.ask_staff && (
+          <Field label="How many people work with you?" hint="Type 0 if it's only you. PF, ESI and professional tax depend on it.">
+            <input className="input" type="number" min="0" inputMode="numeric" value={staff} onChange={(e) => setStaff(e.target.value)} />
+          </Field>
+        )}
+        <FormError msg={err} />
+        <div className="row">
+          <Busy className="btn primary" disabled={!ready} onError={setErr} run={async () => {
+            const body = { gst_registered: gst === "yes", gstin: gst === "yes" ? clean : "", gst_scheme: scheme, has_tan: tanMode === "yes", tan: tanMode === "yes" ? tanClean : "" };
+            if (entity) body.entity = entity;
+            if (gst === "no") body.state = state;
+            if (setup.ask_staff) body.staff = Number(staff);
+            await api("/compliance/setup", { method: "POST", body });
+            onSaved();
+          }}>Save and build my calendar</Busy>
+          <Busy className="btn ghost" run={async () => { await api("/compliance/setup/skip", { method: "POST" }); onClose(true); }}>Skip for now</Busy>
+        </div>
+        <p className="small muted">Saved in your Knowledge Hub, under Business identity. You can change it there any time.</p>
+      </div>
+    </Modal>
+  );
+}
+
 function ComplianceInner() {
-  const { toast } = useHub();
+  const { toast, me } = useHub();
   const [d, reload, err] = useLoad("/compliance?days=90");
   const [tab, setTab] = useState("soon");
+  const [setupOpen, setSetupOpen] = useState(null);   // null: follow the server (pop up on first open); true/false: the owner chose
+  const isOwner = me?.workspace?.role === "owner";
   const year = useMemo(() => (d?.all || []).filter((i) => i.status !== "done" || (i.due_date || "") >= todayIso()), [d]);
   const head = { kicker: "Systems · Compliance calendar", id: "SY-09", pillar: "Systems" };
   if (!d) return <Sheet {...head} title={<>Every filing, <em>on time</em>.</>}>{err ? <FormError msg={err.message} /> : <Loading />}</Sheet>;
@@ -269,7 +375,23 @@ function ComplianceInner() {
         </div>
       </div>
 
-      {!d.identity && (
+      {d.setup && isOwner && (setupOpen ?? d.setup.popup) && (
+        <SetupModal setup={d.setup} onClose={(skipped) => { setSetupOpen(false); if (skipped) reload(); }}
+          onSaved={() => { setSetupOpen(false); toast("Saved. Your calendar is built from it."); reload(); }} />
+      )}
+      {d.setup?.needed && (d.setup.banner || !isOwner || setupOpen === false) && (
+        <div className="panel active">
+          <span className="label">Make it exact</span>
+          <p>{isOwner ? "Add your GST number and TAN so the calendar shows exactly your filings — GST, TDS and the rest."
+            : "Ask the business owner to add the GST number and TAN, so the calendar shows exactly your filings."}</p>
+          {isOwner && <div><button className="btn primary" onClick={() => setSetupOpen(true)}>Add them now</button></div>}
+        </div>
+      )}
+      {(d.notes || []).map((n) => (
+        <div key={n} className="cp-review warn"><i className="mark-dot" aria-hidden="true" /><b>{n}</b></div>
+      ))}
+
+      {!d.identity && !d.setup?.needed && (
         <div className="panel active">
           <span className="label">One step first</span>
           <p>Add your business identity — whether you're a proprietor or a company, GST, state and staff — so the hub knows which filings apply to you.</p>
@@ -293,7 +415,7 @@ function ComplianceInner() {
           </Busy>
         </div>
       )}
-      {d.identity && <p className="hint" style={{ marginTop: -18 }}>Uses 1 AI run. The AI only writes the explanations — it never sets or changes a date.</p>}
+      {d.identity && <p className="hint" style={{ marginTop: -18 }}>Uses 1 AI token. The AI only writes the explanations — it never sets or changes a date.</p>}
 
       <Tabs tabs={[["soon", "Next 90 days"], ["year", "Next 12 months"], ["docs", "Documents"], ["add", "Add your own"]]} value={tab} onChange={setTab} />
       {tab === "soon" && (
