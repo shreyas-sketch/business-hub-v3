@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { api, day, localPhone, rs, waLink } from "../api.js";
+import { api, day, localPhone, rs, upload, waLink } from "../api.js";
 import { Busy, Copy, Field, FormError, Modal, Sheet, Switch, canAct, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Num, Pill, Tabs } from "../v2.jsx";
 import VoiceNote from "../components/VoiceNote.jsx";
@@ -451,7 +451,9 @@ function QuoteCard({ q, onEdit, onInvoice, reload, showInvoices }) {
         {open && <Busy className="btn sm ghost" run={() => setStatus("lost", `${q.number} marked lost`)}>Lost</Busy>}
         {!q.invoice_id && q.status !== "lost" && <button className="btn sm" onClick={() => onInvoice(q)}>Make invoice</button>}
         {q.invoice_id && <button className="btn sm ghost" onClick={showInvoices}>See the invoice</button>}
-        <a className="btn sm ghost" href={`/api/quotes/${q.id}/print`} target="_blank" rel="noreferrer">Print / PDF</a>
+        <a className="btn sm ghost" href={q.pdf_url} target="_blank" rel="noreferrer">PDF</a>
+        <Copy text={q.pdf_url} label="Copy PDF link" className="btn sm ghost" />
+        <a className="btn sm ghost" href={`/api/quotes/${q.id}/print`} target="_blank" rel="noreferrer">Print</a>
         <Copy text={q.share_text} label="Copy text" className="btn sm ghost" />
         {open && <button className="btn sm ghost" onClick={() => onEdit(q)}>Edit</button>}
         {q.status === "draft" && (
@@ -486,7 +488,9 @@ function InvoiceRow({ inv, from, reload }) {
       </div>
       <div className="row" style={{ gap: 8 }}>
         {inv.status !== "paid" && <a className="btn sm primary" href={sendLink(inv)} target="_blank" rel="noreferrer">Send on WhatsApp</a>}
-        <a className="btn sm" href={`/api/quotes/${inv.id}/print`} target="_blank" rel="noreferrer">Print / PDF</a>
+        <a className="btn sm" href={inv.pdf_url} target="_blank" rel="noreferrer">PDF</a>
+        <Copy text={inv.pdf_url} label="Copy PDF link" className="btn sm ghost" />
+        <a className="btn sm ghost" href={`/api/quotes/${inv.id}/print`} target="_blank" rel="noreferrer">Print</a>
         <Copy text={inv.share_text} label="Copy text" className="btn sm ghost" />
         {inv.customer?.email && !emailed && (
           <Busy className="btn sm ghost" run={async () => {
@@ -497,6 +501,71 @@ function InvoiceRow({ inv, from, reload }) {
         )}
         {me.features?.money_owed && inv.due_id && <Link className="btn sm ghost" to="/money">{inv.status === "paid" ? "See in Money owed" : "Mark paid in Money owed"}</Link>}
       </div>
+    </div>
+  );
+}
+
+/** The owner's own past invoices, read once by the AI, so drafts are written the way this business writes them. */
+function StylePanel() {
+  const { toast, refresh } = useHub();
+  const [d, setD] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  useEffect(() => { api("/quotes/style").then(setD).catch(() => setD({ samples: [], max: 3, max_mb: 8 })); }, []);
+  if (!d) return null;
+  const st = d.style || {};
+  const send = async (file) => {
+    setBusy(true); setErr("");
+    try {
+      const form = new FormData();
+      form.append("file", file, file.name);
+      const r = await upload("/quotes/style", form);
+      setD(r); refresh();
+      toast(r.filled?.length ? `Learned. Your ${r.filled.join(" and ")} came from it too.` : "Learned how you write your invoices");
+    } catch (e) { if (!e.handled) setErr(e.message); } finally { setBusy(false); }
+  };
+  const pick = (
+    <label className={`btn sm ${d.samples.length ? "ghost" : "primary"} ai`} style={{ cursor: busy ? "wait" : "pointer" }}>
+      {busy ? "Reading your invoice…" : d.samples.length ? "Add another invoice" : "Upload one of your invoices"}
+      <input type="file" hidden accept="application/pdf,.pdf,image/jpeg,image/png,image/webp" disabled={busy}
+        onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) send(f); }} />
+    </label>
+  );
+  return (
+    <div className={`panel inv-style ${d.samples.length ? "" : "active"}`}>
+      <div className="row between">
+        <div className="stack" style={{ gap: 4 }}>
+          <span className="label">{d.samples.length ? "Drafts follow your own invoice style" : "Teach the hub how you write invoices"}</span>
+          <span className="small muted">{d.samples.length
+            ? `Learned from ${d.samples.length === 1 ? "one of your invoices" : `${d.samples.length} of your invoices`}. Every AI quotation names items, units and GST your way, and uses your past rates for the same items.`
+            : "Upload a quotation or invoice you've sent before (PDF or a photo). The AI reads it once and drafts new ones the same way: your item names, units, GST and terms."}</span>
+        </div>
+        {d.samples.length < d.max && pick}
+      </div>
+      <FormError msg={err} />
+      {d.samples.length > 0 && (
+        <details className="inv-style-more">
+          <summary>What the hub learned</summary>
+          <ul className="inv-style-list small">
+            {st.summary && <li><b>Layout:</b> {st.summary}</li>}
+            {st.item_naming && <li><b>Item names:</b> {st.item_naming}</li>}
+            {st.units?.length > 0 && <li><b>Units:</b> {st.units.join(", ")}</li>}
+            {st.gst_rates?.length > 0 && <li><b>GST:</b> {st.gst_rates.map((g) => `${g}%`).join(", ")}{st.gst_mode === "inter" ? " (IGST)" : st.gst_mode === "intra" ? " (CGST + SGST)" : ""}</li>}
+            {st.numbering && <li><b>Numbering:</b> {st.numbering}</li>}
+            {st.items?.length > 0 && <li><b>Past rates:</b> {st.items.length} item{st.items.length === 1 ? "" : "s"}, used when you don't say a rate</li>}
+            {st.terms && <li><b>Terms:</b> {st.terms}</li>}
+          </ul>
+          <div className="stack" style={{ gap: 6 }}>
+            {d.samples.map((x) => (
+              <div key={x.id} className="row between inv-style-file">
+                <span className="small">{x.name} <span className="muted">· {x.kind === "pdf" ? `PDF, ${x.pages} page${x.pages === 1 ? "" : "s"}` : "photo"} · {day(x.at)}</span></span>
+                <Busy className="btn sm ghost" run={async () => { setD(await api(`/quotes/style/${x.id}`, { method: "DELETE" })); toast("Removed"); }}>Remove</Busy>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+      <span className="small muted">Uses 1 AI token per invoice. Only what the AI learned is kept, never the file. Up to {d.max} invoices, {d.max_mb} MB each.</span>
     </div>
   );
 }
@@ -538,6 +607,7 @@ export default function Quotes() {
       <GatewayLine />
       {me.features?.quote_followup && <p className="small muted">Quote follow-ups on day 2, 5 and 10 after you send a quotation wait in your <Link to="/approvals">Send list</Link>.</p>}
       {settings && !editing && <Settings onClose={() => setSettings(false)} />}
+      {!editing && <StylePanel />}
       {editing === "invoice" && <InvoiceEditor onClose={() => setEditing(null)} onSaved={() => { setEditing(null); setTab("invoice"); reloadI(); top(); }} />}
       {editing && editing !== "invoice" && (
         <Editor key={editing === "new" ? `new-${prefill?.lead_id || ""}` : editing.id} quote={editing === "new" ? null : editing} prefill={editing === "new" ? prefill : null}

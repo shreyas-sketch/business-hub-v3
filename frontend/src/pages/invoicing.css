@@ -2,3 +2,11 @@
 .inv-gw { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
 .inv-gw > span { flex: 1 1 240px; min-width: 0; }
 .inv-email { border-top: 1px solid var(--ink-line); padding-top: 12px; margin-top: 4px; }
+
+/* the owner's own invoice as a reference */
+.inv-style { display: grid; gap: 10px; }
+.inv-style-more summary { cursor: pointer; font-size: 13px; color: var(--ivory-70); min-height: 32px; display: flex; align-items: center; }
+.inv-style-more[open] { display: grid; gap: 12px; }
+.inv-style-list { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.inv-style-file { border-top: 1px solid var(--hairline); padding-top: 8px; flex-wrap: nowrap; }
+.inv-style-file > span { min-width: 0; overflow-wrap: anywhere; }

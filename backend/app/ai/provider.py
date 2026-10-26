@@ -76,7 +76,8 @@ def _retry_after(r: httpx.Response) -> float | None:
         return None
 
 
-async def complete(system: str, prompt: str, mock, max_tokens: int = 1200) -> tuple[dict, Usage]:
+async def complete(system: str, prompt: str, mock, max_tokens: int = 1200, images: list[tuple[str, bytes]] | None = None) -> tuple[dict, Usage]:
+    """`images`: optional [(media type, bytes)] the engine reads with the prompt (e.g. a photo of an invoice)."""
     provider = settings.ai_provider
     if provider == "mock":
         return mock(), Usage()
@@ -84,7 +85,7 @@ async def complete(system: str, prompt: str, mock, max_tokens: int = 1200) -> tu
     while True:
         try:
             async with _semaphore():
-                return await _call_once(provider, system, prompt, mock, max_tokens)
+                return await _call_once(provider, system, prompt, mock, max_tokens, **({"images": images} if images else {}))
         except Busy as e:
             if attempt >= settings.ai_retries:
                 raise
@@ -92,9 +93,12 @@ async def complete(system: str, prompt: str, mock, max_tokens: int = 1200) -> tu
             await asyncio.sleep(e.wait if e.wait is not None else min(2 ** attempt, 8) + random.random())
 
 
-async def _call_once(provider: str, system: str, prompt: str, mock, max_tokens: int) -> tuple[dict, Usage]:
+async def _call_once(provider: str, system: str, prompt: str, mock, max_tokens: int,
+                     images: list[tuple[str, bytes]] | None = None) -> tuple[dict, Usage]:
     """One request to the engine. (`mock` is unused here; the load test swaps this function for a simulated engine.)"""
+    import base64
     model = settings.ai_model or DEFAULT_MODEL.get(provider, "")
+    pics = [(t, base64.b64encode(b).decode()) for t, b in images or []]
     sys_prompt = system + "\n\nReply with ONLY one valid JSON object. No markdown fences, no commentary."
     try:
         async with httpx.AsyncClient(timeout=90) as client:
@@ -102,7 +106,8 @@ async def _call_once(provider: str, system: str, prompt: str, mock, max_tokens: 
                 r = await client.post("https://api.anthropic.com/v1/messages", headers={
                     "x-api-key": settings.anthropic_api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
                     json={"model": model, "max_tokens": max_tokens + THINKING_HEADROOM, "system": sys_prompt,
-                          "messages": [{"role": "user", "content": prompt}],
+                          "messages": [{"role": "user", "content": [*({"type": "image", "source": {"type": "base64", "media_type": t, "data": d}}
+                                                                       for t, d in pics), {"type": "text", "text": prompt}] if pics else prompt}],
                           **({"output_config": {"effort": settings.ai_effort}} if settings.ai_effort else {})})
                 if r.status_code in BUSY_STATUS:
                     raise Busy(f"anthropic {r.status_code}", _retry_after(r))
@@ -118,7 +123,7 @@ async def _call_once(provider: str, system: str, prompt: str, mock, max_tokens: 
             elif provider == "gemini":
                 r = await client.post(f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
                     headers={"x-goog-api-key": settings.gemini_api_key},
-                    json={"systemInstruction": {"parts": [{"text": sys_prompt}]}, "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+                    json={"systemInstruction": {"parts": [{"text": sys_prompt}]}, "contents": [{"role": "user", "parts": [*({"inline_data": {"mime_type": t, "data": d}} for t, d in pics), {"text": prompt}]}],
                           "generationConfig": {"maxOutputTokens": max_tokens, "responseMimeType": "application/json"}})
                 if r.status_code in BUSY_STATUS:
                     raise Busy(f"gemini {r.status_code}", _retry_after(r))
@@ -131,7 +136,9 @@ async def _call_once(provider: str, system: str, prompt: str, mock, max_tokens: 
             elif provider == "openai":
                 r = await client.post("https://api.openai.com/v1/chat/completions", headers={"authorization": f"Bearer {settings.openai_api_key}"},
                     json={"model": model, "max_tokens": max_tokens, "response_format": {"type": "json_object"},
-                          "messages": [{"role": "system", "content": sys_prompt}, {"role": "user", "content": prompt}]})
+                          "messages": [{"role": "system", "content": sys_prompt}, {"role": "user", "content": [
+                              *({"type": "image_url", "image_url": {"url": f"data:{t};base64,{d}"}} for t, d in pics),
+                              {"type": "text", "text": prompt}] if pics else prompt}]})
                 if r.status_code in BUSY_STATUS:
                     raise Busy(f"openai {r.status_code}", _retry_after(r))
                 d = r.json()
