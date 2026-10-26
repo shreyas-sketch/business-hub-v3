@@ -32,7 +32,7 @@ function Job({ r }) {
           refresh();
           reloadPast();
         }}>Start the job</Busy>
-        <span className="small muted">Uses one AI run. The draft is also saved in My outputs.</span>
+        <span className="small muted">Uses one AI token. The draft is also saved in My outputs.</span>
       </div>
       {out && <ToolOutput out={out} />}
       {past?.length > 0 && (

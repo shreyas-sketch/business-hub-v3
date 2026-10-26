@@ -134,7 +134,7 @@ export default function Home() {
           <div className="figures">
             <Link to="/leads"><span className="label">Leads</span><span className="num">{leads ? leads.length : "—"}</span>
               <span className="small muted">{newLeads} waiting for a reply</span></Link>
-            <div><span className="label">AI runs left</span><span className="num aqua">{me.runs.left}</span>
+            <div><span className="label">AI tokens left</span><span className="num aqua">{me.runs.left}</span>
               <span className="small muted">{me.runs.used} of {me.runs.allowance} used{me.runs.bonus ? `, ${me.runs.bonus} bonus` : ""}</span></div>
             <Link to="/website" className="wide"><span className="label">Website</span>
               <span style={{ fontWeight: 600, fontSize: 18 }}>{me.site?.status === "live" ? "Live" : me.site ? "Draft" : "Not built yet"}</span>

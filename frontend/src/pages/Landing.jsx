@@ -105,7 +105,7 @@ export default function Landing() {
                 <span className="label">{p.name}</span>
                 <b className={p.price_minor ? "ladder-price money" : "ladder-price"}>{price(p)}<small>{term(p)}</small></b>
                 <span className="small muted">{p.promise || p.pitch}</span>
-                <span className="ladder-meta">{p.runs.toLocaleString("en-IN")} AI runs a month · {p.features} features</span>
+                <span className="ladder-meta">{p.runs.toLocaleString("en-IN")} AI tokens a month · {p.features} features</span>
               </div>
             ))}
           </div>
@@ -115,7 +115,7 @@ export default function Landing() {
       <section style={{ padding: "64px 0 0", display: "grid", gap: 16 }}>
         <span className="kicker">Free today</span>
         <h2>Start free. Unlock more when it <em>works</em> for you.</h2>
-        <p className="sub">Free includes your brand message, a live website with inquiries to WhatsApp, and 10 AI runs a month. Membership removes the badge, replies to every new lead instantly on WhatsApp and gives you 150 runs a month, with two coaching calls.</p>
+        <p className="sub">Free includes your brand message, a live website with inquiries to WhatsApp, and 10 AI tokens a month. Membership removes the badge, replies to every new lead instantly on WhatsApp and gives you 150 runs a month, with two coaching calls.</p>
         <div><Link className="btn" to="/login">Create my free hub</Link></div>
       </section>
       <footer className="public-foot">

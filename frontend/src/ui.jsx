@@ -199,6 +199,6 @@ export function InviteLine() {
   const { me } = useHub();
   if (!me) return null;
   return (
-    <p className="small muted">Know an owner who'd use this? <Link to="/invite">Share your invite link</Link> — you get extra AI runs when their website goes live.</p>
+    <p className="small muted">Know an owner who'd use this? <Link to="/invite">Share your invite link</Link> — you get extra AI tokens when their website goes live.</p>
   );
 }

@@ -32,7 +32,7 @@ function V23Setup({ changed }) {
     </div>
   );
 }
-const PLAN_FIELDS = { name: "name", short: "short name", price_minor: "price", runs: "AI runs", team_size: "team size", access_days: "days of access", pitch: "pitch",
+const PLAN_FIELDS = { name: "name", short: "short name", price_minor: "price", runs: "AI tokens", team_size: "team size", access_days: "days of access", pitch: "pitch",
   promise: "promise", razorpay_plan_id: "Razorpay plan id" };
 const BILLING = { free: "Free", subscription: "Monthly subscription", one_time: "Paid once" };
 

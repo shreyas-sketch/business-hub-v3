@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Locked, canAct, useHub } from "../ui.jsx";
 import "../pages/team.css";
 
-/** Record or upload a voice note; the server transcribes it (one AI run) and we hand the text to onText(transcript). */
+/** Record or upload a voice note; the server transcribes it (one AI token) and we hand the text to onText(transcript). */
 const MAX_SECONDS = 300;
 const MAX_BYTES = 10 * 1024 * 1024;
 const RECORD_TYPES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus", "audio/ogg"];
@@ -154,7 +154,7 @@ export default function VoiceNote({ onText, purpose = "sop", hint }) {
       {state === "sending" && <span className="small muted" aria-live="polite">Transcribing…</span>}
       {error && <span className="small" role="alert">{error}</span>}
       {snippet && <span className="small muted">Added to your notes: “{snippet.slice(0, 160)}{snippet.length > 160 ? "…" : ""}”</span>}
-      <span className="small muted">{hint || defaultHint} Up to {MAX_SECONDS / 60} minutes. Uses one AI run.</span>
+      <span className="small muted">{hint || defaultHint} Up to {MAX_SECONDS / 60} minutes. Uses one AI token.</span>
     </div>
   );
 }

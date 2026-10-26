@@ -110,7 +110,7 @@ export default function Score() {
   return (
     <Sheet kicker="Structure · Business score" id="ST-01" pillar="Structure" step={1}
       title={latest && !taking ? <>Your business scores <em>{latest.score}</em>.</> : <>Get your Business AI <em>Score</em>.</>}
-      sub="10 quick questions about how your business runs. You get a score out of 100 and the 3 fixes that matter most. Worked out by the hub, so no AI run is used.">
+      sub="10 quick questions about how your business runs. You get a score out of 100 and the 3 fixes that matter most. Worked out by the hub, so no AI token is used.">
 
       {latest && !taking && (
         <>

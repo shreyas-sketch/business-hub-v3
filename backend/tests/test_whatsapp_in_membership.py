@@ -22,6 +22,7 @@ async def test_whatsapp_moved_into_membership_waits_for_the_owners_switch(client
     c, uid, site, admin = await member("9839100001")
     assert (await c.get("/api/chats")).status_code == 403                         # Growth Mentorship in the code
     assert (await admin.patch("/api/admin/config/features/whatsapp_ai", json={"tier": "lite"})).status_code == 200
+    assert (await admin.patch("/api/admin/config/features/whatsapp_tool", json={"tier": "lite"})).status_code == 200   # v2.3: connecting the number
     assert (await c.put("/api/connections/whatsapp", json={"values": {"provider": "aisensy", "number": "98200 12345"}})).status_code == 200
     await connect_demo_whatsapp(uid)
 
@@ -66,17 +67,17 @@ async def test_event_extras_move_into_membership_and_back_in_one_tap(client):
     assert (await c.get("/api/win-back")).status_code == 403
     assert (await c.post("/api/admin/config/presets/event-extras")).status_code == 403      # admin only
     s = (await admin.get("/api/admin/config/presets/event-extras")).json()
-    assert not s["applied"] and {f["key"] for f in s["features"]} == {"win_back", "market_research", "whatsapp_ai", "lead_response"}
+    assert not s["applied"] and {f["key"] for f in s["features"]} == {"win_back", "market_research", "whatsapp_ai", "whatsapp_tool", "lead_response"}
     r = (await admin.post("/api/admin/config/presets/event-extras")).json()
-    assert r["applied"] and set(r["moved"]) == {"win_back", "market_research", "whatsapp_ai", "lead_response"}
+    assert r["applied"] and set(r["moved"]) == {"win_back", "market_research", "whatsapp_ai", "whatsapp_tool", "lead_response"}
     me = (await c.get("/api/me")).json()["features"]
-    assert all(me[k] for k in ("win_back", "market_research", "whatsapp_ai", "lead_response"))
+    assert all(me[k] for k in ("win_back", "market_research", "whatsapp_ai", "whatsapp_tool", "lead_response"))
     assert (await c.get("/api/chats")).status_code == 200
     # renamed meanwhile: moving back keeps the name and only undoes the plan
     assert (await admin.patch("/api/admin/config/features/win_back", json={"label": "Bring them back"})).status_code == 200
     back = (await admin.post("/api/admin/config/presets/event-extras/undo")).json()
-    assert not back["applied"] and set(back["moved_back"]) == {"win_back", "market_research", "whatsapp_ai", "lead_response"}
+    assert not back["applied"] and set(back["moved_back"]) == {"win_back", "market_research", "whatsapp_ai", "whatsapp_tool", "lead_response"}
     me = (await c.get("/api/me")).json()["features"]
-    assert not any(me[k] for k in ("win_back", "market_research", "whatsapp_ai", "lead_response"))
+    assert not any(me[k] for k in ("win_back", "market_research", "whatsapp_ai", "whatsapp_tool", "lead_response"))
     cfg = {f["key"]: f for f in (await admin.get("/api/admin/config")).json()["features"]}
     assert cfg["win_back"]["label"] == "Bring them back" and cfg["win_back"]["tier"] == "program" and cfg["lead_response"]["tier"] == "growth"

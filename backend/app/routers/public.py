@@ -162,7 +162,7 @@ async def site_theme(owner_id: str, accent: str, look: str = "signboard") -> dic
             "ink": ink, "line": _mix(primary, "#E7E9EC", .1), "radius": radius,
             "pill": "3px" if design.get("corners") == "square" or (look == "works" and design.get("corners") != "round") else "999px",
             "head_font": head[0], "body_font": body[0],
-            "fonts_url": "https://fonts.googleapis.com/css2?" + "&".join(f"family={quote(f)}:wght@{w}" for f, w in families.items()) + "&display=swap"}
+            "fonts_url": "https://fonts.googleapis.com/css2?" + "&".join(f"family={quote(f).replace('%20', '+')}:wght@{w}" for f, w in families.items()) + "&display=swap"}
 
 
 # brand kit font keys → their Google Fonts family names (v2.3's _extras; the looks above pick the fonts the page loads)

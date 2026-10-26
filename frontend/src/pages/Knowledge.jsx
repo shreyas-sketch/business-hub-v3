@@ -30,7 +30,7 @@ function SectionHead({ s, children }) {
   );
 }
 
-/** "Update my hub": what was built from the old details, and the AI runs bringing it up to date will use — shown before
+/** "Update my hub": what was built from the old details, and the AI tokens bringing it up to date will use — shown before
     anything runs. Saving the Knowledge Hub never spends runs on its own. */
 function UpdateHub({ updates, onChange }) {
   const { toast, refresh } = useHub();
@@ -266,7 +266,7 @@ export default function Knowledge() {
   const [loaded, reload, err] = useLoad("/knowledge");
   const [d, setD] = useState(null);
   useEffect(() => { if (loaded) setD(loaded); }, [loaded]);
-  // After a save, what costs no AI run updates in the background; look again shortly for what waits for "Update my hub".
+  // After a save, what costs no AI token updates in the background; look again shortly for what waits for "Update my hub".
   const saved = (next) => { setD(next); setTimeout(() => reload(), 4000); };
 
   const head = { kicker: "Structure · Knowledge Hub", id: "KH-01", pillar: "Structure", title: <>Your <em>Knowledge Hub</em>.</>,

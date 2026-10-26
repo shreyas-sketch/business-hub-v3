@@ -174,7 +174,8 @@ async def test_the_tuesday_agent_drafts_only_when_switched_on_and_only_up_to_per
     assert await db().outbox.count_documents({"channel": "email"}) == 0
     assert await db().outbox.count_documents({"channel": "whatsapp", "to": {"$regex": "^91987120"}}) == 0
     drafts = (await c.get("/api/win-back")).json()
-    assert drafts["this_week"] == 3 and {x["email_draft"]["status"] for x in drafts["drafts"] if x["email_draft"]} == {"draft"}
+    same_week = winback.week_of(tue) == winback.week_of(now())      # run on a Monday, last Tuesday was the week before
+    assert drafts["this_week"] == (3 if same_week else 0) and {x["email_draft"]["status"] for x in drafts["drafts"] if x["email_draft"]} == {"draft"}
     assert drafts["results"]["messaged"] == 0 and drafts["results"]["waiting"] == 3
 
     await scheduler.tick(at=tue + timedelta(minutes=30))           # same slot: no second batch

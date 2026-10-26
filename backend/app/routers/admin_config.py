@@ -253,7 +253,7 @@ async def apply_membership_v22(admin: dict = Depends(require_admin)):
 # For a live event, on top of the v2.2 Membership: the agents that sit in higher plans, so every pack made in the room has
 # them. WhatsApp chats brings the owner's own number (and with it Lead Response's first reply); its two agents wait for the
 # owner's own switch on Membership (agents.jobs.OPT_IN). Moved back after the event in one tap.
-EVENT_EXTRAS = ("win_back", "market_research", "whatsapp_ai", "lead_response")
+EVENT_EXTRAS = ("win_back", "market_research", "whatsapp_ai", "whatsapp_tool", "lead_response")   # whatsapp_tool: connecting their number
 
 
 @router.get("/presets/event-extras")

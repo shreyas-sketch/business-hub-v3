@@ -201,7 +201,7 @@ export default function Chats() {
           {!data.connected && <NotConnected owner={owner} />}
           {data.connected && !data.ai_on && (
             <p className="small muted">{data.opt_in
-              ? "On your plan, AI replies stay off until you switch them on. Then the AI answers every customer on your number, 24×7 — each reply uses an AI run."
+              ? "On your plan, AI replies stay off until you switch them on. Then the AI answers every customer on your number, 24×7 — each reply uses an AI token."
               : "AI replies are switched off for every chat. Customers wait for your team until you switch them back on."}</p>
           )}
           {!data.threads.length ? (

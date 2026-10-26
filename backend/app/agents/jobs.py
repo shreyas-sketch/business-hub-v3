@@ -106,7 +106,7 @@ async def record(ws: str, agent: str, status: str, text: str, at: datetime | Non
 async def notify_paused(owner: dict, at: datetime) -> None:
     """Out of AI runs: tell the owner, at most once a day whichever agents were paused."""
     if await claim(f"paused:{owner['_id']}:{at.astimezone(IST).strftime('%Y-%m-%d')}", at):
-        await notify(owner["_id"], "Your agents are paused: this month's AI runs are used up. Add runs or upgrade on Plans & billing, "
+        await notify(owner["_id"], "Your agents are paused: this month's AI tokens are used up. Add tokens or upgrade on Plans & billing, "
                                    "or invite an owner for bonus runs.")
 
 

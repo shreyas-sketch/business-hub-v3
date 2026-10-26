@@ -252,7 +252,7 @@ export default function AdminOwner() {
         <Stat label="Plan in use" value={<span style={{ fontSize: 18 }}>{o.plan_name}</span>} note={SOURCE[o.plan_source] || o.plan_source} />
         <Stat label="Features" value={has} note={`of ${o.features.length} switched on`} />
         <Stat label="Team logins" value={o.team} />
-        <Stat label="Bonus AI runs" value={o.bonus_runs} />
+        <Stat label="Bonus AI tokens" value={o.bonus_runs} />
         <Stat label="Website" value={<span style={{ fontSize: 18 }}>{o.site?.status || "Not made"}</span>}
           note={o.site?.url ? <a href={o.site.url} target="_blank" rel="noopener noreferrer">{o.site.domain || "Open website"}</a> : undefined} />
       </div>

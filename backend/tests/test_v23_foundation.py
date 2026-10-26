@@ -36,16 +36,17 @@ def items(me: dict) -> dict:
 
 
 async def test_the_setup_gives_the_engine_menu_with_only_the_agreed_features(client):
+    # the agreed list, plus the five main already had live (Win-Back, Lead Response, WhatsApp chats, GST set-aside, research)
     m = await v23_member("9811100001")
     me = (await m.get("/api/me")).json()
     assert [g["group"] for g in me["menu"]] == ENGINE_GROUPS
     by_group = {g["group"]: [i["label"] for i in g["items"]] for g in me["menu"]}
     assert by_group["Start"] == ["Knowledge Hub", "Engine Audit"]
     assert by_group["Lead engine"] == ["Website", "Lead magnet"]
-    assert by_group["Sales engine"] == ["Revenue Multiplier", "Ways to get more leads", "Invoicing"]
-    assert by_group["Conversion engine"] == ["Inquiries", "CRM", "Pipeline & Opportunities"]
-    assert by_group["Operations engine"] == ["Dashboard", "Payment follow-up", "Compliance calendar", "SOP Writer"]
-    assert by_group["Brand engine"] == ["Brand kit", "Social media"]
+    assert by_group["Sales engine"] == ["Revenue Multiplier", "Ways to get more leads", "Invoicing", "Win-Back"]
+    assert by_group["Conversion engine"] == ["Inquiries", "CRM", "Pipeline & Opportunities", "Lead Response", "WhatsApp chats"]
+    assert by_group["Operations engine"] == ["Dashboard", "Payment follow-up", "Compliance calendar", "GST set-aside", "SOP Writer"]
+    assert by_group["Brand engine"] == ["Brand kit", "Social media", "Content & company research"]
     assert by_group["Data engine"] == ["Key-person knowledge", "Expenses & bank statement"]
     assert by_group["Account"] == ["Plans & billing", "Connections", "Recordings"]
     assert not any(i["locked"] for i in items(me).values())
@@ -126,13 +127,14 @@ async def test_event_accounts_get_the_events_tokens_and_seven_images_paid_member
     assert "brochures" not in me["feature_locks"] and me["features"]["brochures"]
 
 
-async def test_brochures_and_the_whatsapp_tool_wait_for_payment_during_the_event(client):
+async def test_brochures_wait_for_payment_during_the_event_and_the_whatsapp_tool_does_not(client):
+    # main's decision: event attendees can connect their own WhatsApp number (WhatsApp chats needs it); brochures still wait
     await setup_v23()
     await event_cohort(day=3)
     c, _ = await attendee("9811100006")
     me = (await c.get("/api/me")).json()
-    assert me["feature_locks"]["brochures"] == {"lock": "paid"} and me["feature_locks"]["whatsapp_tool"] == {"lock": "paid"}
-    assert not me["features"]["brochures"]
+    assert me["feature_locks"]["brochures"] == {"lock": "paid"} and "whatsapp_tool" not in me["feature_locks"]
+    assert not me["features"]["brochures"] and me["features"]["whatsapp_tool"]
 
 
 async def test_ending_event_access_closes_it_for_those_who_didnt_pay_and_keeps_their_work(client):

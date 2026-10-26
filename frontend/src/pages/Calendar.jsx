@@ -73,13 +73,13 @@ function WriteForm({ label, slots, exists, month, onDone }) {
   const [focus, setFocus] = useState("");
   const [err, setErr] = useState("");
   const write = async () => {
-    if (exists && !window.confirm(`Write all of ${label}'s posts again? The Posted marks are cleared, and it uses one AI run.`)) return;
+    if (exists && !window.confirm(`Write all of ${label}'s posts again? The Posted marks are cleared, and it uses one AI token.`)) return;
     await api("/calendar", { method: "POST", body: { month, focus: focus.trim() } });
     await onDone();
   };
   return (
     <div className="stack">
-      <Field label="Focus for the month (optional)" hint={`${slots} posts: every Monday, Wednesday and Friday, plus festival days. Uses one AI run.`}>
+      <Field label="Focus for the month (optional)" hint={`${slots} posts: every Monday, Wednesday and Friday, plus festival days. Uses one AI token.`}>
         <input className="input" maxLength={160} placeholder="e.g. Diwali home makeover offer" value={focus} onChange={(e) => setFocus(e.target.value)} />
       </Field>
       <FormError msg={err} />

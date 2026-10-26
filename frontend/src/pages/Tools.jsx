@@ -91,7 +91,7 @@ function ToolForm({ t }) {
         {hasExample && <button className="btn ghost" onClick={() => setVals({ ...blankFor(t), ...t.example })}>Fill an example</button>}
       </div>
       <span className="small muted">
-        {missing.length > 0 ? `Fill in: ${missing.join(", ")}. ` : ""}Uses one AI run · {me.runs?.left ?? 0} left this month.
+        {missing.length > 0 ? `Fill in: ${missing.join(", ")}. ` : ""}Uses one AI token · {me.runs?.left ?? 0} left this month.
       </span>
       {out && (
         <div className="stack">

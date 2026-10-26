@@ -17,9 +17,9 @@ function fieldError(e) {
   return field ? `${field.charAt(0).toUpperCase()}${field.slice(1)}: ${msg}` : msg;
 }
 
-/** v2.3: owners see "AI tokens" where older server messages still say "AI runs". */
+/** v2.3: owners see "AI tokens" where older server messages still say "AI tokens". */
 export const tokenWords = (text) => String(text || "")
-  .replace(/\bAI runs\b/g, "AI tokens").replace(/\bAI run\b/g, "AI token")
+  .replace(/\bAI tokens\b/g, "AI tokens").replace(/\bAI token\b/g, "AI token")
   .replace(/\bruns left\b/g, "tokens left").replace(/\bYour run was\b/g, "Your token was").replace(/\bthis month's runs\b/g, "this month's tokens")
   .replace(/\b(\d+) runs\b/g, "$1 tokens").replace(/\b1 run\b/g, "1 token");
 

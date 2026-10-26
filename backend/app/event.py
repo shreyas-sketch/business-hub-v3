@@ -168,7 +168,7 @@ async def create(code: str, inp: dict, identity: dict, gst: dict | None) -> dict
         steps["check"] = {"status": "skipped", "note": "No website to check."}
     if not ai_allowed:
         for k in ("brand_message", "lead_ideas", "website"):
-            steps[k] = {"status": "after_login", "note": "Made in your hub after you log in (1 AI run)."}
+            steps[k] = {"status": "after_login", "note": "Made in your hub after you log in (1 AI token)."}
     run = {"_id": new_id(), "token": secrets.token_urlsafe(16), "cohort": c["code"], "status": "queued", "attempts": 0, "queued_at": at,
            "created_at": at, "input": inp, "gst": gst, "identity": identity, "ai_allowed": ai_allowed, "steps": steps,
            "consent": {"text": CONSENT_TEXT, "at": at}, "user_id": None, "ai_calls": 0, "ai_cost_inr": 0.0, "timings": {}}

@@ -235,7 +235,7 @@ async def week_texts(owner: dict, business: dict, week: str, kinds: set, at: dat
             ai = {"status": "done", "note": ""}
         except HTTPException as e:
             ai = {"status": "no_runs" if e.status_code == 402 else "unusable",
-                  "note": "No AI runs left this month" if e.status_code == 402 else "The AI's wording couldn't be used"}
+                  "note": "No AI tokens left this month" if e.status_code == 402 else "The AI's wording couldn't be used"}
     for k in winback_tasks.KINDS:
         texts.setdefault(k, winback_tasks.fallback(name, k))
     await db().winback_weeks.update_one({"_id": f"{ws}:{week}"}, {"$set": {"ws": ws, "week": week, "texts": texts, "ai": ai, "at": at}},

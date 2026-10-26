@@ -7,7 +7,7 @@ import TemplatePicker from "../components/Templates.jsx";
 import "./free.css";
 
 /* ───────── Voice recorder (also used by Onboarding) ─────────
-   Records or uploads a voice note; the server transcribes it (one AI run) for `purpose` (onboarding, polish…),
+   Records or uploads a voice note; the server transcribes it (one AI token) for `purpose` (onboarding, polish…),
    which decides the plan and role needed. */
 const MAX_SECONDS = 300;
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -123,7 +123,7 @@ export function VoiceInput({ purpose, onText, label = "Or say it", hint }) {
       </div>
       {state === "sending" && <span className="small muted" aria-live="polite">Listening to your voice note…</span>}
       {error && <span className="small" role="alert">{error}</span>}
-      <span className="small muted">{hint || "Speak in any language."} Up to {MAX_SECONDS / 60} minutes. Uses one AI run.</span>
+      <span className="small muted">{hint || "Speak in any language."} Up to {MAX_SECONDS / 60} minutes. Uses one AI token.</span>
     </div>
   );
 }
@@ -188,7 +188,7 @@ export default function Writer() {
       <div className="panel flat">
         <span className="label">What AI Writer does</span>
         <p>Your writing assistant: it writes posts, replies to customers, answers business questions, and turns rough Hindi/Hinglish/English
-          into polished English — all from your Business Brain. Each job uses one AI run and is saved to My outputs.</p>
+          into polished English — all from your Business Brain. Each job uses one AI token and is saved to My outputs.</p>
       </div>
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
 

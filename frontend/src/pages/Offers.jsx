@@ -35,7 +35,7 @@ function BuildForm({ first, onDone, onCancel }) {
         }}>Build my offer ladder</Busy>
         {onCancel && <button className="btn ghost" onClick={onCancel}>Cancel</button>}
       </div>
-      <span className="small muted">Uses 1 AI run. Written from your Business Brain — you can change every word after.</span>
+      <span className="small muted">Uses 1 AI token. Written from your Business Brain — you can change every word after.</span>
     </div>
   );
 }

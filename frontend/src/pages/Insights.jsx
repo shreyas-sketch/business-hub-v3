@@ -111,7 +111,7 @@ function Dashboard() {
         <Stat label="Inquiry to customer" value={pct(a.conversion)} note={vs(b.conversion, pct)} />
         <Stat label="First reply, median" value={hours(a.response_hours)} note={vs(b.response_hours, hours)} />
         <Stat label="Website views" value={fmt(a.views)} note={vs(b.views)} />
-        <Stat label="AI runs used" value={fmt(a.runs)} note={vs(b.runs)} />
+        <Stat label="AI tokens used" value={fmt(a.runs)} note={vs(b.runs)} />
       </div>
       <div className="row between">
         <span className="label">Last 12 weeks · Monday to Sunday</span>
@@ -119,11 +119,11 @@ function Dashboard() {
       </div>
       {table ? (
         <table className="t cards">
-          <thead><tr><th>Week of</th><th>Inquiries</th><th>Won</th><th>First reply</th><th>Views</th><th>AI runs</th></tr></thead>
+          <thead><tr><th>Week of</th><th>Inquiries</th><th>Won</th><th>First reply</th><th>Views</th><th>AI tokens</th></tr></thead>
           <tbody>{[...d.weeks].reverse().map((w, i) => (
             <tr key={w.start}><td><b>{short(w.start)}</b>{i === 0 && <span className="small muted"> · so far</span>}</td>
               <td data-l="Inquiries">{fmt(w.leads)}</td><td data-l="Won">{fmt(w.won)}</td><td data-l="First reply">{hours(w.response_hours)}</td>
-              <td data-l="Views">{fmt(w.views)}</td><td data-l="AI runs">{fmt(w.runs)}</td></tr>
+              <td data-l="Views">{fmt(w.views)}</td><td data-l="AI tokens">{fmt(w.runs)}</td></tr>
           ))}</tbody>
         </table>
       ) : (
@@ -132,7 +132,7 @@ function Dashboard() {
           <WeekBars title="Customers won" weeks={d.weeks} field="won" unit="by week the inquiry came in" />
           <WeekBars title="First reply, median" weeks={d.weeks} field="response_hours" format={hours} unit="lower is better" />
           <WeekBars title="Website views" weeks={d.weeks} field="views" unit="per week" />
-          <WeekBars title="AI runs used" weeks={d.weeks} field="runs" unit="per week" />
+          <WeekBars title="AI tokens used" weeks={d.weeks} field="runs" unit="per week" />
         </div>
       )}
       <p className="small muted">First reply is the time from an inquiry arriving to the first time you change its status in Leads.</p>

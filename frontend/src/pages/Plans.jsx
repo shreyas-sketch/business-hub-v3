@@ -137,7 +137,7 @@ function PlansInner() {
         </div>
         <p className="muted">{whereFrom(b)}</p>
         <div className="statgrid">
-          <Stat label="AI runs a month" value={b.ladder[rank(current)].runs} />
+          <Stat label="AI tokens a month" value={b.ladder[rank(current)].runs} />
           <Stat label="AI level" value={<span style={{ fontSize: 16 }}>{b.ladder[rank(current)].agent_level}</span>} />
           {Object.entries(b.access || {}).filter(([, u]) => u && new Date(u) > new Date()).map(([t, u]) => (
             <Stat key={t} label={`${b.ladder[rank(t)].name} until`} value={<span style={{ fontSize: 18 }}>{day(u)}</span>} />
@@ -167,7 +167,7 @@ function PlansInner() {
             </div>
             <hr className="rule" />
             <div className="row" style={{ gap: 8 }}>
-              <span className="token grey">{t.runs} AI runs / month</span>
+              <span className="token grey">{t.runs} AI tokens / month</span>
               {t.tier === current && <span className="token grey">{t.agent_level}</span>}
               {t.team_size > 0 && <span className="token grey">{t.team_size} team logins</span>}
               {t.promise && t.promise !== t.pitch && <span className="small muted">{t.promise}</span>}

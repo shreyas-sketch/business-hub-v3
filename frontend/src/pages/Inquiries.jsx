@@ -34,12 +34,12 @@ function Setup({ s, reload }) {
           </span>
           <Switch checked={s.auto_web} label="Also write a proposal for website and lead magnet inquiries"
             onChange={(v) => save({ auto_web: v }, v ? "Website inquiries get a proposal too" : "Website inquiries: no automatic proposal")} />
-          <span className="hint">Each proposal uses 1 AI run. WhatsApp proposals always wait for you to tap Send.</span>
+          <span className="hint">Each proposal uses 1 AI token. WhatsApp proposals always wait for you to tap Send.</span>
           {s.followups?.available && (
             <>
               <Switch checked={s.followups.on} label={`Follow up on every inquiry — day ${s.followups.days.join(", ").replace(/, (\d+)$/, " and $1")}`}
                 onChange={async (v) => { await api("/agents/followup", { method: "PATCH", body: { on: v } }); toast(v ? "Follow-ups on" : "Follow-ups off"); reload(); }} />
-              <span className="hint">On each of those days a short follow-up is written for you (1 AI run) and waits here for you to tap Send on WhatsApp. It stops as soon as you mark the inquiry won or lost.{s.followups.opt_in && !s.followups.on ? " It's off until you switch it on." : ""}</span>
+              <span className="hint">On each of those days a short follow-up is written for you (1 AI token) and waits here for you to tap Send on WhatsApp. It stops as soon as you mark the inquiry won or lost.{s.followups.opt_in && !s.followups.on ? " It's off until you switch it on." : ""}</span>
             </>
           )}
         </div>
@@ -82,7 +82,7 @@ function Paste({ prefill, onDone }) {
           setF({ name: "", phone: "", message: "" });
           onDone();
         }}>Add inquiry</Busy>
-        <span className="small muted">Uses 1 AI run.</span>
+        <span className="small muted">Uses 1 AI token.</span>
       </div>
     </div>
   );
@@ -94,7 +94,7 @@ function Proposal({ it, reload }) {
   const p = it.proposal;
   const [open, setOpen] = useState(false);
   const tr = it.template_reply;
-  // a ready message instead of the AI's words: no AI run; sending it withdraws the proposal waiting in the Send list
+  // a ready message instead of the AI's words: no AI token; sending it withdraws the proposal waiting in the Send list
   const template = manager && it.phone && (
     <TemplatePicker name={it.name} phone={it.phone} label={tr ? "Send another template" : "Use a template"}
       onSend={async (id, text) => { const r = await api(`/inquiries/${it.id}/template`, { method: "POST", body: { template: id, text } }); toast("Sent from your WhatsApp"); reload(); return r; }} />

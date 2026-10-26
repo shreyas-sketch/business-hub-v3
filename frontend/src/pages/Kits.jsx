@@ -438,7 +438,7 @@ export function Reviews() {
         refresh();
         setVersion((v) => v + 1);
       }}>Write this month's review now</Busy>
-      <span className="small muted" style={{ marginLeft: 12 }}>Uses one AI run.</span>
+      <span className="small muted" style={{ marginLeft: 12 }}>Uses one AI token.</span>
     </span></>
   );
   return (

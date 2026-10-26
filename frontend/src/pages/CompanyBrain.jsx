@@ -102,7 +102,7 @@ function Ask({ empty }) {
           {a.found === false && <p className="small muted">This isn't in your documents yet. Add it above, and your AI staff can answer it too.</p>}
         </div>
       )}
-      <span className="small muted">{empty ? "Add a document first." : "Uses one AI run."}</span>
+      <span className="small muted">{empty ? "Add a document first." : "Uses one AI token."}</span>
     </div>
   );
 }

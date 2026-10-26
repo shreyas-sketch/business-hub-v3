@@ -52,7 +52,7 @@ function ContentPanel({ data, onDone }) {
           onDone();
           refresh();
         }}>{latest ? "Write 5 fresh ideas" : "Write 5 post ideas"}</Busy>
-        <span className="small muted">Uses 1 AI run. Posts never name a competitor or copy their words.</span>
+        <span className="small muted">Uses 1 AI token. Posts never name a competitor or copy their words.</span>
       </div>
       {latest ? <Ideas out={latest} /> : <Empty>Your ideas will show here: a hook, what to say, the format, and which competitor move each one answers.</Empty>}
       {data.content.length > 1 && (
@@ -149,7 +149,7 @@ function CompaniesPanel({ data, onDone }) {
           onDone();
           refresh();
         }}>Make my research plan</Busy>
-        <span className="small muted">Uses 1 AI run.</span>
+        <span className="small muted">Uses 1 AI token.</span>
       </div>
       {latest ? <Plan out={latest} /> : <Empty>Your plan, the ready searches and the CSV template will show here.</Empty>}
       {data.companies.length > 1 && (

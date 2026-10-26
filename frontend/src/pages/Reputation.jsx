@@ -195,7 +195,7 @@ function Reply({ r, reload }) {
             setText(x.reply_draft); reload();
           }}>Draft a reply</Busy>
           <button className="btn sm ghost" onClick={() => setWriting(true)}>Write my own</button>
-          <span className="small muted">Drafting uses 1 AI run.</span>
+          <span className="small muted">Drafting uses 1 AI token.</span>
         </div>
         <FormError msg={err} />
       </div>
@@ -289,7 +289,7 @@ function Paste({ platforms, onDone }) {
       <div className="grid2 rep-grid">
         <Field label="Date of the review"><input className="input" type="date" max={todayIso()} value={f.date} onChange={set("date")} /></Field>
         <div className="field"><span className="label">Reply</span>
-          <Switch checked={f.draft} onChange={(v) => setF({ ...f, draft: v })} label="Draft a reply now (1 AI run)" />
+          <Switch checked={f.draft} onChange={(v) => setF({ ...f, draft: v })} label="Draft a reply now (1 AI token)" />
         </div>
       </div>
       <FormError msg={err} />
@@ -376,7 +376,7 @@ function Settings({ d, reload }) {
         <>
           <Switch checked={d.auto_draft} label={`Draft a reply to every new Google review (up to ${d.drafts_per_day} a day)`}
             onChange={async (v) => { await api("/reputation/settings", { method: "PUT", body: { auto_draft: v } }); toast(v ? "New reviews get a draft" : "Drafts only when you ask"); reload(); }} />
-          <span className="hint">Each draft uses 1 AI run. Nothing is posted — you approve, copy and post every reply yourself.</span>
+          <span className="hint">Each draft uses 1 AI token. Nothing is posted — you approve, copy and post every reply yourself.</span>
         </>
       )}
     </div>

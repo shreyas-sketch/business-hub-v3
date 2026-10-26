@@ -4,7 +4,8 @@ OwnerDesk v2.3 setup: the hub as it is sold from the 3-day "your time back" even
 What it does (in the same `config` collection as any admin change, so each part can be changed or undone in Admin →
 Features & plans, and the code's own defaults — and the tests written against them — stay as they were):
 
-- The menu becomes Start, the 6 engines and Account. Only the features below show in it.
+- The menu becomes Start, the 6 engines and Account. Only the features below show in it — his agreed list, plus five that
+  were already live in main and stay on (Win-Back, Lead Response, WhatsApp chats, GST set-aside, research).
 - Features that other pages need keep working behind the scenes ("show" off).
 - Everything else is switched off for everyone. The admin can switch any of it back on.
 - All of it is in the Membership plan (₹1,999 a month or ₹19,999 a year, paid outside the hub on Razorpay; the team marks
@@ -33,15 +34,20 @@ MENU = [
     ("revenue_levers", "sales", "Revenue Multiplier", None),
     ("lead_ideas", "sales", "Ways to get more leads", None),
     ("quotations", "sales", "Invoicing", None),
+    ("win_back", "sales", "Win-Back", None),                # main's: past customers asked back (kept on with v2.3)
     ("inquiry_desk", "conversion", "Inquiries", None),
     ("crm", "conversion", "CRM", None),
     ("pipeline", "conversion", "Pipeline & Opportunities", None),
+    ("lead_response", "conversion", "Lead Response", None),  # main's: kept on with v2.3
+    ("whatsapp_ai", "conversion", "WhatsApp chats", None),    # main's: kept on with v2.3
     ("smart_dashboard", "operations", "Dashboard", 0),      # the home page: open from the first minute of Day 1
     ("money_owed", "operations", "Payment follow-up", None),
     ("compliance_calendar", "operations", "Compliance calendar", None),
+    ("gst_setaside", "operations", "GST set-aside", None),    # main's: with last month's GST from a bank statement
     ("sop_library", "operations", "SOP Writer", None),
     ("brand_kit", "brand", "Brand kit", None),
     ("social_media", "brand", "Social media", None),
+    ("market_research", "brand", "Content & company research", None),   # main's: kept on with v2.3
     ("key_person", "data", "Key-person knowledge", None),
     ("expenses", "data", "Expenses & bank statement", None),
     ("plans_billing", "account", "Plans & billing", None),
@@ -56,8 +62,9 @@ BEHIND = {
     "content_calendar": "brand", "brand_message": "brand", "brochures": "brand", "competitor_watch": "brand", "bank_reader": "data",
     "whatsapp_tool": "account",
 }
-# opened once the member pays: the brochures, linking Employz.ai, and connecting their own WhatsApp number
-PAID_ONLY = ("brochures", "crm_sync", "whatsapp_tool")
+# opened once the member pays: the brochures and linking Employz.ai. Connecting their own WhatsApp number (whatsapp_tool) is
+# open to event accounts too: WhatsApp chats, kept on in main, needs it, and event attendees were promised WhatsApp connections.
+PAID_ONLY = ("brochures", "crm_sync")
 # names by what they are, not the software behind them (the owner may see these on a locked page or a message)
 BEHIND_LABELS = {"crm_sync": "CRM sync", "gateway_invoicing": "Automatic invoices from your payment gateway"}
 FREE = ("business_brain", "engine_audit", "plans_billing", "home")   # what an account keeps when its event access ends

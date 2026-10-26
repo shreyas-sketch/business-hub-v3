@@ -113,7 +113,7 @@ function InviteInner() {
       <div className="grid3">
         <div className="panel"><span className="label">Your friend gets</span><h3>{r.rules.friend_trial_days} days of Membership features</h3></div>
         <div className="panel"><span className="label">First friend live</span><h3>{r.rules.first_reward_days} days of Membership for you</h3></div>
-        <div className="panel"><span className="label">Every friend after</span><h3>+{r.rules.bonus_runs} AI runs</h3></div>
+        <div className="panel"><span className="label">Every friend after</span><h3>+{r.rules.bonus_runs} AI tokens</h3></div>
       </div>
       <Earnings e={e} reload={reloadEarnings} />
       <div className="stack">

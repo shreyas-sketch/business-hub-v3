@@ -271,7 +271,7 @@ function Shell({ me, children }) {
             <div className="me-menu" role="menu">
               <div className="who"><b>{me.user.name || name}</b><span className="small muted">{me.user.plan_name}{me.workspace.is_team ? ` · ${me.workspace.role}` : ""}</span></div>
               <div className="stack" style={{ gap: 6 }}>
-                <span className="small muted">AI runs this month: {me.runs.left} left</span>
+                <span className="small muted">AI tokens this month: {me.runs.left} left</span>
                 <div className="meter ai-meter"><i style={{ width: `${runsPct}%` }} /></div>
               </div>
               <div>
@@ -320,7 +320,7 @@ function LimitModal({ detail, me, onClose, upgrade }) {
   }
   return (
     <Modal onClose={onClose}>
-      <span className="kicker">AI runs</span>
+      <span className="kicker">AI tokens</span>
       <h2>You've used this month's <em>runs</em>.</h2>
       <p className="sub">Two ways to keep going. Your runs refill on the 1st of next month either way.</p>
       <div className="panel">

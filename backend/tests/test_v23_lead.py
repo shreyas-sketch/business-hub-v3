@@ -256,7 +256,8 @@ async def test_brand_kit_fonts_and_colour_reach_the_website(client):
     site = (await o.post("/api/inputs/website/build", json={"source": "answers"})).json()
     assert site["accent"] == "#7C2D12"
     page = (await o.get(f"/s/{site['slug']}?preview=1")).text
-    assert "family=Baloo+2" in page and 'font-family:"Mukta"' in page
+    # the website's look loads the brand kit's fonts (main's five looks set them as the page's --head / --body fonts)
+    assert "family=Baloo+2" in page and '--body:"Mukta"' in page and '--head:"Baloo 2"' in page
 
 
 async def test_inputs_before_the_business_profile(client):

@@ -183,7 +183,7 @@ function GoalCard({ g, onChange, onEdit }) {
         <button className="btn sm ghost" onClick={onEdit}>Edit</button>
         <Busy className="btn sm ghost" run={async () => { if (!window.confirm("Delete this goal and its check-ins?")) return; await api(`/goals/${g.id}`, { method: "DELETE" }); onChange(null); }}>Delete</Busy>
       </div>
-      <span className="small muted">Actions use 1 AI run and are written from your Business Brain and this goal's numbers.</span>
+      <span className="small muted">Actions use 1 AI token and are written from your Business Brain and this goal's numbers.</span>
     </div>
   );
 }

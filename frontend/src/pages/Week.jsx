@@ -114,7 +114,7 @@ export default function Week() {
     toast("Your week is ready");
   };
   const rewrite = async () => {
-    if (!window.confirm("Write new posts and 3 new actions for this week? This week's ticks are cleared, and it uses one AI run.")) return;
+    if (!window.confirm("Write new posts and 3 new actions for this week? This week's ticks are cleared, and it uses one AI token.")) return;
     await plan();
   };
   const toggle = async (n) => {
@@ -156,8 +156,8 @@ export default function Week() {
       {!w && (
         <div className="panel">
           <h3>Your week isn't planned yet</h3>
-          <p className="muted">One AI run writes 7 posts and 3 actions from your Magic Number, your gaps and your leads. It's also written for you every Monday at 8am.</p>
-          <div className="row"><Busy className="btn primary ai" run={plan}>Plan my week</Busy><span className="small muted">Uses one AI run.</span></div>
+          <p className="muted">One AI token writes 7 posts and 3 actions from your Magic Number, your gaps and your leads. It's also written for you every Monday at 8am.</p>
+          <div className="row"><Busy className="btn primary ai" run={plan}>Plan my week</Busy><span className="small muted">Uses one AI token.</span></div>
         </div>
       )}
 

@@ -6,7 +6,7 @@ import { Loading, Pill, Tabs } from "../v2.jsx";
 import "./brandkit.css";
 import Brochures from "./BrandBrochures.jsx";
 
-/* Brand kit (v2.1, 3.11): the message system (one AI run, every line editable), the design system (colours, fonts,
+/* Brand kit (v2.1, 3.11): the message system (one AI token, every line editable), the design system (colours, fonts,
    corners, spacing, logo) and designs drawn in the brand on the server. The primary colour is the website's accent,
    so the website, the launch kit and the next invoice all follow it. */
 

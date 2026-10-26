@@ -31,7 +31,7 @@ async def test_multiplier_writes_15_ideas_per_lever_with_sources_and_feature_lin
     uid = await owner_id(c)
     me = (await c.get("/api/me")).json()
     sales = next(g for g in me["menu"] if g.get("section") == "sales")
-    assert [i["label"] for i in sales["items"]] == ["Revenue Multiplier", "Ways to get more leads", "Invoicing"]
+    assert [i["label"] for i in sales["items"]] == ["Revenue Multiplier", "Ways to get more leads", "Invoicing", "Win-Back"]
     assert (await c.put("/api/levers", json={"customers": 120, "avg_value": 150000, "frequency": 1})).json()["levers"]["result"]["multiplier"] == 1.331
 
     page = (await c.get("/api/multiplier")).json()
