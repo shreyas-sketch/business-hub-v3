@@ -215,3 +215,17 @@
   .pp-stage > .select { grid-area: ff; }
   .pp-stage .btns { grid-area: btns; }
 }
+
+/* Employz.ai pipelines (view only): the switcher, the ⋯ menu's link, the details */
+.pp-pipe-pick { align-items: center; padding: 4px 12px 4px 4px; max-width: min(320px, 70vw); }
+.pp-pipe-pick select { background: transparent; color: var(--paper); border: 0; font: inherit; font-size: 14px; font-weight: 600; padding: 4px 6px;
+  min-width: 0; max-width: 100%; text-overflow: ellipsis; cursor: pointer; }
+.pp-pipe-pick select option { background: var(--panel); color: var(--paper); }
+.pp-menu a.pp-menu-link { display: block; padding: 9px 10px; border-radius: 8px; color: var(--ivory); text-decoration: none; font: 600 13.5px/1.25 var(--body); }
+.pp-menu a.pp-menu-link:hover, .pp-menu a.pp-menu-link:focus-visible { background: rgba(242,238,230,.07); outline: none; }
+.pp-ro { margin: 0 0 14px; display: grid; gap: 8px; }
+.pp-ro div { display: grid; grid-template-columns: minmax(110px, 34%) minmax(0, 1fr); gap: 10px; font-size: 13.5px; }
+.pp-ro dt { color: var(--ivory-35); }
+.pp-ro dd { margin: 0; overflow-wrap: anywhere; }
+.pp-modal-body.pp-modal-one { grid-template-columns: minmax(0, 1fr); }
+.pp-modal-one .pp-modal-main { max-width: 720px; }

@@ -140,7 +140,7 @@ function ListPage() {
               <button key={c.id} className="crm-row" onClick={() => nav(`/contacts/${c.id}`)}>
                 <span className="who"><b>{c.name}</b>
                   <span className="small muted">{[c.company, c.phone && localPhone(c.phone), !c.phone && c.email].filter(Boolean).join(" · ")}</span>
-                  {c.tags.length > 0 && <span className="crm-tags">{c.tags.map((t) => <span key={t} className="crm-tag">{t}</span>)}</span>}
+                  {(c.tags.length > 0 || c.from_crm) && <span className="crm-tags">{c.from_crm && <span className="crm-tag crm-ext">From Employz.ai</span>}{c.tags.map((t) => <span key={t} className="crm-tag">{t}</span>)}</span>}
                 </span>
                 <span className="small hide-sm">{c.open_deals ? `${c.open_deals} open ${c.open_deals === 1 ? "deal" : "deals"}` : c.deals ? `${c.deals} ${c.deals === 1 ? "deal" : "deals"}` : c.source_label}</span>
                 <span className={`small hide-sm ${dueClass(c.follow_up_on, today)}`}>{c.follow_up_on ? `Follow up ${c.follow_up_on === today ? "today" : shortDay(c.follow_up_on)}` : ago(c.last_activity_at)}</span>
@@ -264,6 +264,20 @@ function ContactPage({ id }) {
             <FormError msg={err} />
             {dirty && <Busy className="btn primary" onError={setErr} run={save}>Save changes</Busy>}
           </div>
+
+          {c.from_crm && (
+            <div className="panel stack">
+              <span className="label">From Employz.ai</span>
+              <p className="small muted">{c.crm_managed ? "This contact is kept in step with your Employz.ai CRM every 15 minutes. Change its details there."
+                : "This contact is also in your Employz.ai CRM. The hub only fills in details it was missing; your own stay as they are."}</p>
+              {(c.crm_owner || Object.keys(c.crm_fields || {}).length > 0) && (
+                <dl className="crm-ext-fields">
+                  {c.crm_owner && <div><dt>Owner in Employz.ai</dt><dd>{c.crm_owner}</dd></div>}
+                  {Object.entries(c.crm_fields || {}).map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{Array.isArray(v) ? v.join(", ") : String(v ?? "—")}</dd></div>)}
+                </dl>
+              )}
+            </div>
+          )}
 
           <div className="panel stack">
             <span className="label">Deals</span>

@@ -166,6 +166,9 @@ async def save_connection(kind: str, body: ConnIn, ctx: Ctx = Depends(get_ctx)):
     if not ctx.at_least("owner"):
         raise HTTPException(403, "Only the business owner can do this.")
     await connections.save(ctx.ws, kind, body.values, ctx.actor, "you")
+    if kind == "employz":            # saved again: the Employz.ai import resumes (nothing it imported was purged yet)
+        from .. import employz_import
+        await employz_import.on_connect(ctx.ws)
     return connections.view(kind, await _stored(ctx.ws, kind), ctx.owner)
 
 
@@ -184,6 +187,9 @@ async def remove_connection(kind: str, ctx: Ctx = Depends(get_ctx)):
     if kind not in connections.SPECS or not ctx.at_least("owner"):
         raise HTTPException(404, "Not found")
     await connections.remove(ctx.ws, kind)
+    if kind == "employz":            # the import stops at once; what it brought in is removed after the grace period
+        from .. import employz_import
+        await employz_import.on_disconnect(ctx.ws)
     return {"ok": True}
 
 

@@ -26,7 +26,7 @@ Nothing here messages a customer. A WhatsApp button only opens the owner's own W
 import csv
 import io
 import re
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
@@ -310,8 +310,77 @@ class MoveIn(BaseModel):
     pstage: str = Field(min_length=1, max_length=40)
 
 
+async def _pipelines(ctx: Ctx) -> list[dict]:
+    """The pipelines the board can show: the hub's own, then each one imported from Employz.ai (read-only)."""
+    out = [{"key": "hub", "name": "Sales pipeline", "readonly": False}]
+    async for p in db().ext_pipelines.find({"ws": ctx.ws, "deleted_at": {"$exists": False}}, {"ext_id": 1, "name": 1, "stages": 1}).sort("name", 1):
+        out.append({"key": f"employz:{p['ext_id']}", "name": p.get("name") or "Pipeline", "readonly": True, "source": "Employz.ai",
+                    "stage_count": len(p.get("stages") or [])})
+    return out
+
+
+EXT_STATUS = {"open": "new", "won": "won", "lost": "lost", "abandoned": "lost"}
+STAGE_COLOURS = ["#5B8DEF", "#2BB3A3", "#E0A53B", "#C2649E", "#7A6FF0", "#4FA36B", "#D9734A", "#6C7A89"]
+
+
+async def _ext_board(ctx: Ctx, ext_id: str, pipelines: list[dict]) -> dict:
+    """An Employz.ai pipeline on the board: its own stages and opportunities, read-only (changes are made in Employz.ai)."""
+    p = await db().ext_pipelines.find_one({"ws": ctx.ws, "ext_id": ext_id, "deleted_at": {"$exists": False}})
+    if not p:
+        raise HTTPException(404, "That Employz.ai pipeline isn't in the hub any more.")
+    conn = await db().connections.find_one({"_id": ctx.ws}, {"employz.app_link": 1}) or {}
+    link = ((conn.get("employz") or {}).get("app_link") or "").strip() or None
+    rows = [d async for d in db().ext_deals.find({"ws": ctx.ws, "pipeline_id": ext_id, "deleted_at": {"$exists": False}}).sort("updated_at", -1).limit(2000)]
+    stage_ids = {s["id"] for s in p.get("stages") or []}
+    deals = []
+    for d in rows:
+        ct = d.get("contact") or {}
+        deals.append({"id": f"x:{d['ext_id']}", "readonly": True, "from_crm": True, "name": ct.get("name") or d.get("name") or "Opportunity",
+                      "title": d.get("name") or "", "phone": ct.get("phone") or "", "email": ct.get("email") or "", "company": ct.get("company") or "",
+                      "value": d.get("value"), "status": EXT_STATUS.get(d.get("status"), "new"), "crm_status": d.get("status"),
+                      "stage": "identification", "pstage": d.get("stage_id") if d.get("stage_id") in stage_ids else None,
+                      "source": "employz", "source_label": d.get("source") or "Employz.ai", "message": "",
+                      "created_at": crm.iso(d.get("created_at")), "stage_at": crm.iso(d.get("status_at") or d.get("updated_at")),
+                      "updated_at": crm.iso(d.get("updated_at")), "expected_close": None, "follow_up_on": None, "follow_up_note": "",
+                      "assignee_id": None, "assignee_name": d.get("assignee") or "", "lost_reason": "abandoned" if d.get("status") == "abandoned" else "",
+                      "contact_id": d.get("contact_id"), "won_at": crm.iso(d.get("status_at")) if d.get("status") == "won" else None,
+                      "quote": None, "invoice": None, "counts": {"note": 0, "call": 0, "meeting": 0, "all": 0},
+                      "fields": d.get("fields") or {}, "hub_lead_id": d.get("hub_lead_id"), "open_url": link})
+    open_ = [d for d in deals if d["status"] in crm.OPEN]
+    t = crm.today_ist().isoformat()
+    since30, week_start = now() - timedelta(days=30), now() - timedelta(days=7)
+
+    def val(xs):
+        return round(sum(float(x.get("value") or 0) for x in xs), 2)
+
+    def after(iso_at, since):
+        return bool(iso_at) and crm._aware(datetime.fromisoformat(iso_at)) >= since
+    won30 = [d for d in deals if d["status"] == "won" and after(d["won_at"], since30)]
+    columns = [{"id": s["id"], "name": s.get("name") or "Stage", "ff": "identification", "hint": "", "colour": STAGE_COLOURS[i % len(STAGE_COLOURS)],
+                "count": sum(1 for d in open_ if d["pstage"] == s["id"]), "value": val([d for d in open_ if d["pstage"] == s["id"]])}
+               for i, s in enumerate(p.get("stages") or [])]
+    return {"deals": deals, "stages": columns, "built": True, "readonly": True, "source": "Employz.ai", "open_url": link,
+            "pipeline": f"employz:{ext_id}", "pipeline_name": p.get("name") or "Pipeline", "pipelines": pipelines,
+            "lost_reasons": [], "sync": await _sync_line(ctx.ws),
+            "totals": {"open": len(open_), "open_value": val(open_), "won_30": len(won30), "won_30_value": val(won30), "followups_due": 0},
+            "week": {"new": sum(1 for d in deals if after(d["created_at"], week_start)),
+                     "won": sum(1 for d in deals if d["status"] == "won" and after(d["won_at"], week_start)),
+                     "lost": sum(1 for d in deals if d["status"] == "lost" and after(d["stage_at"], week_start)), "moved": 0},
+            "team": await _team(ctx), "sources": SOURCES, "today": t}
+
+
+async def _sync_line(ws: str) -> dict:
+    from .. import employz_import
+    s = await employz_import.status(ws)
+    return {"last_ok_at": s["last_ok_at"], "state": s["state"], "every_minutes": s["every_minutes"],
+            "error": (s.get("error") or {}).get("message")}
+
+
 @router.get("/deals")
-async def list_deals(ctx: Ctx = Depends(feature("pipeline"))):
+async def list_deals(pipeline: str = "", ctx: Ctx = Depends(feature("pipeline"))):
+    pipelines = await _pipelines(ctx)
+    if pipeline.startswith("employz:"):
+        return await _ext_board(ctx, pipeline.split(":", 1)[1][:60], pipelines)
     await crm.backfill(ctx.ws)
     stages = await crm.stages_of(ctx.ws)
     users = await _users(ctx)
@@ -346,7 +415,7 @@ async def list_deals(ctx: Ctx = Depends(feature("pipeline"))):
             "lost": sum(1 for l in leads if l.get("status") == "lost" and crm._aware(l.get("updated_at") or l["created_at"]) >= week_start),
             "moved": sum(1 for l in leads if l.get("stage_at") and crm._aware(l["stage_at"]) >= week_start)}
     pipe = await crm.pipeline_of(ctx.ws)
-    return {"deals": deals, "stages": columns, "built": bool(pipe),
+    return {"deals": deals, "stages": columns, "built": bool(pipe), "pipelines": pipelines, "pipeline": "hub", "readonly": False,
             "lost_reasons": (pipe or {}).get("lost_reasons") or crm_tasks.BASE_REASONS["services"],
             "totals": {"open": len(open_), "open_value": val(open_), "won_30": len(won30), "won_30_value": val(won30),
                        "followups_due": sum(1 for d in open_ if d["follow_up_on"] and d["follow_up_on"] <= t)},
@@ -530,6 +599,7 @@ class ActivityIn(BaseModel):
 
 def _contact_view(c: dict, stats: dict | None = None, users: dict | None = None) -> dict:
     s = (stats or {}).get(c["_id"]) or {}
+    ext = c.get("ext") or {}     # imported from Employz.ai: its custom fields and owner are shown, read-only
     return {"id": c["_id"], "name": c.get("name", ""), "phone": c.get("phone") or "", "email": c.get("email") or "",
             "company": c.get("company", ""), "company_id": c.get("company_id"), "source": c.get("source", ""),
             "source_label": crm.SOURCE_LABEL.get(c.get("source", ""), (c.get("source") or "").replace("_", " ")), "tags": c.get("tags") or [],
@@ -537,7 +607,9 @@ def _contact_view(c: dict, stats: dict | None = None, users: dict | None = None)
             "assignee_id": c.get("assignee_id"), "assignee_name": (users or {}).get(c.get("assignee_id"), "") if c.get("assignee_id") else "",
             "created_at": crm.iso(c.get("created_at")), "last_activity_at": crm.iso(c.get("last_activity_at")),
             "deals": s.get("deals", 0), "open_deals": s.get("open", 0), "open_value": round(s.get("open_value", 0.0), 2),
-            "won_value": round(s.get("won_value", 0.0), 2)}
+            "won_value": round(s.get("won_value", 0.0), 2),
+            "from_crm": bool(ext.get("src")) and not ext.get("deleted_at"), "crm_managed": bool(ext.get("created")),
+            "crm_fields": ext.get("fields") or {}, "crm_owner": ext.get("owner") or ""}
 
 
 async def _deal_stats(ws: str, contact_ids: list[str]) -> dict:
@@ -560,7 +632,8 @@ async def _deal_stats(ws: str, contact_ids: list[str]) -> dict:
 async def list_contacts(q: str = "", source: str = "", tag: str = "", company: str = "", due: int = 0,
                         ctx: Ctx = Depends(feature("crm"))):
     await crm.backfill(ctx.ws)
-    query: dict = {"ws": ctx.ws}
+    # a contact the Employz.ai import made, since deleted there, no longer shows
+    query: dict = {"ws": ctx.ws, "$nor": [{"ext.created": True, "ext.deleted_at": {"$exists": True}}]}
     if q.strip():
         safe = re.escape(q.strip()[:60])
         digits = re.sub(r"\D", "", q)[-10:]
@@ -584,7 +657,7 @@ async def list_contacts(q: str = "", source: str = "", tag: str = "", company: s
     async for c in db().contacts.find({"ws": ctx.ws, "tags.0": {"$exists": True}}, {"tags": 1}).limit(5000):
         for t in c.get("tags") or []:
             tags[t] = tags.get(t, 0) + 1
-    return {"items": [_contact_view(c, stats, users) for c in rows], "total": await db().contacts.count_documents({"ws": ctx.ws}),
+    return {"items": [_contact_view(c, stats, users) for c in rows], "total": await db().contacts.count_documents({"ws": ctx.ws, "$nor": query["$nor"]}),
             "tags": sorted(tags, key=lambda t: -tags[t])[:40], "sources": SOURCES, "team": await _team(ctx),
             "can_import": ctx.at_least("manager"), "today": crm.today_ist().isoformat()}
 

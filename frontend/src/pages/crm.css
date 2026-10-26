@@ -108,3 +108,10 @@
 @media (pointer: coarse), (max-width: 640px) {
   .crm-chip.x button { min-width: 32px; min-height: 32px; margin: -8px -8px -8px 0; display: inline-grid; place-items: center; }
 }
+
+/* contacts that come from Employz.ai */
+.crm-tag.crm-ext { border-color: rgba(110,168,254,.45); color: #9cc3ff; }
+.crm-ext-fields { margin: 0; display: grid; gap: 8px; }
+.crm-ext-fields div { display: grid; grid-template-columns: minmax(110px, 38%) minmax(0, 1fr); gap: 10px; font-size: 13.5px; }
+.crm-ext-fields dt { color: var(--ivory-35); }
+.crm-ext-fields dd { margin: 0; overflow-wrap: anywhere; }

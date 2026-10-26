@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ago, api } from "../api.js";
 import { Busy, Sheet, Stat, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Pill } from "../v2.jsx";
-import { ConnectionForm, Webhook } from "./Connections.jsx";
+import { ConnectionForm, EmployzImport, Webhook } from "./Connections.jsx";
 import "./running.css";
 
 const STAGE = { identification: "1 · Identification", logic: "2 · Logic", pain: "3 · Pain", vision: "4 · Vision", close: "5 · Close" };
@@ -74,6 +74,7 @@ export default function Crm() {
         }}>Sync now</Busy>
       </div>
       <Recent rows={d.recent || []} />
+      <EmployzImport />
       <details className="panel flat">
         <summary className="label" style={{ cursor: "pointer" }}>Connection details</summary>
         <div className="stack" style={{ marginTop: 14 }}>
