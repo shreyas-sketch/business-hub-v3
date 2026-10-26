@@ -142,8 +142,9 @@ async def test_connection(ws: str, kind: str) -> dict:
         tpl = conn.get("tpl_instant") or conn.get("tpl_followup")
         if not tpl:
             raise HTTPException(400, "Add at least the instant-reply template name, then test.")
-        r = await integrations.wa_template(ws, conn, owner.get("phone", ""), tpl, ["there", b.get("name") or "us", "This is a test from your hub."],
-                                           owner.get("name", ""), "test")
+        # exactly the template's own variables: the instant reply has 2 ({{1}} name, {{2}} business), the follow-up 3
+        params = ["there", b.get("name") or "us"] + ([] if conn.get("tpl_instant") else ["This is a test from your hub."])
+        r = await integrations.wa_template(ws, conn, owner.get("phone", ""), tpl, params, owner.get("name", ""), "test")
         res = {"ok": bool(r.get("sent")), "note": "A test message was sent to your own WhatsApp." if r.get("sent") else (r.get("error") or "Not sent.")}
     else:
         res = {"ok": True, "note": "Saved."}

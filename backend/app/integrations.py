@@ -91,8 +91,10 @@ async def wa_template(ws: str, conn: dict, to: str, template: str, params: list,
         ok = r.status_code in (200, 201) and not _refused(r)
         if not ok:
             log.warning("owner WhatsApp template %s failed: %s %s", template, r.status_code, r.text[:200])
+        why = _reason(r) if not ok else ""
         return {"sent": ok, "via": "owner-whatsapp", "id": _msg_id(r) if ok else None,
-                "error": None if ok else "WhatsApp didn't accept the message. Check the template name and that it is approved."}
+                "error": None if ok else "WhatsApp didn't accept the message. Check the template name and that it is approved."
+                + (f" Your WhatsApp tool said: “{why}”" if why else "")}
     except httpx.HTTPError as e:
         log.warning("owner WhatsApp error: %s", type(e).__name__)
         return {"sent": False, "via": "owner-whatsapp", "error": "WhatsApp couldn't be reached. Try again in a minute."}
@@ -135,6 +137,23 @@ async def wa_text(ws: str, conn: dict, to: str, text: str) -> dict:
 
 def _wati_base(conn: dict) -> str:
     return str(conn.get("api_url") or "").strip().rstrip("/")
+
+
+def _reason(r: httpx.Response) -> str:
+    """The WhatsApp tool's own one-line reason for refusing (AiSensy: wrong campaign, param count, wallet…), for the owner."""
+    try:
+        d = r.json()
+    except ValueError:
+        return ""
+    if not isinstance(d, dict):
+        return ""
+    for k in ("errorMessage", "message", "msg", "error", "info"):
+        v = d.get(k)
+        if isinstance(v, dict):
+            v = v.get("message") or v.get("description")
+        if isinstance(v, str) and v.strip():
+            return " ".join(v.split())[:160]
+    return ""
 
 
 def _refused(r: httpx.Response) -> bool:

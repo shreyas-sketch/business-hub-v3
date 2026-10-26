@@ -72,3 +72,8 @@
   .rb-staff { grid-template-columns: 1fr; }
   .rb-hook { flex-wrap: wrap; }
 }
+
+/* Connections → CRM: which Employz.ai stage each of the hub's 5 steps goes to */
+.ez-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.ez-step { display: grid; gap: 6px; font-size: 13px; color: var(--ivory-70); min-width: 0; }
+.ez-step .select { width: 100%; min-width: 0; }

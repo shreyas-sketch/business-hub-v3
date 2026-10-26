@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from . import plans
 from .config import settings
 from .db import connect, ensure_indexes
-from . import employz_import, files as files_store, mailer
+from . import employz_import, files as files_store, mailer, razorpay_invoices
 from .routers import (admin, admin_config, agents, auth, bankreader, billing, brandkit, cashflow, competitors, leadresponse, reputation, winback, compliance, dashboard, day1, desk, event, followups, domains, growth, hooks, hub, inquiries, gateway, kits, knowledge, leadideas, sitemagnets, membership, money,
                       expenses, gstsetaside, moneyinsights, office, onboard, program, public, recordings, rhythm, social, sopset, team, tools, workforce)
 from .routers import audit, brochures, crm, employz as employz_router, expenseai, inputs, keyperson, multiplier, onboarding as onboarding_admin, socialmedia
@@ -31,7 +31,7 @@ async def lifespan(_: FastAPI):
     connect()
     await ensure_indexes()
     # every module's indexes at once (one after another took several seconds on a fresh database)
-    await asyncio.gather(*(module.ensure_indexes() for module in (*FEATURE_ROUTERS, *V23_ROUTERS, files_store, mailer, employz_import)
+    await asyncio.gather(*(module.ensure_indexes() for module in (*FEATURE_ROUTERS, *V23_ROUTERS, files_store, mailer, employz_import, razorpay_invoices)
                            if hasattr(module, "ensure_indexes")))
     await plans.load(force=True)
     if settings.env != "test" and settings.v23_auto_apply:   # the first start on v2.3 switches the hub to the OwnerDesk setup (once; tests apply it themselves)

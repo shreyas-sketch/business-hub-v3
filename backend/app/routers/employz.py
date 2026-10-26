@@ -3,7 +3,8 @@ Employz.ai in the hub (the owner's Connections → CRM panel and the Pipeline pa
 
 GET  /api/employz/check             what this connection can read (the sub-account, and each kind of data, readable or not)
 GET  /api/employz/remote-pipelines  the sub-account's pipelines and stages, live (to pick where new hub leads go)
-POST /api/employz/push-pipeline     {pipeline_id}: the pipeline new hub leads are sent to, its 5 stage ids matched by name
+POST /api/employz/push-pipeline     {pipeline_id, stages?}: the pipeline new hub leads are sent to, and which of its stages each of the
+                                    hub's 5 steps goes to (the owner's choice; without one, matched by name)
 GET  /api/employz/import            the import's state: last sync, progress, coverage, what's in the hub, errors
 POST /api/employz/import            "Import now" (starts in the background; one at a time)
 
@@ -50,26 +51,39 @@ async def remote_pipelines(ctx: Ctx = Depends(owner_only)):
         page = await api.read_pipelines(conn)
     except api.EmployzError as e:
         raise _plain(e)
-    return {"pipelines": [{"id": p["id"], "name": p.get("name") or "Pipeline",
-                           "stages": [{"id": s["id"], "name": s.get("name") or "Stage"} for s in sorted(p.get("stages") or [], key=lambda s: s.get("position") or 0)]}
-                          for p in page.records],
-            "selected": conn.get("pipeline_id") or None}
+    out = []
+    for p in page.records:
+        stages = sorted(p.get("stages") or [], key=lambda s: s.get("position") or 0)
+        out.append({"id": p["id"], "name": p.get("name") or "Pipeline",
+                    "stages": [{"id": s["id"], "name": s.get("name") or "Stage"} for s in stages],
+                    "suggested": match_stages(stages)[0]})
+    saved = {k: conn.get(f"stage_{k}") for k in STAGE_WORDS if conn.get(f"stage_{k}")}
+    return {"pipelines": out, "selected": conn.get("pipeline_id") or None, "steps": STEP_NAMES, "saved": saved}
+
+
+STEP_NAMES = {"identification": "Identification", "logic": "Logic", "pain": "Pain", "vision": "Vision", "close": "Close"}
+
+
+def _ended(s: dict) -> bool:
+    name = str(s.get("name") or "").lower()
+    return "lost" in name or "won" in name
 
 
 def match_stages(stages: list[dict]) -> tuple[dict, list[str]]:
-    """{hub stage: Employz.ai stage id} by name, then by position for a 5-stage pipeline; and the hub stages left unmatched."""
+    """{hub stage: Employz.ai stage id} by name, then by position for a 5-stage pipeline; and the hub stages left unmatched.
+    A won or lost stage is never matched: a deal still open in the hub must not land on Closed Won or Closed Lost."""
     out: dict = {}
     used: set = set()
     for key, words in STAGE_WORDS.items():
         for s in stages:
             name = str(s.get("name") or "").lower()
-            if s["id"] not in used and any(w in name for w in words):
+            if s["id"] not in used and not _ended(s) and any(w in name for w in words):
                 out[key] = s["id"]
                 used.add(s["id"])
                 break
     if len(out) < 5 and len(stages) == 5:                 # five stages with other names: in order
         for key, s in zip(STAGE_WORDS, stages):
-            if key not in out and s["id"] not in used:
+            if key not in out and s["id"] not in used and not _ended(s):
                 out[key] = s["id"]
                 used.add(s["id"])
     return out, [k for k in STAGE_WORDS if k not in out]
@@ -77,6 +91,7 @@ def match_stages(stages: list[dict]) -> tuple[dict, list[str]]:
 
 class PushIn(BaseModel):
     pipeline_id: str = Field(min_length=4, max_length=60, pattern=r"^[A-Za-z0-9_-]+$")
+    stages: dict[str, str] | None = None      # the owner's choice: hub step → Employz.ai stage id (all 5)
 
 
 @router.post("/push-pipeline")
@@ -90,8 +105,14 @@ async def push_pipeline(body: PushIn, ctx: Ctx = Depends(owner_only)):
     if not pipe:
         raise HTTPException(404, "That pipeline isn't in this Employz.ai sub-account any more. Pick again.")
     stages = sorted(pipe.get("stages") or [], key=lambda s: s.get("position") or 0)
-    matched, missing = match_stages(stages)
-    values = {"pipeline_id": pipe["id"], **{f"stage_{k}": v for k, v in matched.items()}}
+    if body.stages is not None:
+        ids = {s["id"] for s in stages}
+        if set(body.stages) != set(STAGE_WORDS) or any(v not in ids for v in body.stages.values()):
+            raise HTTPException(400, "Pick a stage of this pipeline for each of the 5 steps.")
+        matched, missing = dict(body.stages), []
+    else:
+        matched, missing = match_stages(stages)
+    values = {"pipeline_id": pipe["id"], **{f"stage_{k}": matched.get(k, "") for k in STAGE_WORDS}}   # none left from an earlier pipeline
     await connections.save(ctx.ws, "employz", values, ctx.actor, "you")
     await track("employz_push_pipeline", ctx.ws, matched=len(matched))
     names = {s["id"]: s.get("name") for s in stages}

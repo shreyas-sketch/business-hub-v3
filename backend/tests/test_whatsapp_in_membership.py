@@ -1,6 +1,8 @@
 """WhatsApp chats moved down to the ₹1,999 Membership (Admin → Features & plans, for a live event): the owner can connect
 their own number, but nothing replies to a customer on it — no instant reply, no 24×7 AI reply — until the owner switches
 it on. On Growth Mentorship, its usual plan, both are on as before."""
+import json
+
 from app.db import db
 from tests.conftest import go_live, new_owner
 from tests.test_agents import connect_demo_whatsapp, inquiry
@@ -81,3 +83,36 @@ async def test_event_extras_move_into_membership_and_back_in_one_tap(client):
     assert not any(me[k] for k in ("win_back", "market_research", "whatsapp_ai", "whatsapp_tool", "lead_response"))
     cfg = {f["key"]: f for f in (await admin.get("/api/admin/config")).json()["features"]}
     assert cfg["win_back"]["label"] == "Bring them back" and cfg["win_back"]["tier"] == "program" and cfg["lead_response"]["tier"] == "growth"
+
+
+async def test_a_template_field_takes_its_name_not_its_wording(client):
+    c, uid, site, admin = await member("9839100009")
+    assert (await admin.patch("/api/admin/config/features/whatsapp_tool", json={"tier": "lite"})).status_code == 200
+    wording = "Hello {{1}}, thank you for contacting {{2}}. We've got your message and will reply shortly."
+    r = await c.put("/api/connections/whatsapp", json={"values": {"provider": "aisensy", "tpl_instant": wording}})
+    assert r.status_code == 400 and "name" in r.json()["detail"]
+    r = await c.put("/api/connections/whatsapp", json={"values": {"provider": "aisensy", "tpl_instant": "instant_reply"}})
+    assert r.status_code == 200
+    stored = await db().connections.find_one({"_id": uid})
+    assert stored["whatsapp"]["tpl_instant"] == "instant_reply"
+
+
+async def test_the_connection_test_sends_exactly_the_instant_reply_templates_two_values(client, monkeypatch):
+    import httpx
+    from app import integrations
+    c, uid, site, admin = await member("9839100010")
+    assert (await admin.patch("/api/admin/config/features/whatsapp_tool", json={"tier": "lite"})).status_code == 200
+    assert (await c.put("/api/connections/whatsapp", json={"values": {"provider": "aisensy", "number": "98200 12345", "api_key": "aisensy-key",
+                                                                         "tpl_instant": "instant_reply"}})).status_code == 200
+    sent = []
+
+    def answer(request):
+        sent.append(json.loads(request.content))
+        if len(sent) == 1:
+            return httpx.Response(200, json={"success": "true", "submitted_message_id": "m1"})
+        return httpx.Response(400, json={"errorMessage": "Campaign is not live"})
+    monkeypatch.setattr(integrations, "TRANSPORT", httpx.MockTransport(answer))
+    r = (await c.post("/api/connections/whatsapp/test")).json()
+    assert r["ok"] and sent[0]["campaignName"] == "instant_reply" and len(sent[0]["templateParams"]) == 2
+    r = (await c.post("/api/connections/whatsapp/test")).json()        # refused: the tool's own reason is shown
+    assert not r["ok"] and "Campaign is not live" in r["note"]

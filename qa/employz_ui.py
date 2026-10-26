@@ -43,8 +43,12 @@ with sync_playwright() as p:
             shot(pg, f"{label}_connections_saved")
             sel = pg.locator("select[aria-label='Pipeline for new leads']")
             check(sel.count() == 1, "pipeline picker shows after saving")
+            sel.select_option("pipeB"); pg.wait_for_timeout(300)
+            check(pg.locator("select[aria-label^='Stage for']").count() == 5, "5 step pickers for the chosen pipeline")
+            check(pg.locator("button:has-text('Use this pipeline')").is_disabled(), "can't save until every step has a stage")
             sel.select_option("pipeA"); pg.wait_for_timeout(300)
-            check(pg.locator("text=Identification → Logic / reason").count() > 0, "picked pipeline's stages listed")
+            picked = [pg.locator(f"select[aria-label='Stage for {n}']").input_value() for n in ("Identification", "Logic", "Pain", "Vision", "Close")]
+            check(picked == ["sA1", "sA2", "sA3", "sA4", "sA5"], f"matching stages suggested {picked}")
             pg.locator("button:has-text('Use this pipeline')").click(); pg.wait_for_timeout(1500)
             conn = MongoClient().qa_mc.connections.find_one({"_id": uid}) or {}
             ez = conn.get("employz") or {}
