@@ -231,7 +231,7 @@ async def test_act_on_its_own_only_with_legacyworkforce(client):
     assert sent["status"] == "sent" and sent["via"] == "owner-whatsapp" and sent["decided_by"] == "agent"
     out = await db().outbox.find_one({"kind": "followup", "via": "owner-demo"})
     assert out["params"][:2] == ["Neha", BUSINESS] and out["params"][2] == sent["text"]
-    assert "on its own" in (await c.get("/api/agents/activity")).json()[0]["text"]
+    assert any("on its own" in e["text"] for e in (await c.get("/api/agents/activity")).json() if e["agent"] == "followup")
 
     # back on a plan without agents_act: the stored "act" no longer applies
     await admin.patch(f"/api/admin/users/{uid}", json={"plan": "running"})
@@ -480,7 +480,7 @@ async def test_agents_page_shows_every_agent_and_what_unlocks_it(client):
     body = (await c.get("/api/agents")).json()
     agents = {a["key"]: a for a in body["agents"]}
     assert list(agents) == ["week_plan", "calendar_auto", "followup", "review_request", "digest", "payment_reminder", "quote_followup",
-                            "customer_desk", "instant_reply", "wa_sales", "telecaller", "recall", "ceo_report", "monthly_review", "results",
+                            "customer_desk", "auto_quote", "auto_invoice", "instant_reply", "wa_sales", "telecaller", "recall", "ceo_report", "monthly_review", "results",
                             "meeting_actions", "office_standup"]
     assert agents["week_plan"]["available"] and agents["week_plan"]["on"] and agents["week_plan"]["tier_name"] == "Membership"
     assert not agents["followup"]["available"] and agents["followup"]["tier"] == "program" and agents["followup"]["approvals"]

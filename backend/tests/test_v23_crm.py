@@ -207,7 +207,8 @@ async def test_older_leads_get_contacts_and_a_won_quote_links_its_invoice(client
     q = (await c.post("/api/quotes", json={"customer": {"name": "Farah Khan", "phone": "9820012121"}, "lead_id": "old-lead-1",
                                            "items": [{"name": "Sofa repair", "qty": 1, "rate": 12000, "gst": 18}]})).json()
     assert (await c.post(f"/api/quotes/{q['id']}/status", json={"status": "accepted"})).status_code == 200
-    inv = (await c.post(f"/api/quotes/{q['id']}/invoice", json={"due_in_days": 7})).json()
+    # Invoice on yes: accepting it made the invoice
+    inv = next(x for x in (await c.get("/api/quotes", params={"kind": "invoice"})).json() if x.get("quote_id") == q["id"])
     d = (await c.get("/api/crm/deals/old-lead-1")).json()
     assert d["status"] == "won" and d["value"] == 14160 and d["invoice"]["number"] == inv["number"] and d["quote"]["number"] == q["number"]
     assert {x["kind"] for x in d["documents"]} == {"quote", "invoice"}

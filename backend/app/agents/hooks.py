@@ -68,6 +68,13 @@ async def on_new_lead(owner: dict, business: dict, site: dict | None, lead: dict
                 inquiries.after_lead(owner, business, lead)
     except Exception:
         log.exception("could not start the proposal for lead %s", lead.get("_id"))
+    # A draft quotation from what the customer asked and the price list, for the owner to check and send (background job)
+    try:
+        from .. import auto_quote
+        if await auto_quote.on_inquiry(owner, lead):
+            patch["quote_drafting"] = True
+    except Exception:
+        log.exception("could not queue the draft quotation for lead %s", lead.get("_id"))
     # Running the Business: the lead goes into Employz.ai.
     if plans.has(owner, "crm_sync"):
         await sync_later(owner, {**lead, **patch})
@@ -115,6 +122,8 @@ async def on_lead_status(owner: dict, lead: dict, status: str) -> None:
             if plans.has(owner, "customers"):
                 from .desk import customer_from_lead
                 await customer_from_lead(ws, lead)
+            from .. import auto_quote      # Invoice on yes: its quotation is accepted and invoiced
+            await auto_quote.on_won(owner, lead)
         else:
             await jobs.cancel({"ws": ws, "agent": "review_request", "payload.lead_id": lead_id}, f"Lead marked {status}")
             await expire({"ws": ws, "kind": "review", "lead_id": lead_id}, f"Lead marked {status}")

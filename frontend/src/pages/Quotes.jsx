@@ -418,11 +418,17 @@ function InvoiceModal({ q, onClose, onDone }) {
 
 const sendLink = (q) => q.whatsapp_link || waLink(q.share_text);
 
-function QuoteCard({ q, onEdit, onInvoice, reload, showInvoices }) {
+function QuoteCard({ q, onEdit, onInvoice, reload, showInvoices, onInvoiced }) {
   const { toast } = useHub();
   const [label, kind] = Q_STATUS[q.status] || [q.status, ""];
-  const setStatus = async (status, msg) => { await api(`/quotes/${q.id}/status`, { method: "POST", body: { status } }); toast(msg); reload(); };
+  const setStatus = async (status, msg) => {
+    const x = await api(`/quotes/${q.id}/status`, { method: "POST", body: { status } });
+    toast(status === "accepted" && x.invoice_id && !q.invoice_id ? `${q.number} accepted — the invoice is made` : msg);
+    reload();
+    if (status === "accepted" && x.invoice_id) onInvoiced?.();
+  };
   const open = q.status === "draft" || q.status === "sent";
+  const unpriced = (q.items || []).filter((i) => !Number(i.rate)).length;
   return (
     <div className="panel" style={{ padding: "16px 18px", gap: 10 }}>
       <div className="row between" style={{ alignItems: "flex-start" }}>
@@ -433,6 +439,11 @@ function QuoteCard({ q, onEdit, onInvoice, reload, showInvoices }) {
             {q.sent_on ? ` · sent ${day(q.sent_on)}` : ""}{q.status === "sent" && q.followups ? ` · follow-up ${q.followups} of 3` : ""}
             {!q.customer?.phone ? " · no number" : ""}
           </span>
+          {q.source === "inquiry" && open && (
+            <span className="small" style={{ color: unpriced ? "var(--amber)" : "var(--teal)" }}>
+              Drafted from their inquiry. {unpriced ? `${unpriced} ${unpriced === 1 ? "line needs" : "lines need"} a price — press Edit before sending.` : "Check the prices, then send it."}
+            </span>
+          )}
         </div>
         <div className="row" style={{ gap: 10 }}>
           <span className="money" style={{ fontFamily: "var(--head)", fontSize: 20 }}>{rs(q.totals?.total)}</span>
@@ -689,7 +700,7 @@ export default function Quotes() {
           ) : (
             <div className="stack">
               {quotes.map((q) => (
-                <QuoteCard key={q.id} q={q} reload={reloadQ} onEdit={(x) => { setEditing(x); top(); }} onInvoice={setInvoiceFor} showInvoices={() => setTab("invoice")} />
+                <QuoteCard key={q.id} q={q} reload={reloadQ} onEdit={(x) => { setEditing(x); top(); }} onInvoice={setInvoiceFor} showInvoices={() => setTab("invoice")} onInvoiced={reloadI} />
               ))}
             </div>
           ))}

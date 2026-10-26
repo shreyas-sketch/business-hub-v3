@@ -548,6 +548,9 @@ async def quote_status(qid: str, body: StatusIn, ctx: Ctx = Depends(feature("quo
     await db().quotes.update_one({"_id": qid}, {"$set": patch})
     if body.status in ("accepted", "lost"):
         await _closed(ctx, q, body.status)
+    if body.status == "accepted":       # Invoice on yes: the invoice is made from it (once; told when a price is missing)
+        from .. import auto_quote
+        await auto_quote.invoice_on_yes(ctx.owner, q, ctx.actor)
     return await _qview(await db().quotes.find_one({"_id": qid}))
 
 
@@ -576,29 +579,52 @@ async def make_invoice(qid: str, body: InvoiceIn, ctx: Ctx = Depends(feature("qu
         raise HTTPException(404, "Not found")
     if q.get("invoice_id"):
         raise HTTPException(409, "This quotation already has an invoice.")
-    due_date = (today() + timedelta(days=body.due_in_days)).isoformat()
+    inv = await invoice_from_quote(ctx.owner, ctx.ws, ctx.actor, q, body.due_in_days, ctx)
+    if not inv:
+        raise HTTPException(409, "This quotation already has an invoice.")
+    return await _qview(inv)
+
+
+async def invoice_from_quote(owner: dict, ws: str, actor: str, q: dict, due_in_days: int, ctx: Ctx | None = None) -> dict | None:
+    """The invoice from a quotation (the Make invoice button, and Invoice on yes): numbered, into Money owed, its Razorpay
+    invoice queued, emailed when that's on. None when the quotation got its invoice a moment ago."""
+    qid = q["_id"]
+    due_date = (today() + timedelta(days=due_in_days)).isoformat()
     inv_id, due_id = new_id(), new_id()
-    number = await next_number(ctx.ws, "invoice")
+    claimed = await db().quotes.update_one({"_id": qid, "invoice_id": None}, {"$set": {"invoice_id": inv_id}})
+    if not claimed.modified_count:
+        return None
+    number = await next_number(ws, "invoice")
     inv = {**{k: v for k, v in q.items() if k not in ("_id", "number", "status", "sent_on", "followups", "last_followup_at", "share_token")},
            "_id": inv_id, "kind": "invoice", "number": number, "status": "due", "quote_id": qid, "due_date": due_date, "due_id": due_id,
-           "created_at": now(), "updated_at": now()}
-    await db().quotes.insert_one(inv)
+           "created_by": actor, "created_at": now(), "updated_at": now()}
+    inv.pop("invoice_id", None)
+    inv.pop("auto", None)
+    inv.pop("missing_rates", None)
+    inv["source"] = "quote"
+    try:
+        await db().quotes.insert_one(inv)
+    except Exception:
+        await db().quotes.update_one({"_id": qid, "invoice_id": inv_id}, {"$set": {"invoice_id": None}})   # not made: it can be tried again
+        raise
     cust = q.get("customer") or {}
-    if plans.has(ctx.owner, "money_owed"):
-        await db().dues.insert_one({"_id": due_id, "ws": ctx.ws, "customer": cust.get("name", "")[:80], "phone": cust.get("phone", ""),
+    if plans.has(owner, "money_owed"):
+        await db().dues.insert_one({"_id": due_id, "ws": ws, "customer": cust.get("name", "")[:80], "phone": cust.get("phone", ""),
                                     "email": (cust.get("email") or "").strip().lower(),
                                     "amount": int(round(q["totals"]["total"] * 100)), "due_date": due_date, "note": f"Invoice {number}",
                                     "invoice_no": number, "invoice_id": inv_id, "status": "due", "paid_at": None, "reminders_sent": 0,
-                                    "last_reminded_at": None, "created_by": ctx.actor, "created_at": now(), "updated_at": now()})
+                                    "last_reminded_at": None, "created_by": actor, "created_at": now(), "updated_at": now()})
+    else:
+        await db().quotes.update_one({"_id": inv_id}, {"$set": {"due_id": None}})
     await db().quotes.update_one({"_id": qid}, {"$set": {"invoice_id": inv_id, "status": "accepted", "updated_at": now()}})
     from .. import razorpay_invoices   # its Razorpay invoice, with the pay link, when Razorpay is connected
-    await razorpay_invoices.queue(ctx.ws, inv_id)
-    if q.get("status") != "accepted":
+    await razorpay_invoices.queue(ws, inv_id)
+    if q.get("status") != "accepted" and ctx is not None:
         await _closed(ctx, q, "accepted")
-    await track("invoice", ctx.ws)
+    await track("invoice", ws)
     from .gateway import maybe_email   # "Email invoices automatically", when the owner switched it on (off by default)
-    await maybe_email(ctx.owner, await db().quotes.find_one({"_id": inv_id}))
-    return await _qview(await db().quotes.find_one({"_id": inv_id}))
+    await maybe_email(owner, await db().quotes.find_one({"_id": inv_id}))
+    return await db().quotes.find_one({"_id": inv_id})
 
 
 @router.delete("/quotes/{qid}")

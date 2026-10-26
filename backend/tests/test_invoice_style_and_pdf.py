@@ -133,7 +133,8 @@ async def test_the_whatsapp_message_carries_the_pdf_link_and_it_opens_without_a_
     again = next(x for x in (await c.get("/api/quotes?kind=quote")).json() if x["id"] == q["id"])
     assert again["pdf_url"] == url
     await c.post(f"/api/quotes/{q['id']}/status", json={"status": "accepted"})
-    inv = (await c.post(f"/api/quotes/{q['id']}/invoice", json={"due_in_days": 7})).json()
+    # Invoice on yes: accepting it made the invoice
+    inv = next(x for x in (await c.get("/api/quotes", params={"kind": "invoice"})).json() if x.get("quote_id") == q["id"])
     assert inv["pdf_url"] != url and "See the invoice as a PDF:" in inv["share_text"]
     assert (await client.get(inv["pdf_url"].replace(settings.app_url, ""))).status_code == 200
     # a made-up or short token: not found
