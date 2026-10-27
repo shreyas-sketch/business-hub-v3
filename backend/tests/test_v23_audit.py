@@ -1,4 +1,4 @@
-"""v2.3 Engine Audit: the 4-3-2-1 audit on the hub. Have it / Missing / Not sure for each engine's accomplishments, a rupee
+"""v2.3 Engine Audit: the 4-3-2-1 audit on the hub. Have it / Missing for each of the 14 processes, a rupee
 cost a month and hours a week for each gap, growth unlocked and hours back (× the item's rate, capped at half a month's
 sales), the fix for each gap (open, opening on an event day, or in the plan), history with the change since last time, the
 PDF and the share card, and Admin → Engine Audit. 0 AI tokens. Every business, person and number here is invented."""
@@ -58,17 +58,17 @@ async def test_totals_growth_hours_and_top_gaps_with_no_tokens(client):
     answers = all_have(
         lead_magnet={"status": "missing", "monthly_cost": 40000, "hours_week": 4},
         ops_payments={"status": "missing", "monthly_cost": 90000, "hours_week": 6},
-        brand_social={"status": "unsure", "monthly_cost": 15000, "hours_week": 3, "cost_unsure": True},
+        brand_social={"status": "missing", "monthly_cost": 15000, "hours_week": 3},
         ops_sops={"status": "missing", "monthly_cost": 25000, "hours_week": 10},
     )
     res = (await m.post("/api/audit", json={"answers": answers})).json()
     t = res["totals"]
     assert t["in_place"] == 10 and t["total"] == 14 and t["gaps"] == 4
-    assert t["cost_month"] == 155000                       # the "not sure" ₹ counts as ₹0 and is flagged
-    assert t["growth_month"] == 77500 and t["hours_week"] == 23 and t["hours_back_week"] == 11.5
-    assert t["unsure_amounts"] == 1 and not t["capped"]
+    assert t["cost_month"] == 170000
+    assert t["growth_month"] == 85000 and t["hours_week"] == 23 and t["hours_back_week"] == 11.5
+    assert "unsure_amounts" not in t and not t["capped"]
     rows = {x["item_key"]: x for x in res["answers"]}
-    assert rows["brand_social"]["cost_unsure"] and rows["brand_social"]["monthly_cost"] == 0 and rows["brand_social"]["hours_week"] == 3
+    assert rows["brand_social"]["monthly_cost"] == 15000 and "cost_unsure" not in rows["brand_social"]
     assert rows["ops_payments"]["growth_unlocked"] == 45000 and rows["ops_payments"]["hours_back"] == 3
     assert res["top_gaps"] == ["ops_payments", "lead_magnet", "ops_sops"]
     ops = next(e for e in res["engines"] if e["key"] == "operations")
@@ -191,3 +191,16 @@ async def test_edits_made_to_the_earlier_questions_dont_reword_the_day1_ones(cli
     ea.forget_cache()
     item = next(i for i in (await m.get("/api/audit")).json()["items"] if i["key"] == "lead_website")
     assert item["statement"] == "A website that brings you inquiries every week, without you chasing anyone"
+
+
+async def test_there_is_no_not_sure_answer_and_older_ones_read_as_missing(client):
+    m = await v23_member("9811000013")
+    r = await m.post("/api/audit", json={"answers": all_have(lead_magnet={"status": "unsure"})})
+    assert r.status_code == 422                                     # only Have it or Missing
+    from app import engine_audit as ea
+    items = [dict(v) for v in ea.defaults().values()]
+    old = {k: {"status": "have"} for k in ALL_KEYS} | {"lead_magnet": {"status": "unsure", "monthly_cost": 5000, "cost_unsure": True}}
+    res = ea.compute(items, old, None, 50)                          # a draft saved when there was a "Not sure"
+    row = next(x for x in res["rows"] if x["item_key"] == "lead_magnet")
+    assert row["status"] == "missing" and row["monthly_cost"] == 5000 and res["totals"]["gaps"] == 1
+    assert ea.STATUS_WORD["unsure"] == "Missing"                    # an older audit's PDF says Missing

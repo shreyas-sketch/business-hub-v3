@@ -24,8 +24,6 @@
 .au-in { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .au-in .input { flex: 1 1 140px; min-width: 0; max-width: 220px; }
 .au-pre, .au-post { color: var(--ivory-70); font-weight: 700; }
-.au-ns { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ivory-70); cursor: pointer; }
-.au-ns input { accent-color: var(--gold); }
 .au-fix { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
 /* the running totals stay on screen at the bottom while the owner scrolls the engines */
