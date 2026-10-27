@@ -46,6 +46,10 @@ them (requests, input and output tokens a minute, and the organisation, so you c
 then with `--burst 200` sends 200 real website drafts at once through the hub's own engine pool and reports answered,
 waits, "busy", output tokens a minute reached and cost. From `backend/`: `python ../qa/loadtest/real_api_probe.py --burst 200`.
 
+**A live hub** (`live_event_load.py`): paced packs through the public event flow with real owner and competitor websites
+and the server's own AI key, plus a monitor timing `/api/health` every 2 s. Needs an open event code; nothing is saved to an
+account. `python live_event_load.py --base https://ownerdesk.io --sites sites.json --stages CODE:5:2,CODE:10:3,CODE:15:2`.
+
 **The engine pool in the simulation:** each key is its own account at `limiter.py` (`LIMIT_SHARED=1` puts them all on one,
 as keys of one Anthropic organisation are). E.g. `ANTHROPIC_API_KEYS=sim-2 ./start_hub.sh` for two accounts, or
 `AI_FALLBACK=gemini GEMINI_API_KEY=sim-g ./start_hub.sh` for a backup engine. To test with the real AI engine:
