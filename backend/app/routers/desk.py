@@ -273,6 +273,8 @@ class Line(BaseModel):
     unit: str = Field(default="nos", max_length=20)
     rate: float = Field(ge=0, le=1e10)
     gst: float = Field(default=18, ge=0, le=28)
+    sac: str = Field(default="", max_length=10, pattern=r"^[0-9 ]*$")    # SAC (services) or HSN (goods) code, printed per line
+    description: str = Field(default="", max_length=600)                 # a line or two under the item on the invoice
 
 
 class QCustomer(BaseModel):
@@ -306,10 +308,23 @@ class DraftIn(BaseModel):
 
 
 class QSettings(BaseModel):
+    """Invoicing → Business details: what every quotation and invoice prints (invoice_doc.compose)."""
     gstin: str = Field(default="", max_length=15)
     address: str = Field(default="", max_length=300)
     payment: str = Field(default="", max_length=300)
     terms: str = Field(default="", max_length=1500)
+    legal_name: str = Field(default="", max_length=120)       # "Giant Analytics Private Limited", when it differs from the name
+    phone: str = Field(default="", max_length=24)
+    email: str = Field(default="", max_length=120)
+    pan: str = Field(default="", max_length=10, pattern=r"^([A-Za-z]{5}[0-9]{4}[A-Za-z])?$")
+    cin: str = Field(default="", max_length=21)
+    bank_account_name: str = Field(default="", max_length=120)
+    bank_name: str = Field(default="", max_length=80)
+    bank_account: str = Field(default="", max_length=30)
+    bank_account_type: str = Field(default="", max_length=20)
+    bank_ifsc: str = Field(default="", max_length=11, pattern=r"^([A-Za-z]{4}0[A-Za-z0-9]{6})?$")
+    upi: str = Field(default="", max_length=80)
+    signatory: str = Field(default="", max_length=80)         # the name and designation under "Authorised signatory"
 
 
 def totals(items: list[dict], mode: str) -> dict:
@@ -442,7 +457,32 @@ async def get_qsettings(ctx: Ctx = Depends(feature("quotations", "manager"))):
 
 @router.put("/quotes/settings")
 async def save_qsettings(body: QSettings, ctx: Ctx = Depends(feature("quotations", "owner"))):
-    await db().quote_settings.replace_one({"_id": ctx.ws}, {"_id": ctx.ws, **body.model_dump()}, upsert=True)
+    await db().quote_settings.update_one({"_id": ctx.ws}, {"$set": body.model_dump()}, upsert=True)   # the signature stays
+    return {"ok": True}
+
+
+@router.post("/quotes/settings/signature")
+async def save_signature(file: FastUpload = File(...), ctx: Ctx = Depends(feature("quotations", "owner"))):
+    """A picture of the signature, printed above "Authorised signatory" (PNG or JPG, up to 2 MB)."""
+    from .. import files, invoice_doc
+    data, ctype = await files.read_upload(file, ("image/png", "image/jpeg"), 2)
+    if not invoice_doc.image_type(data):
+        raise HTTPException(400, "Upload the signature as a PNG or JPG picture.")
+    s = await db().quote_settings.find_one({"_id": ctx.ws}, {"signature_file_id": 1}) or {}
+    f = await files.put(ctx.ws, data, "signature", ctype, "signature")
+    await db().quote_settings.update_one({"_id": ctx.ws}, {"$set": {"signature_file_id": f["_id"]}}, upsert=True)
+    if s.get("signature_file_id"):
+        await files.delete(s["signature_file_id"], ctx.ws)
+    return {"ok": True}
+
+
+@router.delete("/quotes/settings/signature")
+async def remove_signature(ctx: Ctx = Depends(feature("quotations", "owner"))):
+    from .. import files
+    s = await db().quote_settings.find_one({"_id": ctx.ws}, {"signature_file_id": 1}) or {}
+    if s.get("signature_file_id"):
+        await files.delete(s["signature_file_id"], ctx.ws)
+    await db().quote_settings.update_one({"_id": ctx.ws}, {"$unset": {"signature_file_id": ""}})
     return {"ok": True}
 
 
@@ -676,10 +716,10 @@ async def print_quote(qid: str, ctx: Ctx = Depends(feature("quotations", "manage
     q = await db().quotes.find_one({"_id": qid, "ws": ctx.ws})
     if not q:
         raise HTTPException(404, "Not found")
-    b = await db().businesses.find_one({"owner_id": ctx.ws}) or {}
-    s = await db().quote_settings.find_one({"_id": ctx.ws}) or {}
-    from ..brand import accent_for
-    return HTMLResponse(templates.get_template("quote.html").render(q=q, b=b, s=s, rupees=rupees, accent=await accent_for(ctx.ws)))
+    from .. import invoice_doc
+    d = await invoice_doc.build(q)
+    return HTMLResponse(templates.get_template("quote.html").render(d=d, inr=invoice_doc.inr, logo=invoice_doc.data_uri(d["logo"]),
+                                                                    signature=invoice_doc.data_uri(d["signature"])))
 
 
 # ═════════════════════════ Employz.ai CRM starter ═════════════════════════
