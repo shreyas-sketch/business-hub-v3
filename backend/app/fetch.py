@@ -323,7 +323,9 @@ def _abs(base: str, href: str | None) -> str:
 
 
 def read(page: Page) -> Facts:
+    """Blocking (a big page takes a second or more to parse): from async code call it with `await asyncio.to_thread(read, page)`."""
     soup = BeautifulSoup(page.html, "html.parser")
+    has_form = soup.find("form") is not None   # before the text is pulled apart below
     f = Facts(url=page.url)
     f.title = (soup.title.get_text(" ", strip=True) if soup.title else "")[:200]
     desc = soup.find("meta", attrs={"name": re.compile("^description$", re.I)}) or soup.find("meta", attrs={"property": "og:description"})
@@ -378,7 +380,7 @@ def read(page: Page) -> Facts:
         "title": bool(f.title) and bool(f.description),
         "contact": bool(f.phones or f.whatsapp or f.emails),
         "whatsapp": bool(f.whatsapp),
-        "form": bool(BeautifulSoup(page.html, "html.parser").find("form")),
+        "form": has_form,
         "proof": any(w in html_low for w in ("testimonial", "review", "what our clients", "what our customers", "happy customers", "rated")),
         "light": page.bytes < 1_500_000,
     }
@@ -388,14 +390,14 @@ def read(page: Page) -> Facts:
 async def read_site(raw_url: str) -> Facts:
     """The home page, plus about/services/contact pages when the home page links to them (text only, best effort)."""
     home = await fetch(raw_url)
-    facts = read(home)
+    facts = await asyncio.to_thread(read, home)     # parsing is pure Python: off the event loop, so one heavy site never stalls the room
     extra = []
     for key in ("about", "service", "product", "contact"):
         u = facts.links.get(key)
         if not u or u == home.url:
             continue
         try:
-            sub = read(await fetch(u))
+            sub = await asyncio.to_thread(read, await fetch(u))
         except FetchError:
             continue
         extra.append(f"--- {key.upper()} PAGE ---\n{sub.text[:4000]}")

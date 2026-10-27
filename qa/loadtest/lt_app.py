@@ -25,14 +25,15 @@ def _http() -> httpx.AsyncClient:
 
 async def simulated_engine(provider_name, system, prompt, mock, max_tokens):
     out = int(max_tokens * 0.45)
-    r = await _http().post(f"{LIMITER}/call", json={"out": out})
+    eng = provider.current_engine()   # each key of the engine pool is its own account at the limiter (LIMIT_SHARED=1: one account)
+    r = await _http().post(f"{LIMITER}/call", json={"out": out, "account": f"{provider_name}:{eng.key if eng else ''}"})
     if r.status_code == 429:
         raise Busy("simulated 429", r.json().get("retry_after"))
     try:
         await asyncio.sleep(r.json()["latency"])
     finally:
-        await _http().post(f"{LIMITER}/done")
-    return mock(), Usage(int((len(system) + len(prompt)) / 3.5), out, "simulated")
+        await _http().post(f"{LIMITER}/done", json={"account": f"{provider_name}:{eng.key if eng else ''}"})
+    return mock(), Usage(int((len(system) + len(prompt)) / 3.5), out, eng.model if eng else "simulated")
 
 provider._call_once = simulated_engine
 

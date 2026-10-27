@@ -399,6 +399,76 @@ async def test_engine_calls_wait_their_turn_and_busy_answers_are_tried_again(set
         await provider.complete("s", "always-busy", lambda: {})
 
 
+async def test_the_engine_pool_takes_turns_and_a_busy_or_down_engine_hands_over_to_the_backup(setting, monkeypatch):
+    setting(ai_provider="anthropic", anthropic_api_key="key-main-aaaa", anthropic_api_keys="key-second-bbbb", ai_fallback="gemini",
+            gemini_api_key="key-gemini-cccc", ai_retries=1)
+    pool = provider.engines()
+    assert [(e.provider, e.key) for e in pool] == [("anthropic", "key-main-aaaa"), ("anthropic", "key-second-bbbb"), ("gemini", "key-gemini-cccc")]
+    assert pool[2].model == provider.DEFAULT_MODEL["gemini"]
+    used, refuse = [], {}
+
+    async def fake(provider_name, system, prompt, mock, max_tokens):
+        eng = provider.current_engine()
+        used.append(eng.key)
+        if eng.key in refuse:
+            raise refuse[eng.key]
+        return mock(), Usage(1, 1, eng.model)
+
+    monkeypatch.setattr(provider, "_call_once", fake)
+    for _ in range(4):
+        await provider.complete("s", "p", lambda: {"ok": True})
+    assert set(used) == {"key-main-aaaa", "key-second-bbbb"} and used[0] != used[1]   # the two Claude keys take turns
+
+    # both Claude keys say "slow down": the call moves straight to Gemini, and the Claude keys rest for the wait they asked for
+    used.clear()
+    refuse.update({"key-main-aaaa": Busy("anthropic 429", 20), "key-second-bbbb": Busy("anthropic 429", 20)})
+    result, usage = await provider.complete("s", "p", lambda: {"ok": "backup"})
+    assert result == {"ok": "backup"} and usage.model == provider.DEFAULT_MODEL["gemini"] and used[-1] == "key-gemini-cccc"
+    used.clear()
+    await provider.complete("s", "p", lambda: {})
+    assert used == ["key-gemini-cccc"]   # resting keys aren't asked again in the meantime
+
+    # an engine that can't be reached hands over too
+    for e in pool:
+        e.rest_until = 0
+    refuse.clear()
+    refuse["key-main-aaaa"] = refuse["key-second-bbbb"] = provider.Down("The AI engine could not be reached")
+    assert (await provider.complete("s", "p", lambda: {"ok": 3}))[0] == {"ok": 3} and used[-1] == "key-gemini-cccc"
+
+    # a bad request isn't the engine's fault: no other engine is tried
+    for e in pool:
+        e.rest_until = 0
+    used.clear()
+    refuse.clear()
+    refuse["key-main-aaaa"] = refuse["key-second-bbbb"] = AIError("anthropic 400: bad request")
+    with pytest.raises(AIError):
+        await provider.complete("s", "p", lambda: {})
+    assert len(used) == 1
+
+
+async def test_with_one_engine_a_down_engine_fails_at_once(setting, monkeypatch):
+    setting(ai_provider="anthropic", anthropic_api_key="sk-only", anthropic_api_keys="", ai_fallback="")
+    calls = []
+
+    async def fake(*a):
+        calls.append(1)
+        raise provider.Down("The AI engine could not be reached")
+    monkeypatch.setattr(provider, "_call_once", fake)
+    with pytest.raises(AIError):
+        await provider.complete("s", "p", lambda: {})
+    assert len(calls) == 1 and provider.engines()[0].rest_until == 0
+
+
+def test_which_refusals_send_the_call_to_a_backup():
+    import httpx
+    def r(status, text=""):
+        return provider._failed("anthropic", httpx.Response(status, text=text))
+    assert isinstance(r(401, "invalid x-api-key"), provider.Down) and isinstance(r(500), provider.Down)
+    assert isinstance(r(400, '{"error":{"message":"Your credit balance is too low"}}'), provider.Down)
+    bad = r(400, '{"error":{"message":"max_tokens: too large"}}')
+    assert isinstance(bad, AIError) and not isinstance(bad, provider.Down)
+
+
 async def test_when_the_website_cant_be_read_a_line_about_the_business_brings_the_rest(client):
     await open_event()
     with site_server() as site:

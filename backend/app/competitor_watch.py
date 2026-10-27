@@ -383,7 +383,7 @@ async def check_site(website: str, previous: list[dict] | None) -> SiteResult:
                 res.errors.append(ROBOTS_NO)
                 return res
         pause = max(PAUSE_SECONDS, min(robots.delay, MAX_CRAWL_DELAY))
-        snap, links = read_page(home)
+        snap, links = await asyncio.to_thread(read_page, home)
         res.pages.append(snap)
         failed, deadline = [], time.monotonic() + SITE_BUDGET_SECONDS
         picks = pick_links(home.url, links, list(prev))
@@ -407,7 +407,7 @@ async def check_site(website: str, previous: list[dict] | None) -> SiteResult:
                 continue
             if _host(page.url) != _host(home.url):       # sent off to another website: not theirs to compare
                 continue
-            sub, _ = read_page(page)
+            sub, _ = await asyncio.to_thread(read_page, page)
             sub["path"] = path
             if all(p["path"] != path for p in res.pages):
                 res.pages.append(sub)

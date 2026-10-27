@@ -1,6 +1,7 @@
 """Stand-in for 200 attendees' own websites (all made up): /b/<n>/ with an about page, a contact page and a logo.
 Realistic small-business behaviour: most open in 0.3–4 s, some are slow (8–15 s), a few never answer in time (25 s, past the
-hub's 20 s limit) and a few are broken (404). Seeded, so every run sees the same mix."""
+hub's 20 s limit) and a few are broken (404). One in three home pages is the size of a real theme-built site (~800 KB of markup:
+menus, sliders, page-builder wrappers), the rest are small. Seeded, so every run sees the same mix."""
 import io
 import random
 import sys
@@ -50,7 +51,12 @@ def page(n: int, which: str) -> bytes:
 <meta name="viewport" content="width=device-width"></head><body><img src="logo.png" alt="{name} logo"><h1>{name}</h1>
 <p>{what} in {city}. Trusted by local families and businesses.</p>{heads}<h2>Why choose us</h2><p>On-time work. Clear quotes.</p>
 <a href="about">About us</a> <a href="contact">Contact us</a> <a href="https://wa.me/9198{n:08d}">WhatsApp</a>
-<p>{('Lorem ipsum ' * 200)}</p></body></html>""".encode()
+<p>{('Lorem ipsum ' * 200)}</p>{HEAVY if n % 3 == 0 else ""}</body></html>""".encode()
+
+
+# what a WordPress/Elementor home page carries besides its words: thousands of nested wrappers, menu items and widgets
+HEAVY = "".join(f'<div class="elementor-element elementor-widget e{i}"><div class="widget-wrap"><a href="/item-{i}">Item {i}</a>'
+                f'<span class="meta">text text text</span></div></div>' for i in range(5000))
 
 
 class H(BaseHTTPRequestHandler):

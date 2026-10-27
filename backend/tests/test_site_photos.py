@@ -128,3 +128,34 @@ async def test_photos_are_served_on_the_websites_own_address(client):
         assert (await client.get(f"{host}/photo/{hero['id']}/../../api/me")).status_code == 404
     finally:
         object.__setattr__(settings, "sites_domain", old)
+
+
+async def test_when_pexels_says_too_many_searches_they_pause_and_the_website_is_tried_again_later(client, monkeypatch):
+    import time
+    state = {"limit": True, "calls": 0}
+
+    def handler(req):
+        state["calls"] += 1
+        if state["limit"]:
+            return httpx.Response(429, headers={"x-ratelimit-remaining": "0", "x-ratelimit-reset": str(int(time.time()) + 900)})
+        return httpx.Response(200, json={"photos": [pexels_photo(300 + i, "q") for i in range(int(req.url.params["per_page"]))]})
+
+    monkeypatch.setattr(photos.httpx, "AsyncClient", lambda *a, **k: REAL_CLIENT(transport=httpx.MockTransport(handler), timeout=5))
+    monkeypatch.setitem(photos._paused, "until", 0.0)
+    object.__setattr__(settings, "pexels_api_key", "px-test")
+    try:
+        await login(client, "9827100009")
+        site = await go_live(client)
+        assert not (site.get("photos") or {}).get("hero")
+        stored = await db().sites.find_one({"_id": site["id"]})
+        assert "stock_checked_at" not in (stored.get("photos") or {})   # not marked: the next visit tries again
+        assert photos._paused["until"] > time.time() + 800              # paused until Pexels' hour resets
+        before = state["calls"]
+        r = await client.post("/api/site/photos/stock")
+        assert r.status_code == 503 and "busy" in r.json()["detail"] and state["calls"] == before   # paused: Pexels isn't asked
+        state["limit"] = False
+        photos._paused["until"] = 0.0
+        r = await client.post("/api/site/photos/stock")
+        assert r.status_code == 200 and r.json()["photos"]["hero"]["src"].startswith("https://images.pexels.com/")
+    finally:
+        object.__setattr__(settings, "pexels_api_key", "")

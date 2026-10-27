@@ -447,6 +447,8 @@ async def refresh_stock_photos(ctx: Ctx = Depends(owner_ctx)):
         raise HTTPException(400, "Create your website first")
     await rate_limit(f"stock:{user['_id']}", 10, 3600, "Photos were refreshed many times this hour. Try again later.")
     photos = await photos_mod.refresh_stock(site, await _profile(ctx))
+    if photos is None:
+        raise HTTPException(503, "The stock photo library is busy just now. Try again in a few minutes.")
     if not photos.get("hero") and not photos.get("gallery"):
         raise HTTPException(404, "No stock photos found for this business. Upload your own instead.")
     return site_view(await db().sites.find_one({"_id": site["_id"]}), user)
