@@ -238,6 +238,10 @@ async def generate_site(body: GenerateIn | None = None, ctx: Ctx = Depends(owner
     user = ctx.owner
     b = await _profile(ctx)
     site = await db().sites.find_one({"owner_id": user["_id"]})
+    if not site:
+        from .. import shared_inputs as si
+        if si.needs_questions(await si.get_inputs(ctx.ws, b)):
+            raise HTTPException(400, "You told us you don't have a website yet: answer the 4 questions first, and it's built from them.")
     if body and body.competitors is not None:
         try:
             urls = rv.clean(body.competitors, b.get("website"))

@@ -7,7 +7,7 @@ import "../pages/lead23.css";
    their website, one competitor's website, and — when there's no website — the 4 questions, pre-filled from the
    Knowledge Hub so nobody types the same thing twice. */
 
-const Q_KEYS = ["about", "offers", "audience", "pains"];
+export const Q_KEYS = ["about", "offers", "audience", "pains"];
 const FROM = { brain: "From your Knowledge Hub — check it", you: "", "": "" };
 
 /** The 4 questions, pre-filled. `value` and `onChange` work on {about, offers, audience, pains}. */

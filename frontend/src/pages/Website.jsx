@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { api, upload, waLink } from "../api.js";
 import { Busy, Copy, Field, FormError, InviteLine, Locked, Modal, Sheet, useHub, useLoad } from "../ui.jsx";
 import DomainPanel from "../components/DomainPanel.jsx";
-import SharedInputs, { CompetitorNote, FourQuestions, answersOf } from "../components/SharedInputs.jsx";
+import SharedInputs, { CompetitorNote, FourQuestions, Q_KEYS, answersOf } from "../components/SharedInputs.jsx";
 import SitePreview from "../components/SitePreview.jsx";
 import "./website21.css";
 import "./lead23.css";
@@ -127,7 +127,8 @@ function ListEditor({ label, items, setItems, fields, max, blank }) {
 }
 
 /** v2.3: the first website — from their own website, or (no website) from 4 quick answers, made to stand out against a
-    competitor. Prompt-to-website: answer, press Build, preview, then publish. */
+    competitor. Prompt-to-website: answer, press Build, preview, then publish. An owner who said they have no website (here,
+    in onboarding or at an event) goes straight to the 4 questions, and the website is built only once all 4 are answered. */
 function Builder({ onBuilt }) {
   const { refresh, toast } = useHub();
   const [d, setD] = useState(null);
@@ -137,6 +138,7 @@ function Builder({ onBuilt }) {
   const [ans, setAns] = useState({});
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const [fromHub, setFromHub] = useState(false);
   useEffect(() => {
     api("/inputs").then((v) => {
       setD(v); setSite(v.inputs.website_url || ""); setRival(v.inputs.competitor_url || ""); setAns(answersOf(v.inputs));
@@ -144,6 +146,7 @@ function Builder({ onBuilt }) {
     }).catch((e) => setErr(e.message));
   }, []);
   if (!d) return err ? <FormError msg={err} /> : null;
+  const noSite = d.inputs.has_website === false;
   const firstRead = rival.trim() && !(d.competitor && d.competitor.matches && d.competitor.status === "ok");
   const build = async () => {
     setBusy(true); setErr("");
@@ -156,9 +159,18 @@ function Builder({ onBuilt }) {
       await refresh(); toast("Your website is ready to check"); onBuilt();
     } catch (e) { if (!e.handled) setErr(e.message); } finally { setBusy(false); }
   };
-  const ready = way === "website" ? site.trim().length > 3 : (ans.about || "").trim().length > 2 && ((ans.offers || "").trim() || (ans.audience || "").trim());
+  const writeFromHub = async () => {
+    setFromHub(true); setErr("");
+    try { await api("/site/generate", { method: "POST" }); await refresh(); onBuilt(); }
+    catch (e) { if (!e.handled) setErr(e.message); } finally { setFromHub(false); }
+  };
+  const ready = way === "website" ? site.trim().length > 3 : Q_KEYS.every((k) => (ans[k] || "").trim().length > 1);
   return (
     <div className="stack">
+      {noSite && way === "answers" ? (
+        <div className="notice"><span>You told us you don't have a website yet. Answer these 4 questions and we build it from your answers.</span>
+          <button type="button" className="linkbtn small" onClick={() => setWay("website")}>I have a website now</button></div>
+      ) : (
       <div className="ws-ways" role="radiogroup" aria-label="How should we build it?">
         <button type="button" role="radio" aria-checked={way === "website"} className={`ws-way ${way === "website" ? "on" : ""}`} onClick={() => setWay("website")}>
           <b>I have a website</b><span className="small muted">We read it and build you a better, faster one, with an inquiry form and WhatsApp.</span>
@@ -167,6 +179,7 @@ function Builder({ onBuilt }) {
           <b>I don't have one yet</b><span className="small muted">Answer 4 quick questions and we build it for you in about a minute.</span>
         </button>
       </div>
+      )}
       {way && (
         <div className="panel">
           {way === "website" && (
@@ -182,10 +195,12 @@ function Builder({ onBuilt }) {
           <FormError msg={err} />
           <div className="row">
             <button className="btn primary ai" disabled={!ready || busy} onClick={build}>{busy ? "Building your website…" : "Build my website"}</button>
-            <span className="small muted">Uses 1 AI token{firstRead ? " (plus 1 to read your competitor's website the first time)" : ""}. Takes about a minute. Nothing goes live until you publish.</span>
+            <span className="small muted">{way === "answers" && !ready ? "Answer all 4 questions to build it. " : ""}Uses 1 AI token{firstRead ? " (plus 1 to read your competitor's website the first time)" : ""}. Takes about a minute. Nothing goes live until you publish.</span>
           </div>
         </div>
       )}
+      {!way && <FormError msg={err} />}
+      {!noSite && <p className="small muted">Or <button className="linkbtn small" disabled={fromHub} onClick={writeFromHub}>{fromHub ? "writing it from your Knowledge Hub…" : "write it straight from your Knowledge Hub"}</button> (1 AI token).</p>}
     </div>
   );
 }
@@ -278,7 +293,6 @@ export default function Website() {
   const [slug, setSlug] = useState("");
   const [showcase, setShowcase] = useState(false);
   const [frame, setFrame] = useState(0);
-  const [building, setBuilding] = useState(false);
   const [guideUrl, setGuideUrl] = useState(null);
   const [qr, setQr] = useState(false);
   const [preview, setPreview] = useState(false);
@@ -294,9 +308,8 @@ export default function Website() {
   }, [me.features?.lead_magnet, site?.status, site?.slug]);
 
   const build = async () => {
-    setBuilding(true);
     try { await api("/site/generate", { method: "POST" }); await reload(); await refresh(); setFrame((f) => f + 1); }
-    catch (e) { if (!e.handled) toast(e.message, "err"); } finally { setBuilding(false); }
+    catch (e) { if (!e.handled) toast(e.message, "err"); }
   };
   const save = async () => {
     const r = await api("/site", { method: "PUT", body: { content: c, accent, slug, showcase } });
@@ -309,7 +322,6 @@ export default function Website() {
       <Sheet kicker="Systems · Website" id="SY-01" pillar="Systems" step={2} title={<>Your website, built in a <em>minute</em>.</>}
         sub="From your own website, or from 4 quick answers. Nothing invented — you preview it on a computer and a phone, edit every word, then publish.">
         <Builder onBuilt={async () => { await reload(); setFrame((f) => f + 1); setPreview(true); }} />
-        <p className="small muted">Or <button className="linkbtn small" disabled={building} onClick={build}>{building ? "writing it from your Knowledge Hub…" : "write it straight from your Knowledge Hub"}</button> (1 AI token).</p>
       </Sheet>
     );
   }
