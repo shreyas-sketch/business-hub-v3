@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { api, day, localPhone, rs, upload, waLink } from "../api.js";
+import { ago, api, day, localPhone, rs, upload, waLink } from "../api.js";
 import { Busy, Copy, Field, FormError, Modal, Sheet, Switch, canAct, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Num, Pill, Tabs } from "../v2.jsx";
 import VoiceNote from "../components/VoiceNote.jsx";
+import QuoteStatus from "../components/QuoteStatus.jsx";
 import "./running.css";
 import "./invoicing.css";
 
@@ -642,6 +643,29 @@ function StylePanel() {
   );
 }
 
+/** Website and WhatsApp inquiries of the last 30 days, and what happened to each one's draft quotation. */
+function InquiryQuotes({ onMade }) {
+  const [list, reload] = useLoad("/quotes/inquiries");
+  const [all, setAll] = useState(false);
+  const drafting = (list || []).some((x) => x.quote.state === "drafting");
+  // a draft is written in the background in about a minute: look again while one is on its way
+  useEffect(() => { if (!drafting) return undefined; const t = setInterval(reload, 15000); return () => clearInterval(t); }, [drafting, reload]);
+  if (!list || !list.length) return null;
+  const shown = all ? list : list.slice(0, 5);
+  return (
+    <div className="panel stack" style={{ gap: 12 }}>
+      <span className="label">From your inquiries · last 30 days</span>
+      {shown.map((x) => (
+        <div key={x.id} className="stack" style={{ gap: 4, paddingBottom: 10, borderBottom: "1px solid var(--ink-line)" }}>
+          <span className="small"><b>{x.name || "A customer"}</b> · {ago(x.created_at)}{x.message ? <span className="muted"> · “{x.message.slice(0, 120)}{x.message.length > 120 ? "…" : ""}”</span> : null}</span>
+          <QuoteStatus leadId={x.id} q={x.quote} link={false} onMade={async () => { await reload(); onMade(); }} />
+        </div>
+      ))}
+      {list.length > 5 && <button className="linkbtn small" style={{ justifySelf: "start" }} onClick={() => setAll(!all)}>{all ? "Show fewer" : `Show all ${list.length}`}</button>}
+    </div>
+  );
+}
+
 export default function Quotes() {
   const { me } = useHub();
   const [tab, setTab] = useState("quote");
@@ -691,6 +715,7 @@ export default function Quotes() {
           <Tabs tabs={[["quote", `Quotations${quotes ? ` · ${quotes.length}` : ""}`], ["invoice", `Invoices${invoices ? ` · ${invoices.length}` : ""}`],
             ...(credits?.length ? [["credit", `Credit notes · ${credits.length}`]] : []),
             ...(me.features?.gateway_invoicing && canAct(me, "manager") ? [["razorpay", "Razorpay invoices"]] : [])]} value={tab} onChange={setTab} />
+          {tab === "quote" && canAct(me, "manager") && <InquiryQuotes onMade={reloadQ} />}
           {tab === "quote" && (!quotes ? <Loading /> : !quotes.length ? (
             <div className="empty">
               <h2>No quotations yet.</h2>

@@ -4,6 +4,7 @@ import { ago, api } from "../api.js";
 import { Busy, Copy, Field, FormError, Sheet, Switch, canAct, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Pill, Tabs } from "../v2.jsx";
 import TemplatePicker from "../components/Templates.jsx";
+import QuoteStatus from "../components/QuoteStatus.jsx";
 import "./inquiries.css";
 
 const STATUS = { new: "New", proposal_sent: "Proposal sent", in_pipeline: "In pipeline" };
@@ -234,6 +235,7 @@ export default function Inquiries() {
               {it.channel === "email" && it.verified === false && <span className="small muted">The sender's address couldn't be confirmed — check before you reply.</span>}
               {(it.replies || []).map((r, i) => <div key={i} className="inq-reply small"><b>They replied {ago(r.at)}:</b> {r.text}</div>)}
               <Proposal it={it} reload={reload} />
+              {it.quote && <QuoteStatus leadId={it.id} q={it.quote} canMake={canAct(me, "manager") && !!me.features?.quotations} onMade={reload} />}
               <FollowUp it={it} reload={reload} />
               <div className="small">{me.features?.crm && me.features?.pipeline
                 ? <Link to={`/pipeline?deal=${it.id}`}>Open the deal</Link>   /* v2.3: the deal (and its contact in the CRM) */

@@ -4,7 +4,8 @@ from datetime import timedelta
 from app import auto_quote
 from app.agents import scheduler
 from app.db import db, now
-from tests.test_agents import QUIET, inquiry, owner_on, quiet
+from tests.conftest import new_owner
+from tests.test_agents import ADMIN, QUIET, inquiry, owner_on, quiet
 
 
 async def run_jobs():
@@ -123,3 +124,71 @@ async def test_invoice_on_yes_switched_off_leaves_it_to_the_button(client):
                                            "items": [{"name": "Gate", "qty": 1, "unit": "nos", "rate": 25000, "gst": 18}]})).json()
     assert not (await c.post(f"/api/quotes/{q['id']}/status", json={"status": "accepted"})).json().get("invoice_id")
     assert (await c.post(f"/api/quotes/{q['id']}/invoice", json={"due_in_days": 7})).status_code == 200
+
+
+async def status_of(lead_id):
+    return (await db().leads.find_one({"_id": lead_id})).get("auto_quote") or {}
+
+
+async def test_every_inquiry_says_what_happened_to_its_quotation(client):
+    c, uid, site = await owner_on("9852000011", "running")
+    await quiet(c, *QUIET, "followup")
+    lead = await inquiry(client, site, phone="98340 00021")
+    st = await status_of(lead["_id"])
+    assert st["state"] == "drafting" and "about a minute" in st["text"]
+    await run_jobs()
+    [q] = await quotes_for(lead["_id"])
+    st = await status_of(lead["_id"])
+    assert st["state"] == "ready" and q["number"] in st["text"] and st["quote_id"] == q["_id"]
+    # the same customer again this week: no new draft, and it says which one they already have
+    again = await inquiry(client, site, phone="98340 00021", message="Also a wardrobe for the bedroom please")
+    st = await status_of(again["_id"])
+    assert st["state"] == "none" and f"already got draft quotation {q['number']} this week" in st["text"] and st["can_make"]
+    # too short to quote from: says so, and the owner can still make one
+    short = await inquiry(client, site, phone="98340 00022", message="price?")
+    st = await status_of(short["_id"])
+    assert st["state"] == "none" and "too short" in st["text"] and st["can_make"]
+    # Invoicing shows them all, newest first, each with its status
+    rows = (await c.get("/api/quotes/inquiries")).json()
+    by = {r["id"]: r["quote"] for r in rows}
+    assert by[lead["_id"]]["quote_number"] == q["number"] and by[lead["_id"]]["state"] == "ready" and not by[lead["_id"]]["can_make"]
+    assert by[short["_id"]]["state"] == "none" and by[short["_id"]]["can_make"]
+    # Make quotation: drafted on the spot (no daily cap), never sent, and the status follows
+    made = await c.post(f"/api/quotes/from-inquiry/{short['_id']}")
+    assert made.status_code == 200, made.text
+    assert made.json()["state"] == "ready" and made.json()["quote_number"]
+    assert (await db().quotes.find_one({"lead_id": short["_id"]}))["created_by"] == "make_quotation"
+    again2 = await c.post(f"/api/quotes/from-inquiry/{short['_id']}")              # once: it points to the one made
+    assert again2.json()["quote_number"] == made.json()["quote_number"] and len(await quotes_for(short["_id"])) == 1
+    # the Inquiries page and Admin → the owner show the same line
+    inq = {i["id"]: i for i in (await c.get("/api/inquiries")).json()["items"]}
+    assert inq[lead["_id"]]["quote"]["quote_number"] == q["number"]
+    admin = await new_owner(ADMIN)
+    o = (await admin.get(f"/api/admin/owners/{uid}")).json()
+    assert o["quotations_open"] and {x["id"]: x["quote"]["state"] for x in o["inquiries"]}[lead["_id"]] == "ready"
+
+
+async def test_no_invoicing_or_no_tokens_says_why(client, monkeypatch):
+    free, fuid, fsite = await owner_on("9852000012", "free")
+    lead = await inquiry(client, fsite, phone="98340 00023")
+    st = await status_of(lead["_id"])
+    assert st["state"] == "none" and "come with" in st["text"] and not st["can_make"]
+    # an event account whose access has ended
+    await db().users.update_one({"_id": fuid}, {"$set": {"trial": {"plan": "lite", "until": now() - timedelta(hours=1), "reason": "event"}}})
+    late = await inquiry(client, fsite, phone="98340 00024")
+    assert "your event access has ended" in (await status_of(late["_id"]))["text"]
+    admin = await new_owner(ADMIN)
+    o = (await admin.get(f"/api/admin/owners/{fuid}")).json()
+    assert not o["quotations_open"] and o["quotations_why"] == "your event access has ended"
+    # tokens used up when the draft is written: it says so, and Make quotation is offered for later
+    c, uid, site = await owner_on("9852000013", "running")
+    await quiet(c, *QUIET, "followup")
+    from fastapi import HTTPException
+
+    async def no_tokens(*a, **k):
+        raise HTTPException(402, "No AI runs left")
+    monkeypatch.setattr(auto_quote, "run_ai", no_tokens)
+    broke = await inquiry(client, site, phone="98340 00025")
+    await run_jobs()
+    st = await status_of(broke["_id"])
+    assert st["state"] == "failed" and "AI tokens are used up" in st["text"] and st["can_make"]

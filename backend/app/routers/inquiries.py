@@ -249,6 +249,8 @@ async def list_inquiries(channel: str = "", status: str = "", ctx: Ctx = Depends
     appr = {a["_id"]: a["status"] async for a in db().approvals.find({"_id": {"$in": ids}}, {"status": 1})}
     running = ctx.has("follow_up_agent") and await jobs.is_on_for(ctx.owner, "followup")
     follow = await _followups(ctx.ws, [x["_id"] for x in leads], running)
+    from .. import auto_quote
+    numbers = await auto_quote.numbers_for(ctx.ws, leads)
     items = []
     for x in leads:
         st = _status(x, appr)
@@ -265,6 +267,7 @@ async def list_inquiries(channel: str = "", status: str = "", ctx: Ctx = Depends
                       "created_at": x["created_at"].isoformat(), "status": st, "stage": x.get("stage", "identification"), "proposal": p or None,
                       "replies": [{"at": r["at"].isoformat(), "from": r.get("from", ""), "text": r.get("text", "")} for r in (x.get("replies") or [])[-3:]],
                       "verified": x.get("sender_verified"), "attachments": x.get("attachments") or [], "followups": follow.get(x["_id"]),
+                      "quote": auto_quote.status_view(x, numbers) if ctx.has("quotations") or x.get("auto_quote") else None,
                       "template_reply": {"at": x["template_reply"]["at"].isoformat(), "text": x["template_reply"].get("text", "")} if x.get("template_reply") else None})
     counts = {k: sum(1 for i in items if i["status"] == k) for k in ("new", "proposal_sent", "in_pipeline")}
     return {"items": items[:200], "counts": counts, "channels": CHANNELS}

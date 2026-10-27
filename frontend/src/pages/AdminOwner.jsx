@@ -4,6 +4,7 @@ import { ago, api, day, localPhone } from "../api.js";
 import { Busy, Copy, Field, FormError, Sheet, Stat, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Pill } from "../v2.jsx";
 import { GrantAdd } from "./AdminFeatures.jsx";
+import QuoteStatus from "../components/QuoteStatus.jsx";
 import "./admin.css";
 
 const TIERS = ["free", "lite", "program", "running", "growth", "office"];
@@ -232,6 +233,22 @@ function OwnerConnections({ o }) {
 }
 
 /* ── Page ── */
+/** The owner's last inquiries and what happened to each one's draft quotation, so a missing one explains itself. */
+function OwnerInquiries({ o }) {
+  return (
+    <div className="panel stack" style={{ gap: 12 }}>
+      <span className="label">Inquiries and draft quotations</span>
+      {!o.quotations_open && <p className="small" style={{ color: "var(--amber)" }}>No draft quotations for this owner: {o.quotations_why}.</p>}
+      {!o.inquiries?.length ? <p className="small muted">No inquiries yet.</p> : o.inquiries.map((x) => (
+        <div key={x.id} className="stack" style={{ gap: 4 }}>
+          <span className="small"><b>{x.name || "A customer"}</b>{x.phone ? ` · ${localPhone(x.phone)}` : ""} · {ago(x.created_at)}{x.message ? <span className="muted"> · “{x.message}”</span> : null}</span>
+          <QuoteStatus leadId={x.id} q={x.quote} canMake={false} link={false} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function AdminOwner() {
   const { id } = useParams();
   const { me } = useHub();
@@ -258,6 +275,7 @@ export default function AdminOwner() {
       </div>
       <PlanPanel o={o} tierNames={tierNames} onSaved={reload} />
       <OwnerGrants o={o} tierNames={tierNames} onChange={reload} />
+      <OwnerInquiries o={o} />
       <SetupSteps o={o} />
       <OwnerConnections o={o} />
     </Sheet>
