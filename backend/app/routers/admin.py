@@ -116,7 +116,13 @@ async def owner_detail(user_id: str):
     grants = [{"feature": k, "label": plans.label_of(k), "until": v.isoformat(), "active": plans.granted(u, k)}
               for k, v in (u.get("grants") or {}).items() if hasattr(v, "isoformat") and k in plans.META]
     team = await db().users.count_documents({"team_of": user_id})
-    return {"id": u["_id"], "phone": u["phone"], "name": u.get("name", ""), "business": b.get("name", ""), "city": b.get("city", ""),
+    from .. import auto_quote   # the last inquiries and what happened to each one's draft quotation
+    leads = [x async for x in db().leads.find({"owner_id": user_id}, {"name": 1, "phone": 1, "message": 1, "created_at": 1, "auto_quote": 1,
+                                                                   "quote_id": 1}).sort("created_at", -1).limit(10)]
+    numbers = await auto_quote.numbers_for(user_id, leads)
+    return {"inquiries": [{"id": x["_id"], "name": x.get("name", ""), "phone": x.get("phone", ""), "message": (x.get("message") or "")[:160],
+                           "created_at": x["created_at"].isoformat(), "quote": auto_quote.status_view(x, numbers)} for x in leads],
+            "quotations_open": plans.has(u, "quotations"), "quotations_why": None if plans.has(u, "quotations") else auto_quote.no_feature_reason(u),"id": u["_id"], "phone": u["phone"], "name": u.get("name", ""), "business": b.get("name", ""), "city": b.get("city", ""),
             "industry": b.get("industry", ""), "plan": u.get("plan", "free"), "effective_plan": plans.effective_plan(u),
             "plan_name": plans.PLANS[plans.effective_plan(u)]["name"], "plan_source": plans.plan_source(u), "access": access,
             "grants": grants, "disabled": bool(u.get("disabled")), "bonus_runs": u.get("bonus_runs", 0), "cohort": u.get("cohort"),

@@ -403,6 +403,38 @@ async def list_quotes(kind: str = "quote", ctx: Ctx = Depends(feature("quotation
     return [await _qview(q) async for q in db().quotes.find({"ws": ctx.ws, "kind": kind}).sort("created_at", -1).limit(300)]
 
 
+@router.get("/quotes/inquiries")
+async def quote_inquiries(ctx: Ctx = Depends(feature("quotations", "manager"))):
+    """The last 30 days' inquiries and what happened to each one's quotation (auto_quote.status_view)."""
+    from .. import auto_quote
+    leads = [x async for x in db().leads.find({"owner_id": ctx.ws, "created_at": {"$gte": now() - timedelta(days=30)}},
+                                              {"name": 1, "phone": 1, "email": 1, "message": 1, "source": 1, "created_at": 1, "status": 1,
+                                               "auto_quote": 1, "quote_id": 1}).sort("created_at", -1).limit(30)]
+    numbers = await auto_quote.numbers_for(ctx.ws, leads)
+    return [{"id": x["_id"], "name": x.get("name", ""), "phone": x.get("phone", ""), "message": (x.get("message") or "")[:300],
+             "source": x.get("source", "website"), "created_at": x["created_at"].isoformat(), "quote": auto_quote.status_view(x, numbers)}
+            for x in leads]
+
+
+@router.post("/quotes/from-inquiry/{lead_id}")
+async def quote_from_inquiry(lead_id: str, ctx: Ctx = Depends(feature("quotations", "manager"))):
+    """Make quotation: the draft for an inquiry that didn't get one on its own (1 AI token). Never sent by itself."""
+    from .. import auto_quote
+    from ..agents.catalog import Skip
+    lead = await db().leads.find_one({"_id": lead_id, "owner_id": ctx.ws})
+    if not lead:
+        raise HTTPException(404, "Inquiry not found")
+    if not (lead.get("message") or "").strip():
+        raise HTTPException(400, "This inquiry has no message to quote from. Write the quotation with New quotation.")
+    try:
+        await auto_quote.make_draft(ctx.owner, lead, manual=True)
+    except Skip:
+        pass                                   # it has one already: its status points to it
+    fresh = await db().leads.find_one({"_id": lead_id})
+    numbers = await auto_quote.numbers_for(ctx.ws, [fresh])
+    return auto_quote.status_view(fresh, numbers)
+
+
 @router.get("/quotes/settings")
 async def get_qsettings(ctx: Ctx = Depends(feature("quotations", "manager"))):
     return public(await db().quote_settings.find_one({"_id": ctx.ws})) or {}
