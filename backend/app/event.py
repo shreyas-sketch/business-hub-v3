@@ -57,6 +57,8 @@ DEFAULT_RULES_SECONDS = 5
 DEFAULT_AI_SECONDS = 45
 
 STEP_KEYS = ("site", "compliance", "check", "brand", "knowledge", "brand_message", "lead_ideas", "website")
+# no website: a line or two isn't enough to write one; it's built in the hub from the 4 questions (shared_inputs)
+NO_SITE_NOTE = "Built in your hub after you save, from 4 quick questions about your business, customers and what you sell."
 AI_STEPS = ("brand_message", "lead_ideas", "website")
 CONSENT_TEXT = ("I run this business. The hub may read its public website and use the GST number to work out its filing dates. "
                 "Everything it writes is a draft for me to check.")
@@ -169,6 +171,8 @@ async def create(code: str, inp: dict, identity: dict, gst: dict | None) -> dict
     if not ai_allowed:
         for k in ("brand_message", "lead_ideas", "website"):
             steps[k] = {"status": "after_login", "note": "Made in your hub after you log in (1 AI token)."}
+    if not inp.get("website_url"):
+        steps["website"] = {"status": "after_login", "note": NO_SITE_NOTE}
     run = {"_id": new_id(), "token": secrets.token_urlsafe(16), "cohort": c["code"], "status": "queued", "attempts": 0, "queued_at": at,
            "created_at": at, "input": inp, "gst": gst, "identity": identity, "ai_allowed": ai_allowed, "steps": steps,
            "consent": {"text": CONSENT_TEXT, "at": at}, "user_id": None, "ai_calls": 0, "ai_cost_inr": 0.0, "timings": {}}
@@ -457,8 +461,9 @@ async def build_ai(run: dict) -> bool:
             await _set(run, {"profile": profile, "profile_source": "ai", "steps.knowledge": {"status": "done"}})
         else:
             await _set(run, {"steps.knowledge": {"status": "done", "note": "Read from your website without AI — check it after you log in."}})
+        no_site = not inp.get("website_url")
         if not profile.get("industry"):
-            for k in ("brand_message", "lead_ideas", "website"):
+            for k in ("brand_message", "lead_ideas") + (() if no_site else ("website",)):
                 await _step(run, k, "after_login", "Add what your business does in the Knowledge Hub first.")
         else:
             await _step(run, "brand_message", "working")
@@ -486,13 +491,14 @@ async def build_ai(run: dict) -> bool:
                 await _set(run, {"ideas": [dict(x, tried=False, tried_at=None) for x in ideas], "business_type": kind, "steps.lead_ideas": {"status": "done"}})
             else:
                 await _step(run, "lead_ideas", "after_login", "Couldn't be written just now — one tap in your hub after you log in.")
-            await _step(run, "website", "working")
-            brand = options[0] if options else None
-            content = await _ai(rid, "website", lambda: tasks.site_content(profile, brand, competitors), _site_from_ai)
-            if content:
-                await _set(run, {"website": content, "steps.website": {"status": "done"}})
-            else:
-                await _step(run, "website", "after_login", "Couldn't be written just now — one tap in your hub after you log in.")
+            if not no_site:
+                await _step(run, "website", "working")
+                brand = options[0] if options else None
+                content = await _ai(rid, "website", lambda: tasks.site_content(profile, brand, competitors), _site_from_ai)
+                if content:
+                    await _set(run, {"website": content, "steps.website": {"status": "done"}})
+                else:
+                    await _step(run, "website", "after_login", "Couldn't be written just now — one tap in your hub after you log in.")
         took = round((time.monotonic() - started) * 1000)
         r = await db().event_runs.update_one({"_id": rid, "status": "ai", "claim": run.get("claim")},
                                              {"$set": {"status": "done", "finished_at": now(), "timings.ai_ms": took, "error": None}, "$unset": {"_facts": ""}})
@@ -836,7 +842,16 @@ async def apply(run: dict, user: dict, email: str, name: str, late: bool = False
     elif design:
         out["brand"] = "kept"
 
-    content = run.get("website")
+    if not run["input"].get("website_url"):
+        # no website: none is made from the pack; the hub asks the 4 questions first, with what they typed as the first answer
+        inputs = b.get("inputs") or {}
+        set_inputs = {} if inputs.get("has_website") is not None else {"inputs.has_website": False}
+        about = (run["input"].get("about") or "").strip()
+        if about and not (inputs.get("about") or "").strip():
+            set_inputs["inputs.about"] = about[:400]
+        if set_inputs:
+            await db().businesses.update_one({"owner_id": ws}, {"$set": {**set_inputs, "inputs.updated_at": now()}})
+    content = run.get("website") if run["input"].get("website_url") else None
     if content:
         if await db().sites.find_one({"owner_id": ws}, {"_id": 1}):
             out["website"] = "kept"

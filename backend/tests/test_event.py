@@ -280,7 +280,36 @@ async def test_no_website_the_business_in_a_line_still_gets_a_pack(client):
     assert v["business"]["name"] == "Riya Tiffins" and v["business"]["industry"]
     assert v["identity"]["entity"] == "opc" and v["identity"]["gst_scheme"] == "qrmp"
     assert "GSTR-1 (quarterly, QRMP)" in v["compliance"]["kinds"] and "Professional tax (employer)" not in v["compliance"]["kinds"]
-    assert v["design"]["source"] == "default" and v["website"]
+    assert v["design"]["source"] == "default"
+    # a line or two isn't enough for a website: it's built in the hub from the 4 questions, after they save
+    assert v["website"] is None and v["steps"]["website"] == {"status": "after_login", "note": ev.NO_SITE_NOTE}
+
+
+async def test_no_website_saved_from_an_event_the_hub_asks_the_4_questions_before_any_website(client):
+    await open_event()
+    made = await make(client, form(None, business_name="Riya Tiffins", about="Home-cooked lunch tiffins delivered to offices", city="Pune"))
+    await ev.drain()
+    code = (await client.post(f"/api/event/runs/{made['token']}/code", json={"phone": "98330 55555"})).json()["dev_code"]
+    saved = await client.post(f"/api/event/runs/{made['token']}/verify", json={"phone": "9833055555", "code": code,
+                                                                               "email": "riya@example-tiffins.in", "name": "Riya"})
+    assert saved.status_code == 200, saved.text
+    assert "website" not in saved.json()["applied"]
+    owner = (await db().users.find_one({"phone": "+919833055555"}))["_id"]
+    assert not await db().sites.find_one({"owner_id": owner})                                   # no website made from the pack
+    assert (await client.get("/api/site")).json() == {}
+    got = (await client.get("/api/inputs")).json()
+    assert got["inputs"]["has_website"] is False                                                # the website step opens on the questions
+    assert got["inputs"]["about"] == "Home-cooked lunch tiffins delivered to offices"          # what they typed, as the first answer
+    # nothing builds a website until all 4 are answered: not the questions, not the Knowledge Hub route
+    r = await client.post("/api/site/generate")
+    assert r.status_code == 400 and "4 questions" in r.json()["detail"]
+    await client.put("/api/inputs", json={"offers": "Veg lunch tiffin, monthly plans"})
+    r = await client.post("/api/inputs/website/build", json={"source": "answers"})
+    assert r.status_code == 400 and "all 4" in r.json()["detail"]
+    await client.put("/api/inputs", json={"audience": "Office staff in Baner and Aundh", "pains": "No time to cook, canteen food is oily"})
+    r = await client.post("/api/inputs/website/build", json={"source": "answers"})
+    assert r.status_code == 200, r.text
+    assert (await db().sites.find_one({"owner_id": owner}))["built_from"] == "answers"
 
 
 async def test_an_ai_step_that_fails_is_left_for_after_login_and_the_pack_still_finishes(client, monkeypatch):

@@ -229,8 +229,9 @@ async def build_website(body: BuildIn, ctx: Ctx = Depends(owner_ctx)):
             raise HTTPException(400, "We couldn't read much from your website (it may be built from pictures). Build it from your answers instead.")
         await db().site_scans.update_one({"_id": ctx.ws}, {"$set": {"url": facts.url, "checks": facts.checks, "logo": facts.logo,
                                                                    "colour": facts.colour, "title": facts.title, "at": now()}}, upsert=True)
-    elif not si.answered(inp):
-        raise HTTPException(400, "Answer the questions first: what your business is about, and what you sell or who you sell to.")
+    elif not si.all_answered(inp):
+        raise HTTPException(400, "Answer all 4 questions first: what your business is about, what you sell, who you sell to and "
+                                 "their problems.")
     if inp["competitor_url"]:
         await _read_if_needed(ctx.owner, inp["competitor_url"])
     content, comp, brand = await write_content(ctx.owner, p, inp, own_text,

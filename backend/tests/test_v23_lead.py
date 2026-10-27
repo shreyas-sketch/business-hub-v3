@@ -112,6 +112,9 @@ async def test_website_from_the_4_answers_preview_then_publish(client):
     o = await v23_member("9811000004")
     ws = await owner_id(o)
     assert (await o.post("/api/inputs/website/build", json={"source": "website"})).status_code == 400   # no website given
+    # three come pre-filled from the Knowledge Hub; their customers' pain points only the owner can give
+    assert (await o.post("/api/inputs/website/build", json={"source": "answers"})).status_code == 400
+    await o.put("/api/inputs", json={"pains": "Delays and surprise costs"})
     before = await runs_used(o)
     r = await o.post("/api/inputs/website/build", json={"source": "answers"})
     assert r.status_code == 200, r.text
@@ -152,6 +155,7 @@ async def test_website_from_their_own_site_and_no_invented_numbers(client, monke
 
 
 async def _live_site(o) -> dict:
+    await o.put("/api/inputs", json={"pains": "Delays and surprise costs"})
     site = (await o.post("/api/inputs/website/build", json={"source": "answers"})).json()
     assert (await o.post("/api/site/publish")).status_code == 200
     return site
@@ -253,6 +257,7 @@ async def test_brand_kit_fonts_and_colour_reach_the_website(client):
     o = await v23_member("9811000009")
     ws = await owner_id(o)
     await db().brand_kits.insert_one({"_id": ws, "design": {"colors": {"primary": "#7C2D12"}, "fonts": {"heading": "baloo2", "body": "mukta"}}})
+    await o.put("/api/inputs", json={"pains": "Delays and surprise costs"})
     site = (await o.post("/api/inputs/website/build", json={"source": "answers"})).json()
     assert site["accent"] == "#7C2D12"
     page = (await o.get(f"/s/{site['slug']}?preview=1")).text

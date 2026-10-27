@@ -93,6 +93,17 @@ def answers_text(inp: dict) -> str:
     return "\n".join(f"{QUESTIONS[k]} {inp.get(k) or '(not given)'}" for k in QUESTIONS)
 
 
+def all_answered(inp: dict) -> bool:
+    """All 4 questions answered: what a website built from the answers needs. The website page has the owner confirm the
+    pre-filled ones, and their customers' pain points are never pre-filled, so only the owner can complete the four."""
+    return all(inp.get(k) for k in QUESTIONS)
+
+
+def needs_questions(inp: dict) -> bool:
+    """No website, and the 4 questions not all answered yet: no website may be built until they are."""
+    return inp.get("has_website") is False and not all_answered(inp)
+
+
 def answered(inp: dict) -> bool:
     """Enough to build a website or ideas from: what the business is about, and what it sells or who it's for."""
     return bool(inp.get("about")) and bool(inp.get("offers") or inp.get("audience"))
