@@ -164,7 +164,15 @@ async def test_the_form_is_checked_before_anything_is_built(client):
     assert r.status_code == 400 and "state" in r.json()["detail"]
     r = await client.post("/api/event/runs", json=form("www.example-shop.in", consent=False))
     assert r.status_code == 400
+    # no website: the error names what's missing
+    r = await client.post("/api/event/runs", json=form(None, about="Tyres for cars and bikes"))
+    assert r.status_code == 400 and "business name" in r.json()["detail"]
+    r = await client.post("/api/event/runs", json=form(None, business_name="GrowTube", about="TV"))
+    assert r.status_code == 400 and "what you sell" in r.json()["detail"]
     assert await db().event_runs.count_documents({}) == 0
+    # one word is enough to say what they sell
+    r = await client.post("/api/event/runs", json=form(None, business_name="GrowTube", about="Tires", city="Pune"))
+    assert r.status_code == 200, r.text
 
 
 # ───────────────────────── the whole flow ─────────────────────────

@@ -69,7 +69,8 @@ function Form() {
   const submit = async () => {
     setErr("");
     if (!v.noSite && v.website.trim().length < 4) return setErr("Type your website, or tick “I don't have a website”.");
-    if (v.noSite && (v.business_name.trim().length < 2 || v.about.trim().length < 10)) return setErr("Type your business name and what you sell.");
+    if (v.noSite && v.business_name.trim().length < 2) return setErr("Type your business name.");
+    if (v.noSite && v.about.trim().length < 3) return setErr("Type what you sell, even in one word — for example “Tyres”.");
     if (!v.noGst && !gst?.valid) return setErr(gst?.error || "Type your 15-character GST number, or tick “Not registered for GST”.");
     if (!v.entity) return setErr("Pick your type of business.");
     if (needState && !v.state) return setErr("Pick your state.");
@@ -332,7 +333,8 @@ function AboutForm({ token, siteError, onDone, ai }) {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const go = async () => {
-    if (f.business_name.trim().length < 2 || f.about.trim().length < 10) { setErr("Type your business name and what you sell."); return; }
+    if (f.business_name.trim().length < 2) { setErr("Type your business name."); return; }
+    if (f.about.trim().length < 3) { setErr("Type what you sell, even in one word — for example “Tyres”."); return; }
     setBusy(true); setErr("");
     try { onDone(await api(`/event/runs/${token}/about`, { method: "POST", body: { ...f, business_name: f.business_name.trim(), about: f.about.trim(), city: f.city.trim() } })); }
     catch (e) { setErr(e.message); } finally { setBusy(false); }

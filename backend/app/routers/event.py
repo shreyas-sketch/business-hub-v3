@@ -86,8 +86,10 @@ def _inputs(body: RunIn) -> tuple[dict, dict, dict | None]:
             inp["website_url"] = fetch.normalise_url(body.website)
         except fetch.FetchError as e:
             raise HTTPException(400, str(e))
-    elif len(inp["business_name"]) < 2 or len(inp["about"]) < 10:
-        raise HTTPException(400, "No website? Type your business name and what you sell, in a line or two.")
+    elif len(inp["business_name"]) < 2:
+        raise HTTPException(400, "No website? Type your business name.")
+    elif len(inp["about"]) < 3:      # one word is enough: "Tyres", "Tea"
+        raise HTTPException(400, "No website? Type what you sell, even in one word.")
     from .. import rivals
     try:
         inp["competitors"] = rivals.clean(body.competitors, inp["website_url"])
@@ -151,7 +153,7 @@ async def pick_brand(token: str, body: PickIn):
 
 class AboutIn(BaseModel):
     business_name: str = Field(min_length=2, max_length=80)
-    about: str = Field(min_length=10, max_length=1000)
+    about: str = Field(min_length=3, max_length=1000)
     city: str = Field(default="", max_length=80)
 
 
