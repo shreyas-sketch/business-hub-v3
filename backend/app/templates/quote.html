@@ -3,55 +3,134 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{ "Quotation" if q.kind == "quote" else "Invoice" }} {{ q.number }} — {{ b.name }}</title>
+<title>{{ d.title }} {{ d.number }} — {{ d.seller.brand }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+{#- One document, laid out by invoice_doc.compose (the PDF in invoice_pdf.py draws the same thing). -#}
 <style>
-:root{--accent:{{ accent }}}
-*{box-sizing:border-box}body{margin:0;background:#eef1f4;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans",Helvetica,Arial,sans-serif;color:#14171c}
-.page{max-width:820px;margin:24px auto;background:#fff;padding:36px 40px;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.08)}
-.top{display:flex;justify-content:space-between;gap:24px;border-bottom:3px solid var(--accent);padding-bottom:18px}
-h1{margin:0;font-size:22px}.muted{color:#5b6370}.doc{text-align:right}.doc b{font-size:20px;color:var(--accent);display:block}
-.parties{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:20px 0}
-.label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#5b6370}
-table{width:100%;border-collapse:collapse;margin-top:8px}th,td{padding:9px 8px;border-bottom:1px solid #e6e8ec;text-align:left;vertical-align:top}
-th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#5b6370;background:#f6f7f9}td.n,th.n{text-align:right;white-space:nowrap}
-.totals{margin-left:auto;width:min(340px,100%);margin-top:12px}.totals div{display:flex;justify-content:space-between;padding:5px 0}
-.totals .grand{border-top:2px solid #14171c;font-weight:700;font-size:16px;margin-top:4px;padding-top:8px}
-.notes{margin-top:22px;white-space:pre-wrap}.bar{max-width:820px;margin:16px auto 0;display:flex;gap:10px;justify-content:flex-end}
-.bar button{font:inherit;padding:10px 18px;border-radius:8px;border:0;background:var(--accent);color:#fff;font-weight:600;cursor:pointer}
-@media print{body{background:#fff}.page{box-shadow:none;margin:0;max-width:none;border-radius:0;padding:0}.bar{display:none}}
-@media(max-width:640px){.page{padding:22px 16px;margin:0;border-radius:0}.top,.parties{grid-template-columns:1fr;display:grid}.doc{text-align:left}}
+:root{--accent:{{ d.accent }};--ink:#14171C;--muted:#6B7280;--faint:#9CA3AF;--line:#E5E7EB;--soft:#F5F6F8}
+*{box-sizing:border-box}
+body{margin:0;background:#EEF1F4;font:13px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink)}
+.mono{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+.cap{font:500 9px/1.4 "JetBrains Mono",ui-monospace,monospace;letter-spacing:.22em;text-transform:uppercase;color:var(--faint)}
+.page{position:relative;width:min(820px,100%);margin:24px auto;background:#fff;padding:44px 52px 36px 64px;box-shadow:0 6px 24px rgba(0,0,0,.08)}
+.page:before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--accent)}
+.head{display:flex;justify-content:space-between;gap:28px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.logo img{max-height:56px;max-width:200px;display:block;margin-bottom:10px}
+.logo .wordmark{font:700 26px/1.1 Inter,sans-serif;letter-spacing:-.02em;margin-bottom:8px}
+.addr{text-align:right;font-size:11.5px;line-height:1.65;color:#4B5563;max-width:300px}
+.logo .cap{white-space:nowrap}
+.addr i{font-style:normal;font-size:9px;margin-right:4px;color:var(--accent)}
+.titlebar{display:flex;justify-content:space-between;gap:28px;align-items:flex-start;margin:18px 0 20px}
+h1{margin:0 0 10px;font:700 26px/1.15 Inter,sans-serif;letter-spacing:-.02em}
+.chip{display:inline-block;padding:5px 12px;border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,#fff);color:var(--accent);
+  font:500 9px/1.2 "JetBrains Mono",monospace;letter-spacing:.24em;text-transform:uppercase}
+.meta{display:grid;grid-template-columns:auto auto;gap:5px 14px;font-size:11.5px;justify-items:end}
+.meta span{color:var(--muted)}.meta b{font:500 11.5px/1.5 "JetBrains Mono",monospace}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card{border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.card .who{font-weight:600;font-size:13.5px;margin:8px 0 4px}.card .muted{color:var(--muted);font-size:11.5px}
+.ids{margin-top:8px;font-size:10.5px;color:var(--faint)}.ids b{font:500 10.5px "JetBrains Mono",monospace;color:var(--ink);margin:0 14px 0 6px}
+table{width:100%;border-collapse:collapse;margin-top:24px}
+th{text-align:left;padding:0 0 10px;border-bottom:1px solid var(--line);font:500 9px/1.4 "JetBrains Mono",monospace;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+td{padding:14px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th.n,td.n{text-align:right;padding-left:18px;white-space:nowrap}td.n{font:400 12px/1.6 "JetBrains Mono",monospace}
+.item{font-weight:500;font-size:13px;max-width:340px}.desc{color:var(--muted);font-size:10.5px;line-height:1.55;margin-top:6px;max-width:380px;white-space:pre-wrap}
+.qty{color:var(--faint);font-size:10.5px;margin-top:2px}
+.totals{margin:14px 0 0 auto;width:min(300px,100%)}
+.totals div{display:flex;justify-content:space-between;padding:9px 8px;border-bottom:1px solid var(--line);font-size:12px}
+.totals div span:last-child{font-family:"JetBrains Mono",monospace}
+.totals .grand{border-top:2px solid var(--ink);border-bottom:0;margin-top:6px;padding-top:12px;font-weight:700;font-size:14px}
+.totals .grand span:last-child{font-weight:500;font-size:14.5px}
+.words{margin-top:22px;background:var(--soft);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:10px 16px}
+.words div{font-size:12.5px;margin-top:4px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:22px}
+.two .cap{color:var(--accent);margin-bottom:8px;display:block}
+.kv{display:grid;grid-template-columns:96px 1fr;gap:6px 10px;font-size:11.5px}.kv span{color:var(--faint)}.kv b{font:400 11.5px "JetBrains Mono",monospace}
+.pay p{margin:0 0 6px;font-size:11.5px;overflow-wrap:anywhere}
+.terms{margin-top:18px;font-size:10.5px;color:#4B5563;white-space:pre-wrap}.terms b{color:var(--ink)}
+.sign{margin:42px 0 0 auto;width:260px;text-align:center}
+.sign img{max-height:52px;max-width:180px;display:block;margin:8px auto 2px}.sign .blank{height:48px}
+.sign .rule{border-top:1px solid #9CA3AF;margin-top:4px;padding-top:8px;font-weight:600;font-size:12px}.sign .who{color:var(--muted);font-size:10.5px}
+.foot{margin-top:28px;padding-top:10px;border-top:1px solid var(--line)}
+.bar{width:min(820px,100%);margin:16px auto 0;display:flex;justify-content:flex-end}
+.bar button{font:600 14px Inter,sans-serif;padding:10px 18px;border-radius:8px;border:0;background:var(--accent);color:#fff;cursor:pointer}
+@page{size:A4;margin:12mm 10mm}
+@media print{body{background:#fff}.page{box-shadow:none;margin:0;width:auto;padding:8mm 6mm 6mm 12mm}.bar{display:none}
+  .page:before{position:fixed}}
+@media(max-width:640px){.page{padding:24px 18px 24px 26px;margin:0}.head,.titlebar{flex-direction:column}.addr{text-align:left}
+  .meta{justify-items:start}.cards,.two{grid-template-columns:1fr}td.n,th.n{padding-left:10px}.sac{display:none}}
 </style>
 </head>
 <body>
 <div class="bar"><button onclick="window.print()">Print or save as PDF</button></div>
 <div class="page">
-  <div class="top">
-    <div><h1>{{ b.name }}</h1><div class="muted">{% if s.address %}{{ s.address }}{% elif b.city %}{{ b.city }}{% endif %}</div>
-      {% if s.gstin %}<div class="muted">GSTIN {{ s.gstin }}</div>{% endif %}
-      <div class="muted">{% if b.whatsapp %}{{ b.whatsapp }}{% endif %}{% if b.email %} · {{ b.email }}{% endif %}</div></div>
-    <div class="doc"><span class="label">{{ "Quotation" if q.kind == "quote" else "Tax invoice" }}</span><b>{{ q.number }}</b>
-      <div class="muted">Date {{ q.created_at.strftime('%d %b %Y') }}</div>
-      {% if q.kind == "quote" %}<div class="muted">Valid for {{ q.valid_days }} days</div>{% elif q.due_date %}<div class="muted">Due {{ q.due_date }}</div>{% endif %}</div>
+  <div class="head">
+    <div class="logo">
+      {% if logo %}<img src="{{ logo }}" alt="{{ d.seller.brand }}">{% else %}<div class="wordmark">{{ d.seller.brand }}</div>{% endif %}
+      <div class="cap">{{ d.seller.name }}</div>
+    </div>
+    <div class="addr">
+      {% for line in d.seller.address.split("\n") if line.strip() %}{% if loop.first %}<i>A</i>{% endif %}{{ line }}<br>{% endfor %}
+      {% if d.seller.phone %}<i>T</i>{{ d.seller.phone }}<br>{% endif %}
+      {% if d.seller.email %}<i>E</i>{{ d.seller.email }}<br>{% endif %}
+      {% if d.seller.gstin %}<i>GST</i>{{ d.seller.gstin }}{% endif %}
+    </div>
   </div>
-  <div class="parties">
-    <div><span class="label">{{ "For" if q.kind == "quote" else "Bill to" }}</span><div><b>{{ q.customer.name }}</b></div>
-      {% if q.customer.address %}<div class="muted">{{ q.customer.address }}</div>{% endif %}
-      {% if q.customer.gstin %}<div class="muted">GSTIN {{ q.customer.gstin }}</div>{% endif %}
-      {% if q.customer.phone %}<div class="muted">{{ q.customer.phone }}</div>{% endif %}</div>
+
+  <div class="titlebar">
+    <div><h1>{{ d.title }}</h1><span class="chip">{{ d.tag }}</span></div>
+    <div class="meta">{% for k, v in d.meta %}<span>{{ k }}</span><b>{{ v }}</b>{% endfor %}</div>
   </div>
+
+  <div class="cards">
+    <div class="card"><span class="cap">{{ "From" if d.kind == "quote" else "Billed by" }}</span>
+      <div class="who">{{ d.seller.name }}</div>
+      {% if d.seller.address %}<div class="muted">{{ d.seller.address }}</div>{% endif %}
+      {% if d.seller.gstin or d.seller.pan or d.seller.cin %}<div class="ids">
+        {% if d.seller.gstin %}GSTIN<b>{{ d.seller.gstin }}</b>{% endif %}{% if d.seller.gstin and (d.seller.pan or d.seller.cin) %}<br>{% endif %}
+        {% if d.seller.pan %}PAN<b>{{ d.seller.pan }}</b>{% endif %}{% if d.seller.cin %}CIN<b>{{ d.seller.cin }}</b>{% endif %}</div>{% endif %}
+    </div>
+    <div class="card"><span class="cap">{{ "For" if d.kind == "quote" else "Billed to" }}</span>
+      <div class="who">{{ d.buyer.name }}</div>
+      {% if d.buyer.address %}<div class="muted">{{ d.buyer.address }}</div>{% endif %}
+      {% if d.buyer.phone or d.buyer.email %}<div class="muted">{{ [d.buyer.phone, d.buyer.email]|select|join(" · ") }}</div>{% endif %}
+      {% if d.buyer.gstin %}<div class="ids">GSTIN<b>{{ d.buyer.gstin }}</b></div>{% endif %}
+    </div>
+  </div>
+
   <table>
-    <thead><tr><th>#</th><th>Item</th><th class="n">Qty</th><th class="n">Rate</th>{% if q.gst_mode != "none" %}<th class="n">GST</th>{% endif %}<th class="n">Amount</th></tr></thead>
-    <tbody>{% for i in q["items"] %}<tr><td>{{ loop.index }}</td><td>{{ i.name }}</td><td class="n">{{ '%g' % i.qty }} {{ i.unit }}</td><td class="n">{{ rupees(i.rate) }}</td>{% if q.gst_mode != "none" %}<td class="n">{{ '%g' % i.gst }}%</td>{% endif %}<td class="n">{{ rupees(i.amount) }}</td></tr>{% endfor %}</tbody>
+    <thead><tr><th>Description</th>{% if d.show_sac %}<th class="n sac">SAC / HSN</th>{% endif %}<th class="n">Taxable</th>
+      {% if d.show_gst %}<th class="n">{{ d.gst_head }}</th>{% endif %}<th class="n">Amount</th></tr></thead>
+    <tbody>{% for l in d.lines %}<tr>
+      <td><div class="item">{{ l.name }}</div>{% if l.qty_line %}<div class="qty">{{ l.qty_line }}{% if d.show_gst and not d.gst_head.endswith("%") %} · GST {{ '%g' % l.gst_rate }}%{% endif %}</div>{% endif %}
+        {% if l.description %}<div class="desc">{{ l.description }}</div>{% endif %}</td>
+      {% if d.show_sac %}<td class="n sac">{{ l.sac }}</td>{% endif %}<td class="n">{{ inr(l.taxable) }}</td>
+      {% if d.show_gst %}<td class="n">{{ inr(l.gst) }}</td>{% endif %}<td class="n">{{ inr(l.amount) }}</td></tr>{% endfor %}</tbody>
   </table>
+
   <div class="totals">
-    <div><span>Subtotal</span><span>{{ rupees(q.totals.subtotal) }}</span></div>
-    {% if q.gst_mode == "intra" %}<div><span>CGST</span><span>{{ rupees(q.totals.cgst) }}</span></div><div><span>SGST</span><span>{{ rupees(q.totals.sgst) }}</span></div>
-    {% elif q.gst_mode == "inter" %}<div><span>IGST</span><span>{{ rupees(q.totals.igst) }}</span></div>{% endif %}
-    <div class="grand"><span>Total</span><span>{{ rupees(q.totals.total) }}</span></div>
+    {% for k, v in d.rows %}<div><span>{{ k }}</span><span>{{ inr(v) }}</span></div>{% endfor %}
+    <div class="grand"><span>{{ d.grand }}</span><span>{{ inr(d.total) }}</span></div>
   </div>
-  {% if q.notes %}<div class="notes"><span class="label">Notes</span><br>{{ q.notes }}</div>{% endif %}
-  {% if q.terms %}<div class="notes"><span class="label">Terms</span><br>{{ q.terms }}</div>{% endif %}
-  {% if s.payment %}<div class="notes"><span class="label">How to pay</span><br>{{ s.payment }}</div>{% endif %}
+
+  <div class="words"><span class="cap">Amount in words</span><div>{{ d.words }}</div></div>
+
+  {% if d.bank or d.pay %}<div class="two">
+    <div class="pay">{% if d.pay %}<span class="cap">How to pay</span>{% for p in d.pay %}<p>{{ p }}</p>{% endfor %}{% endif %}</div>
+    <div>{% if d.bank %}<span class="cap">Bank &amp; payment details</span>
+      <div class="kv">{% for k, v in d.bank %}<span>{{ k }}</span><b>{{ v }}</b>{% endfor %}</div>{% endif %}</div>
+  </div>{% endif %}
+
+  {% if d.notes or d.terms %}<div class="terms"><b>Notes &amp; terms.</b> {{ [d.notes, d.terms]|select|join(" ") }}</div>{% endif %}
+
+  <div class="sign">
+    <span class="cap">For {{ d.seller.name }}</span>
+    {% if signature %}<img src="{{ signature }}" alt="Signature">{% else %}<div class="blank"></div>{% endif %}
+    <div class="rule">Authorised signatory</div>
+    {% if d.signatory %}<div class="who">{{ d.signatory }}</div>{% endif %}
+  </div>
+  <div class="foot cap">{{ d.footer }}</div>
 </div>
 </body>
 </html>

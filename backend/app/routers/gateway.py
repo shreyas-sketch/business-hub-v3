@@ -192,8 +192,6 @@ async def send_invoice_email(owner: dict, inv: dict) -> dict:
     if not await claim(f"invoice_email:{inv['_id']}"):
         return {"sent": False, "via": "already", "error": "This invoice was already emailed."}
     b = await db().businesses.find_one({"owner_id": ws}) or {}
-    qs = await db().quote_settings.find_one({"_id": ws}) or {}
-    from ..brand import accent_for
     doc = {"credit_note": "Credit note"}.get(inv.get("kind"), "Invoice")
     name = (inv.get("customer") or {}).get("name") or ""
     t = inv.get("totals") or {}
@@ -202,7 +200,7 @@ async def send_invoice_email(owner: dict, inv: dict) -> dict:
             f" for ₹{t.get('total', 0):,.2f}.{' It is marked paid — thank you.' if paid and doc == 'Invoice' else ''}"
             f"{(' Due by ' + inv['due_date'] + '.') if inv.get('due_date') and not paid and doc == 'Invoice' else ''}\n\nThank you,\n{b.get('name') or ''}")
     try:
-        pdf = invoice_pdf.render(inv, b, qs, await accent_for(ws))
+        pdf = await invoice_pdf.pdf_for(inv)
     except Exception as e:  # noqa: BLE001
         log.warning("invoice PDF failed: %s", e)
         from ..agents.jobs import release
@@ -415,10 +413,7 @@ async def email_now(inv_id: str, ctx: Ctx = Depends(feature("quotations", "manag
 @router.get("/invoices/{inv_id}/pdf")
 async def invoice_file(inv_id: str, ctx: Ctx = Depends(feature("quotations", "manager"))):
     inv = await _doc(ctx.ws, inv_id)
-    b = await db().businesses.find_one({"owner_id": ctx.ws}) or {}
-    qs = await db().quote_settings.find_one({"_id": ctx.ws}) or {}
-    from ..brand import accent_for
-    return Response(invoice_pdf.render(inv, b, qs, await accent_for(ctx.ws)), media_type="application/pdf",
+    return Response(await invoice_pdf.pdf_for(inv), media_type="application/pdf",
                     headers={"Content-Disposition": f'inline; filename="{inv["number"]}.pdf"'})
 
 

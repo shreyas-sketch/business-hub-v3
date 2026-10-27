@@ -77,3 +77,7 @@
 .ez-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
 .ez-step { display: grid; gap: 6px; font-size: 13px; color: var(--ivory-70); min-width: 0; }
 .ez-step .select { width: 100%; min-width: 0; }
+/* under each line: SAC / HSN and the description printed on the invoice */
+.rb-line .rb-more { grid-column: 1 / -1; display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 8px; margin: -2px 0 6px; }
+.rb-line .rb-more .input { padding: 7px 10px; font-size: 13px; }
+@media (max-width: 640px) { .rb-line .rb-more { grid-template-columns: 1fr; } }

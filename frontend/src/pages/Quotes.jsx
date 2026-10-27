@@ -32,11 +32,11 @@ function totals(items, mode) {
   return out;
 }
 
-const blankItem = () => ({ name: "", qty: "1", unit: "nos", rate: "", gst: 18 });
+const blankItem = () => ({ name: "", qty: "1", unit: "nos", rate: "", gst: 18, sac: "", description: "" });
 const blankForm = () => ({ customer: { name: "", phone: "", gstin: "", address: "" }, items: [blankItem()], gst_mode: "intra", notes: "", terms: "", valid_days: 15, lead_id: "" });
 const fromQuote = (q) => ({
   customer: { name: q.customer?.name || "", phone: q.customer?.phone ? localPhone(q.customer.phone) : "", gstin: q.customer?.gstin || "", address: q.customer?.address || "" },
-  items: (q.items || []).map((i) => ({ name: i.name, qty: String(i.qty), unit: i.unit || "nos", rate: i.rate ? String(i.rate) : "", gst: i.gst })),
+  items: (q.items || []).map((i) => ({ name: i.name, qty: String(i.qty), unit: i.unit || "nos", rate: i.rate ? String(i.rate) : "", gst: i.gst, sac: i.sac || "", description: i.description || "" })),
   gst_mode: q.gst_mode || "intra", notes: q.notes || "", terms: q.terms || "", valid_days: q.valid_days || 15, lead_id: q.lead_id || "",
 });
 
@@ -87,7 +87,7 @@ function Editor({ quote, prefill, onClose, onSaved }) {
     setF({ ...f, lead_id: id, customer: l && !f.customer.name.trim() ? { ...f.customer, name: l.name || "", phone: l.phone ? localPhone(l.phone) : "" } : f.customer });
   };
   const fill = (r) => {
-    const items = (r.items || []).map((i) => ({ name: i.name, qty: String(i.qty || 1), unit: i.unit || "nos", rate: i.rate ? String(i.rate) : "", gst: GST_RATES.includes(i.gst) ? i.gst : 18 }));
+    const items = (r.items || []).map((i) => ({ name: i.name, qty: String(i.qty || 1), unit: i.unit || "nos", rate: i.rate ? String(i.rate) : "", gst: GST_RATES.includes(i.gst) ? i.gst : 18, sac: "", description: "" }));
     setF((cur) => ({ ...cur, items: items.length ? items : cur.items, notes: r.notes || cur.notes,
       customer: { ...cur.customer, name: r.customer?.name || cur.customer.name, phone: r.customer?.phone || cur.customer.phone } }));
     toast(r.missing_rates ? `Drafted. ${r.missing_rates} ${r.missing_rates === 1 ? "line needs" : "lines need"} a rate` : "Drafted. Check every line, then save");
@@ -99,7 +99,7 @@ function Editor({ quote, prefill, onClose, onSaved }) {
     if (zero && !window.confirm(`${zero} ${zero === 1 ? "line has" : "lines have"} no rate (₹0). Save anyway?`)) return;
     const body = {
       customer: { name: f.customer.name.trim(), phone: f.customer.phone.trim(), gstin: f.customer.gstin.trim().toUpperCase(), address: f.customer.address.trim() },
-      items: named.map((i) => ({ name: i.name.trim(), qty: Number(i.qty), unit: i.unit.trim() || "nos", rate: Number(i.rate) || 0, gst: Number(i.gst) })),
+      items: named.map((i) => ({ name: i.name.trim(), qty: Number(i.qty), unit: i.unit.trim() || "nos", rate: Number(i.rate) || 0, gst: Number(i.gst), sac: (i.sac || "").trim(), description: (i.description || "").trim() })),
       gst_mode: f.gst_mode, notes: f.notes.trim(), terms: f.terms.trim(), valid_days: Number(f.valid_days) || 15, lead_id: f.lead_id || null,
     };
     const q = await api(edit ? `/quotes/${quote.id}` : "/quotes", { method: edit ? "PUT" : "POST", body });
@@ -146,6 +146,10 @@ function Editor({ quote, prefill, onClose, onSaved }) {
             </label>
             <span className="amt money small">{rs(t.amounts[i])}</span>
             <button className="rb-x" type="button" aria-label={`Remove line ${i + 1}`} disabled={f.items.length === 1} onClick={() => setF({ ...f, items: f.items.filter((_, j) => j !== i) })}>×</button>
+            <div className="rb-more">
+              <input className="input mono" maxLength={10} inputMode="numeric" value={it.sac || ""} onChange={(e) => setF({ ...f, items: f.items.map((x, j) => (j === i ? { ...x, sac: e.target.value.replace(/[^0-9 ]/g, "") } : x)) })} aria-label={`Line ${i + 1}: SAC or HSN code`} placeholder="SAC / HSN" />
+              <input className="input" maxLength={600} value={it.description || ""} onChange={setI(i, "description")} aria-label={`Line ${i + 1}: description`} placeholder="Description on the invoice (optional)" />
+            </div>
           </div>
         ))}
       </div>
@@ -184,29 +188,67 @@ function Editor({ quote, prefill, onClose, onSaved }) {
   );
 }
 
+const DETAIL_KEYS = ["legal_name", "gstin", "pan", "cin", "phone", "email", "address", "payment", "terms",
+  "bank_account_name", "bank_name", "bank_account", "bank_account_type", "bank_ifsc", "upi", "signatory"];
+
 function Settings({ onClose }) {
   const { me, toast } = useHub();
-  const [s] = useLoad("/quotes/settings");
+  const [s, reload] = useLoad("/quotes/settings");
   const [f, setF] = useState(null);
   const [err, setErr] = useState("");
-  useEffect(() => { if (s && !f) setF({ gstin: s.gstin || "", address: s.address || "", payment: s.payment || "", terms: s.terms || "" }); }, [s, f]);
+  useEffect(() => { if (s && !f) setF(Object.fromEntries(DETAIL_KEYS.map((k) => [k, s[k] || ""]))); }, [s, f]);
   const owner = canAct(me, "owner");
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  const upper = (k) => (e) => setF({ ...f, [k]: e.target.value.toUpperCase() });
   return (
     <div className="panel">
-      <div className="row between"><span className="label">Your business details on every quotation</span><button className="btn sm ghost" onClick={onClose}>Close</button></div>
+      <div className="row between"><span className="label">Your business details on every quotation and invoice</span><button className="btn sm ghost" onClick={onClose}>Close</button></div>
       {!f ? <Loading /> : (
         <>
           <div className="grid2">
-            <Field label="Your GSTIN"><input className="input mono" maxLength={15} value={f.gstin} onChange={set("gstin")} disabled={!owner} placeholder="27ABCDE1234F1Z5" /></Field>
-            <Field label="How customers pay you" hint="UPI id or bank details, printed on quotations and invoices."><input className="input" maxLength={300} value={f.payment} onChange={set("payment")} disabled={!owner} placeholder="UPI shreeganesh@okicici" /></Field>
+            <Field label="Legal name" hint="As registered, e.g. Quba Technologies Pvt Ltd. Your business name is used when it's empty."><input className="input" maxLength={120} value={f.legal_name} onChange={set("legal_name")} disabled={!owner} /></Field>
+            <Field label="Your GSTIN"><input className="input mono" maxLength={15} value={f.gstin} onChange={upper("gstin")} disabled={!owner} placeholder="27ABCDE1234F1Z5" /></Field>
+            <Field label="PAN (optional)" hint="Read from your GSTIN when it's empty."><input className="input mono" maxLength={10} value={f.pan} onChange={upper("pan")} disabled={!owner} placeholder="ABCDE1234F" /></Field>
+            <Field label="CIN (optional)"><input className="input mono" maxLength={21} value={f.cin} onChange={upper("cin")} disabled={!owner} /></Field>
+            <Field label="Phone on invoices"><input className="input" maxLength={24} value={f.phone} onChange={set("phone")} disabled={!owner} /></Field>
+            <Field label="Email on invoices"><input className="input" type="email" maxLength={120} value={f.email} onChange={set("email")} disabled={!owner} /></Field>
           </div>
           <Field label="Business address"><textarea className="textarea" style={{ minHeight: 70 }} maxLength={300} value={f.address} onChange={set("address")} disabled={!owner} /></Field>
+          <span className="label">Bank &amp; payment details</span>
+          <div className="grid2">
+            <Field label="Account name"><input className="input" maxLength={120} value={f.bank_account_name} onChange={set("bank_account_name")} disabled={!owner} /></Field>
+            <Field label="Bank"><input className="input" maxLength={80} value={f.bank_name} onChange={set("bank_name")} disabled={!owner} placeholder="HDFC Bank" /></Field>
+            <Field label="Account number"><input className="input mono" maxLength={30} value={f.bank_account} onChange={set("bank_account")} disabled={!owner} /></Field>
+            <Field label="Account type"><input className="input" maxLength={20} value={f.bank_account_type} onChange={set("bank_account_type")} disabled={!owner} placeholder="Current" /></Field>
+            <Field label="IFSC"><input className="input mono" maxLength={11} value={f.bank_ifsc} onChange={upper("bank_ifsc")} disabled={!owner} placeholder="HDFC0001234" /></Field>
+            <Field label="UPI id (optional)"><input className="input" maxLength={80} value={f.upi} onChange={set("upi")} disabled={!owner} placeholder="business@okicici" /></Field>
+          </div>
+          <Field label="How customers pay you (optional)" hint="A line under How to pay, e.g. payment within 7 days by bank transfer."><input className="input" maxLength={300} value={f.payment} onChange={set("payment")} disabled={!owner} /></Field>
           <Field label="Usual terms" hint="Used on a quotation when its own terms are left empty."><textarea className="textarea" maxLength={1500} value={f.terms} onChange={set("terms")} disabled={!owner} placeholder="50% advance. Prices valid for 15 days." /></Field>
+          <div className="grid2">
+            <Field label="Authorised signatory (optional)" hint="Name and title under the signature."><input className="input" maxLength={80} value={f.signatory} onChange={set("signatory")} disabled={!owner} placeholder="Ravi Mehta, Director" /></Field>
+            <Field label="Signature" hint={s.signature_file_id ? "Printed above Authorised signatory." : "A PNG or JPG of your signature, up to 2 MB."}>
+              {owner ? (
+                <div className="row">
+                  <label className="btn sm">{s.signature_file_id ? "Replace signature" : "Upload signature"}
+                    <input type="file" accept="image/png,image/jpeg" hidden onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = "";
+                      if (!file) return;
+                      const form = new FormData();
+                      form.append("file", file);
+                      try { await upload("/quotes/settings/signature", form); toast("Signature saved"); reload(); } catch (x) { if (!x.handled) setErr(x.message); }
+                    }} />
+                  </label>
+                  {s.signature_file_id && <Busy className="btn sm ghost" onError={setErr} run={async () => { await api("/quotes/settings/signature", { method: "DELETE" }); reload(); }}>Remove</Busy>}
+                </div>
+              ) : <span className="small muted">{s.signature_file_id ? "Uploaded" : "None"}</span>}
+            </Field>
+          </div>
           <FormError msg={err} />
           {owner ? (
             <div><Busy className="btn primary" onError={setErr} run={async () => {
-              await api("/quotes/settings", { method: "PUT", body: { ...f, gstin: f.gstin.trim().toUpperCase(), address: f.address.trim(), payment: f.payment.trim(), terms: f.terms.trim() } });
+              await api("/quotes/settings", { method: "PUT", body: Object.fromEntries(DETAIL_KEYS.map((k) => [k, f[k].trim()])) });
               toast("Business details saved");
               onClose();
             }}>Save details</Busy></div>
@@ -261,7 +303,7 @@ function InvoiceEditor({ onClose, onSaved }) {
     const c = f.customer;
     const inv = await api("/invoices", { method: "POST", body: {
       customer: { name: c.name.trim(), phone: c.phone.trim(), email: c.email.trim(), gstin: c.gstin.trim().toUpperCase(), state: c.state },
-      items: named.map((i) => ({ name: i.name.trim(), qty: Number(i.qty), unit: i.unit.trim() || "nos", rate: Number(i.rate), gst: Number(i.gst) })),
+      items: named.map((i) => ({ name: i.name.trim(), qty: Number(i.qty), unit: i.unit.trim() || "nos", rate: Number(i.rate), gst: Number(i.gst), sac: (i.sac || "").trim(), description: (i.description || "").trim() })),
       gst_mode: f.gst_mode || null, due_in_days: Number(f.due_in_days) || 0, paid_already: f.paid_already } });
     toast(`Invoice ${inv.number} made${inv.email?.sent ? " and emailed" : ""}`);
     onSaved(inv);
@@ -281,7 +323,7 @@ function InvoiceEditor({ onClose, onSaved }) {
           <Busy className="btn ai" disabled={entry.trim().length < 5} onError={setErr} run={async () => {
             const d = await api("/invoices/draft", { method: "POST", body: { text: entry.trim() } });
             setF({ customer: { ...blankInvoice().customer, ...Object.fromEntries(Object.entries(d.customer || {}).filter(([, v]) => v)) },
-              items: d.items.map((i) => ({ name: i.name, qty: String(i.qty), unit: i.unit || "nos", rate: i.rate ? String(i.rate) : "", gst: GST_RATES.includes(i.gst) ? i.gst : 18 })),
+              items: d.items.map((i) => ({ name: i.name, qty: String(i.qty), unit: i.unit || "nos", rate: i.rate ? String(i.rate) : "", gst: GST_RATES.includes(i.gst) ? i.gst : 18, sac: i.sac || "", description: i.description || "" })),
               gst_mode: "", due_in_days: d.due_in_days, paid_already: d.paid_already });
             toast(d.missing_rates ? `Drafted. ${d.missing_rates} ${d.missing_rates === 1 ? "line needs" : "lines need"} a rate` : "Drafted. Check it, then make the invoice");
           }}>Fill the invoice</Busy>
@@ -323,6 +365,10 @@ function InvoiceEditor({ onClose, onSaved }) {
             </label>
             <span className="amt money small">{rs(t.amounts[i])}</span>
             <button className="rb-x" type="button" aria-label={`Remove line ${i + 1}`} disabled={f.items.length === 1} onClick={() => setF({ ...f, items: f.items.filter((_, j) => j !== i) })}>×</button>
+            <div className="rb-more">
+              <input className="input mono" maxLength={10} inputMode="numeric" value={it.sac || ""} onChange={(e) => setF({ ...f, items: f.items.map((x, j) => (j === i ? { ...x, sac: e.target.value.replace(/[^0-9 ]/g, "") } : x)) })} aria-label={`Line ${i + 1}: SAC or HSN code`} placeholder="SAC / HSN" />
+              <input className="input" maxLength={600} value={it.description || ""} onChange={setI(i, "description")} aria-label={`Line ${i + 1}: description`} placeholder="Description on the invoice (optional)" />
+            </div>
           </div>
         ))}
       </div>

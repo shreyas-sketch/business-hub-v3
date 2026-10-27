@@ -189,9 +189,7 @@ async def run_owner(owner: dict, at=None) -> dict:
             try:
                 inv = await db().quotes.find_one({"_id": due["invoice_id"], "ws": ws})
                 if inv:
-                    from .brand import accent_for
-                    qs = await db().quote_settings.find_one({"_id": ws}) or {}
-                    attachments.append((f"{inv['number']}.pdf", invoice_pdf.render(inv, b, qs, await accent_for(ws)), "application/pdf"))
+                    attachments.append((f"{inv['number']}.pdf", await invoice_pdf.pdf_for(inv), "application/pdf"))
             except Exception as e:  # noqa: BLE001  the reminder still goes, without the PDF
                 log.warning("invoice PDF for follow-up failed: %s", e)
         result = await mailer.send(owner=owner, to=due["email"], subject=msg["subject"], text=msg["text"], kind=f"followup_{kind}",
