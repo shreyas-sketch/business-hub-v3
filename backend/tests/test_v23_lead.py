@@ -287,3 +287,27 @@ async def test_a_knowledge_hub_change_rewrites_the_website_the_same_way(client):
     site = await db().sites.find_one({"owner_id": ws})
     assert site["built_from"] == "answers" and "young couples" in site["content"]["subheadline"].lower()
     assert "surprise costs" in site["content"]["subheadline"].lower()       # still written from the answers
+
+
+async def test_no_business_yet_the_website_step_makes_it_from_the_name_and_the_answers(client):
+    """An admin number skips onboarding: its website step asks the name and city too, and builds the business from them."""
+    from tests.conftest import new_owner
+    o = await new_owner("9811000099", name="Owner Test")
+    v = (await o.get("/api/inputs")).json()
+    assert v["business"] == {"name": "", "city": "", "complete": False}
+    answers = {"about": "Forecasting of stocks", "offers": "Stock forecasts, Weekly market report", "audience": "Corporate employees",
+               "pains": "Can't tell if a stock will go up or down", "has_website": False, "website_url": ""}
+    r = await o.put("/api/inputs", json=answers)
+    assert r.status_code == 400 and "business name" in r.json()["detail"]
+    r = await o.put("/api/inputs", json={**answers, "business_name": "Giant Analytics", "city": "Mumbai"})
+    assert r.status_code == 200, r.text
+    assert r.json()["business"] == {"name": "Giant Analytics", "city": "Mumbai", "complete": True}
+    b = await db().businesses.find_one({"owner_id": await owner_id(o)})
+    assert b["industry"] == "Forecasting of stocks" and [x["name"] for x in b["offers"]] == ["Stock forecasts", "Weekly market report"]
+    assert b["ideal_customer"] == "Corporate employees"
+    r = await o.post("/api/inputs/website/build", json={"source": "answers"})
+    assert r.status_code == 200, r.text
+    # a business that has its own details keeps them
+    await o.put("/api/inputs", json={"business_name": "Other Name", "about": "Something else entirely"})
+    b = await db().businesses.find_one({"owner_id": await owner_id(o)})
+    assert b["name"] == "Giant Analytics" and b["industry"] == "Forecasting of stocks"
