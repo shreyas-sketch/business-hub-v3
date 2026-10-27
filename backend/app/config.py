@@ -77,6 +77,13 @@ class Settings:
     ai_cost_out_per_m: float = _float("AI_COST_INR_PER_M_OUTPUT", 425.0)
     ai_concurrency: int = _int("AI_CONCURRENCY", 32)        # AI calls in flight at once, per server process; the rest wait their turn
     ai_retries: int = _int("AI_RETRIES", 2)                 # a "too many requests" / "overloaded" answer is tried again this many times
+    # The engine pool: more keys for the same engine (ANTHROPIC_API_KEYS=k2,k3 — counts only if each key is on its own account,
+    # since a provider's limits are per account, not per key) and backup engines tried when the main one is busy or down
+    # (AI_FALLBACK=gemini,openai; "gemini:gemini-2.5-pro" picks the model). Each uses its *_API_KEY(S).
+    anthropic_api_keys: str = os.getenv("ANTHROPIC_API_KEYS", "")
+    gemini_api_keys: str = os.getenv("GEMINI_API_KEYS", "")
+    openai_api_keys: str = os.getenv("OPENAI_API_KEYS", "")
+    ai_fallback: str = os.getenv("AI_FALLBACK", "").strip().lower()
 
     # Messaging: the hub's own WhatsApp number, through a WhatsApp tool (v2.3: any of aisensy | wati | interakt | meta; aisensy
     # is the default, so an existing setup changes nothing), with SMS fallback via MSG91 for login codes. Empty = development

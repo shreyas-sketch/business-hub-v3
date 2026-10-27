@@ -1,10 +1,13 @@
 """Photos on owners' websites: the owner's own uploads first, then stock photos from Pexels chosen from the AI's search
 terms, else the website's designed artwork. Stock photos are hot-linked from Pexels (as their licence allows) with credit.
 
-Two Pexels searches per website at most, cached for a week, so a full workshop room stays inside the free limit."""
+Two Pexels searches per website at most, cached for a week. A Pexels key allows 200 searches an hour by default, which a
+full workshop room opening its new websites at once can use up: then searches pause until Pexels' hour resets, and websites
+are left unmarked so they get their photos on a later visit instead of going a day without."""
 import asyncio
 import logging
 import re
+import time
 from datetime import timedelta
 
 import httpx
@@ -18,6 +21,7 @@ GALLERY_MAX = 6
 UPLOADS_MAX = 8
 UPLOAD_BYTES = 3 * 1024 * 1024
 _running: set[str] = set()
+_paused = {"until": 0.0}   # time.time() when Pexels takes searches again, after it said "too many requests"
 
 
 def image_type(data: bytes) -> str | None:
@@ -42,35 +46,48 @@ def queries_for(content: dict, business: dict) -> list[str]:
     return qs[:2]
 
 
-async def _search(query: str, n: int) -> list[dict]:
+async def _search(query: str, n: int) -> list[dict] | None:
+    """The photos for a query; [] when Pexels found none; None when the search couldn't be made (worth trying again later)."""
     key = query.lower().strip()
     cached = await db().photo_cache.find_one({"_id": key})
     if cached and cached["at"] > now() - timedelta(days=7):
         return cached["photos"]
+    if time.time() < _paused["until"]:
+        return None
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             r = await client.get(PEXELS_URL, headers={"Authorization": settings.pexels_api_key},
                                  params={"query": query, "per_page": n, "orientation": "landscape"})
+        if r.status_code == 429 or r.headers.get("x-ratelimit-remaining") == "0":
+            try:
+                reset = float(r.headers.get("x-ratelimit-reset", ""))
+            except ValueError:
+                reset = 0.0
+            _paused["until"] = reset if time.time() < reset < time.time() + 3600 else time.time() + 600
+            log.warning("Pexels hourly limit reached: stock photo searches paused for %d s", _paused["until"] - time.time())
         if r.status_code != 200:
             log.warning("Pexels search %r failed: %s %s", query, r.status_code, r.text[:200])
-            return []
+            return None
         photos = [{"kind": "stock", "src": p["src"].get("large2x") or p["src"].get("large"), "thumb": p["src"].get("large") or p["src"].get("medium"),
                    "alt": (p.get("alt") or query)[:160], "credit": (p.get("photographer") or "Pexels")[:80],
                    "credit_url": p.get("url") or "https://www.pexels.com", "id": f"pexels-{p.get('id')}"}
                   for p in r.json().get("photos", []) if (p.get("src") or {}).get("large")]
     except (httpx.HTTPError, ValueError, KeyError, TypeError) as e:
         log.warning("Pexels search %r error: %s", query, type(e).__name__)
-        return []
+        return None
     await db().photo_cache.update_one({"_id": key}, {"$set": {"photos": photos, "at": now()}}, upsert=True)
     return photos
 
 
 async def stock_for(content: dict, business: dict) -> dict:
-    """{"hero", "gallery", "offers"} from at most two searches. Empty when no key or nothing was found."""
+    """{"hero", "gallery", "offers"} from at most two searches. Empty when no key or nothing was found; None when a search
+    couldn't be made, so the website is tried again later."""
     if not settings.pexels_api_key:
         return {}
     qs = queries_for(content, business)
     results = await asyncio.gather(*[_search(q, 12 if i == 0 else 8) for i, q in enumerate(qs)])
+    if any(batch is None for batch in results):
+        return None
     pool, seen = [], set()
     for batch in results:
         for p in batch:
@@ -94,8 +111,13 @@ def merge(current: dict | None, stock: dict) -> dict:
     return {"hero": hero, "gallery": gallery, "offers": stock.get("offers", {}), "stock_checked_at": now()}
 
 
-async def refresh_stock(site: dict, business: dict) -> dict:
-    photos = merge(site.get("photos"), await stock_for(site.get("content", {}), business))
+async def refresh_stock(site: dict, business: dict) -> dict | None:
+    """The site's new photos; None when Pexels couldn't be asked just now (the site is left as it was, unmarked, so the next
+    visit tries again)."""
+    stock = await stock_for(site.get("content", {}), business)
+    if stock is None:
+        return None
+    photos = merge(site.get("photos"), stock)
     await db().sites.update_one({"_id": site["_id"]}, {"$set": {"photos": photos}})
     return photos
 

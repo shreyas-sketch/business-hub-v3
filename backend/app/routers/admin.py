@@ -174,6 +174,8 @@ async def ai_check():
     model = settings.ai_model or provider.DEFAULT_MODEL.get(settings.ai_provider, "")
     out = {"provider": settings.ai_provider, "model": model, "effort": settings.ai_effort, "key_set": bool(
         {"anthropic": settings.anthropic_api_key, "gemini": settings.gemini_api_key, "openai": settings.openai_api_key}.get(settings.ai_provider, "x"))}
+    if settings.ai_provider != "mock":
+        out["engines"] = [e.label for e in provider.engines()]   # the main engine's keys, then the backups (AI_FALLBACK)
     last = await db().config.find_one({"_id": "ai_last_failure"})
     if last:
         out["last_failure"] = {"at": last["at"], "kind": last["kind"], "error": last["error"], "fix": provider.explain(last["error"])}
@@ -184,7 +186,7 @@ async def ai_check():
         _, usage = await provider.complete("You check that the line works.", 'Reply with {"ok": true}.', lambda: {"ok": True}, 50)
     except provider.AIError as e:
         return {**out, "ok": False, "error": str(e)[:300], "fix": provider.explain(str(e))}
-    return {**out, "ok": True, "seconds": round(time.monotonic() - t, 1), "tokens": usage.input_tokens + usage.output_tokens}
+    return {**out, "ok": True, "seconds": round(time.monotonic() - t, 1), "tokens": usage.input_tokens + usage.output_tokens, "answered_by": usage.model}
 
 
 @router.get("/cohorts")
