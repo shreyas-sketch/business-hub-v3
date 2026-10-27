@@ -106,6 +106,16 @@ if (DIST / "assets").exists():
     app.mount("/assets", StaticFiles(directory=DIST / "assets"), name="assets")
 
 
+@app.get("/membership", include_in_schema=False)
+@app.get("/membership/", include_in_schema=False)
+async def membership_page():
+    """The Membership sales and checkout page: a standalone page (frontend/public/membership.html) that pays on Razorpay links."""
+    page = DIST / "membership.html"
+    if page.exists():
+        return FileResponse(page, headers={"Cache-Control": "no-cache"})
+    return JSONResponse({"detail": "Frontend not built. Run: cd frontend && npm install && npm run build"}, status_code=503)
+
+
 @app.get("/{path:path}", include_in_schema=False)
 async def spa(path: str):
     if path.startswith("api/"):
