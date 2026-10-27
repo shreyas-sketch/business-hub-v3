@@ -1,8 +1,8 @@
 """
 Engine Audit (v2.3): the 4-3-2-1 audit, done on the hub — the Day 1 activity of the 3-day "your time back" event.
 
-The owner checks their business against the 6 engines. Each engine's demo features become accomplishment statements
-("My website brings me inquiries every week"). For each one the owner taps Have it, Missing or Not sure. For a gap they
+The owner checks their business against the 6 engines: the 14 processes of the AI Advantage Day 1 audit ("A website that
+brings you inquiries every week, without you chasing anyone"). For each one the owner taps Have it, Missing or Not sure. For a gap they
 can say roughly what it costs a month in rupees and how many hours a week it takes from them or their team, and they see
 straight away which OwnerDesk feature fixes it.
 
@@ -14,7 +14,8 @@ Every figure is labelled "Estimated from your own numbers." Nothing here calls t
 
 Items follow the feature registry: an item whose feature is switched off (or that the admin switches off) drops out.
 
-config {_id "engine_audit", items {key: {statement, hint_cost, hint_hours, rate, hours_rate, on}}, cap_pct, updated_at}
+config {_id "engine_audit", items_day1 {key: {statement, hint_cost, hint_hours, rate, hours_rate, on}}, cap_pct, updated_at}
+       (items: the admin's edits to the 16 statements used before the Day 1 audit's 14; no longer read)
 engine_audits {_id, owner_id, answers [{item_key, engine, feature, status, monthly_cost, hours_week, cost_unsure,
                hours_unsure, growth_unlocked, hours_back}], totals {...}, revenue {month, source}, completed_at, by}
 engine_audit_drafts {_id owner_id, answers {key: {...}}, revenue, updated_at}
@@ -33,49 +34,47 @@ DEFAULT_RATE = 0.5
 MAX_COST = 1e9          # ₹ a month for one gap
 MAX_HOURS = 1000        # hours a week (a whole team's)
 
-# (key, engine, statement, feature that fixes it, hint for the ₹ question, hint for the hours question)
+# (key, engine, statement, feature that fixes it, hint for the ₹ question, hint for the hours question): the 14 processes of
+# the AI Advantage Day 1 audit, in its order, with its words
 DEFAULT_ITEMS = [
-    ("lead_website", "lead", "My website brings me inquiries every week", "website",
-     "Inquiries you miss a month × your average order", "Time spent sending details and photos of your work by hand"),
-    ("lead_magnet", "lead", "I have a free guide or resource that captures leads", "lead_magnet",
-     "Leads you could collect a month × your close rate × your average order", "Time spent finding new people to talk to"),
-    ("sales_levers", "sales", "I know which lever grows my revenue, and I have a plan for each", "revenue_levers",
-     "Growth you're leaving on the table a month", "Time spent on ideas that don't move sales"),
-    ("sales_leads", "sales", "I have more than one steady way to get new leads", "lead_ideas",
-     "Sales a month you'd make from one more steady lead source", "Time spent chasing leads one by one"),
-    ("sales_invoicing", "sales", "Quotations and invoices go out the same day, without manual work", "quotations",
-     "Staff hours a month × hourly cost, plus payments delayed by late invoices", "Time spent typing quotations and invoices"),
-    ("conv_inquiries", "conversion", "Every inquiry, from every channel, lands in one place and gets a reply", "inquiry_desk",
-     "Inquiries a month that never get a reply × your close rate × your average order",
-     "Time spent searching WhatsApp, email and calls for inquiries"),
-    ("conv_pipeline", "conversion", "I can see every deal, its stage and its value", "pipeline",
-     "Deals a month lost to forgotten follow-ups × your average order", "Time spent asking the team where each deal stands"),
-    ("ops_dashboard", "operations", "I can see my whole business on one screen", "smart_dashboard",
-     "Money lost to decisions made late because the numbers weren't in front of you",
-     "Time spent collecting numbers from people and files"),
-    ("ops_payments", "operations", "Overdue payments are followed up without me chasing", "money_owed",
-     "Money stuck overdue a month (the interest on it, plus your time)", "Time spent calling and messaging for payments"),
-    ("ops_compliance", "operations", "I never miss a filing, renewal or licence date", "compliance_calendar",
-     "Penalties and late fees in a typical year ÷ 12", "Time spent tracking dates and following up with your CA"),
-    ("ops_sops", "operations", "Key processes are written down, so work doesn't depend on me", "sop_library",
+    ("lead_website", "lead", "A website that brings you inquiries every week, without you chasing anyone", "website",
+     "Inquiries you miss a month × your average order", "Hours spent explaining your business and sending details again and again"),
+    ("lead_magnet", "lead", "A free guide or checklist that collects contacts of people interested in what you sell", "lead_magnet",
+     "Leads you could collect a month × your close rate × your average order", "Hours spent finding new people to talk to"),
+    ("sales_invoicing", "sales", "Quotations and invoices that go out the same day, without you sitting to make them", "quotations",
+     "Staff hours a month × hourly cost, plus payments delayed by late invoices", "Hours spent making, checking and resending quotes and bills"),
+    ("sales_levers", "sales", "A clear plan to grow revenue: more customers, bigger orders, more repeat buying", "revenue_levers",
+     "Growth you're leaving on the table a month", "Hours spent on growth ideas that go nowhere"),
+    ("conv_inquiries", "conversion", "Every inquiry, from WhatsApp, email, calls and website, in one place and answered fast",
+     "inquiry_desk", "Inquiries a month that never get a reply × your close rate × your average order",
+     "Hours spent searching chats and replying late"),
+    ("conv_pipeline", "conversion", "Every lead tracked stage by stage, so none is forgotten", "pipeline",
+     "Deals a month lost to forgotten follow-ups × your average order", "Hours spent remembering who to call back"),
+    ("conv_deal_value", "conversion", "You know exactly how much money is sitting in open deals right now", "crm",
+     "Deals a month that slip because nobody was watching them × your average order", "Hours spent asking your team for updates"),
+    ("ops_compliance", "operations", "Every GST, TDS, licence and renewal date tracked, and reminded before it's due",
+     "compliance_calendar", "Penalties and late fees in a typical year ÷ 12", "Hours spent chasing your CA and fixing late filings"),
+    ("ops_sops", "operations", "Your key processes written down, so your team doesn't need to ask you", "sop_library",
      "Your hours a month spent explaining and fixing mistakes × what an hour of your time is worth",
-     "Time spent explaining the same work again"),
-    ("brand_kit", "brand", "My brand message and look are the same everywhere", "brand_kit",
-     "Business lost to looking smaller or less trustworthy than competitors", "Time spent redoing designs and rewriting messages"),
-    ("brand_social", "brand", "I post on social media regularly", "social_media",
+     "Hours spent answering the same questions"),
+    ("ops_payments", "operations", "Pending payments followed up on time, without you chasing", "money_owed",
+     "Money stuck overdue a month (the interest on it, plus your time)", "Hours spent calling customers for money"),
+    ("brand_kit", "brand", "One brand message and voice, the same on your website, WhatsApp and sales calls", "brand_kit",
+     "Business lost to looking smaller or less trustworthy than competitors", "Hours spent rewriting how you describe your business"),
+    ("brand_social", "brand", "Posting on social media every week, with content ready in advance", "social_media",
      "Inquiries a month you'd get from regular posting × your close rate × your average order",
-     "Time spent making posts, or deciding what to post"),
-    ("brand_brochure", "brand", "I have a brochure I can send to any prospect", "brochures",
-     "Deals a month where a prospect wanted something to show their boss or partner",
-     "Time spent explaining your business again on every call"),
-    ("data_keyperson", "data", "If a key employee leaves, their knowledge stays in the business", "key_person",
-     "What a month of disruption would cost if that person left", "Time spent covering one person's work, or answering their questions"),
-    ("data_money", "data", "I know where my money goes every month", "expenses",
-     "Spending a month you'd cut if you could see it", "Time spent sorting bills and bank statements"),
+     "Hours spent thinking what to post, or not posting at all"),
+    ("data_money", "data", "Knowing exactly where your money goes every month", "expenses",
+     "Spending a month you'd cut if you could see it", "Hours spent going through bank statements and bills"),
+    ("data_keyperson", "data", "If your most important employee left tomorrow, their know-how stays in the business", "key_person",
+     "What a month of disruption would cost if that person left", "Hours spent covering for, or depending on, one person"),
 ]
 ITEM_KEYS = [i[0] for i in DEFAULT_ITEMS]
 # features without a page of their own: where the fix lives
 FIX_PATH = {"brochures": "/brand-kit?tab=brochures"}
+# where the admin's edits are kept: a new field for the 14 Day 1 questions, so edits made to the earlier 16 don't put old
+# wording on the new questions
+ITEMS_FIELD = "items_day1"
 EDITABLE = {"statement": str, "hint_cost": str, "hint_hours": str, "rate": (int, float), "hours_rate": (int, float), "on": bool}
 
 
@@ -94,7 +93,7 @@ async def load_config(fresh: bool = False) -> dict:
         return _cache["cfg"]
     doc = await db().config.find_one({"_id": "engine_audit"}) or {}
     items = defaults()
-    for key, patch in (doc.get("items") or {}).items():
+    for key, patch in (doc.get(ITEMS_FIELD) or {}).items():
         if key not in items or not isinstance(patch, dict):
             continue
         for field, kind in EDITABLE.items():
@@ -104,7 +103,7 @@ async def load_config(fresh: bool = False) -> dict:
             items[key][field] = v
     cap = doc.get("cap_pct")
     cfg = {"items": items, "cap_pct": cap if isinstance(cap, int) and not isinstance(cap, bool) and 0 < cap <= 100 else DEFAULT_CAP_PCT,
-           "overrides": doc.get("items") or {}}
+           "overrides": doc.get(ITEMS_FIELD) or {}}
     _cache.update(at=time.monotonic(), cfg=cfg)
     return cfg
 

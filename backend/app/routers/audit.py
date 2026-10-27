@@ -188,7 +188,7 @@ async def admin_get():
 
 
 async def _write_items(items: dict, user: dict, key: str, before, after) -> None:
-    await db().config.update_one({"_id": "engine_audit"}, {"$set": {"items": items, "updated_at": now()}}, upsert=True)
+    await db().config.update_one({"_id": "engine_audit"}, {"$set": {ea.ITEMS_FIELD: items, "updated_at": now()}}, upsert=True)
     await db().config_changes.insert_one({"_id": new_id(), "at": now(), "by": user["_id"], "by_phone": user.get("phone", ""),
                                           "kind": "engine_audit", "target": key, "before": before, "after": after, "note": ""})
     ea.forget_cache()
@@ -200,7 +200,7 @@ async def admin_patch_item(key: str, body: ItemPatch, user: dict = Depends(requi
         raise HTTPException(404, "No such audit item")
     patch = body.model_dump(exclude_none=True)
     doc = await db().config.find_one({"_id": "engine_audit"}) or {}
-    items = doc.get("items") or {}
+    items = doc.get(ea.ITEMS_FIELD) or {}
     before = dict(items.get(key) or {})
     default = ea.defaults()[key]
     after = {k: v for k, v in {**before, **patch}.items() if default.get(k) != v}
@@ -217,7 +217,7 @@ async def admin_reset_item(key: str, user: dict = Depends(require_admin)):
     if key not in ea.ITEM_KEYS:
         raise HTTPException(404, "No such audit item")
     doc = await db().config.find_one({"_id": "engine_audit"}) or {}
-    items = doc.get("items") or {}
+    items = doc.get(ea.ITEMS_FIELD) or {}
     before = items.pop(key, None) or {}
     await _write_items(items, user, key, before, {})
     return await _admin_view()

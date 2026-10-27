@@ -9,9 +9,9 @@ from app.db import db, now
 from tests.conftest import new_owner
 from tests.v23_helpers import admin_client, owner_id, setup_v23, v23_member
 
-ALL_KEYS = ["lead_website", "lead_magnet", "sales_levers", "sales_leads", "sales_invoicing", "conv_inquiries", "conv_pipeline",
-            "ops_dashboard", "ops_payments", "ops_compliance", "ops_sops", "brand_kit", "brand_social", "brand_brochure",
-            "data_keyperson", "data_money"]
+# the 14 processes of the AI Advantage Day 1 audit, in its order
+ALL_KEYS = ["lead_website", "lead_magnet", "sales_invoicing", "sales_levers", "conv_inquiries", "conv_pipeline", "conv_deal_value",
+            "ops_compliance", "ops_sops", "ops_payments", "brand_kit", "brand_social", "data_money", "data_keyperson"]
 
 
 def all_have(**changes) -> dict:
@@ -36,7 +36,11 @@ async def test_items_by_engine_with_their_fixes(client):
     fixes = {i["key"]: i["fix"] for i in a["items"]}
     assert fixes["lead_website"] == {"state": "open", "label": "Website", "path": "/website"}
     assert fixes["sales_levers"]["label"] == "Revenue Multiplier" and fixes["sales_levers"]["state"] == "open"
-    assert fixes["brand_brochure"]["state"] == "open" and fixes["brand_brochure"]["path"].startswith("/brand-kit")
+    assert fixes["conv_deal_value"] == {"state": "open", "label": "CRM", "path": "/contacts"}
+    st = {i["key"]: i["statement"] for i in a["items"]}
+    assert st["lead_website"] == "A website that brings you inquiries every week, without you chasing anyone"
+    assert st["data_keyperson"] == "If your most important employee left tomorrow, their know-how stays in the business"
+    assert next(i for i in a["items"] if i["key"] == "ops_payments")["hint_hours"] == "Hours spent calling customers for money"
     assert all(i["hint_cost"] and i["hint_hours"] and i["rate"] == 0.5 and i["hours_rate"] == 0.5 for i in a["items"])
     assert a["latest"] is None and a["history"] == [] and a["note"] == "Estimated from your own numbers." and a["cap_pct"] == 50
 
@@ -59,7 +63,7 @@ async def test_totals_growth_hours_and_top_gaps_with_no_tokens(client):
     )
     res = (await m.post("/api/audit", json={"answers": answers})).json()
     t = res["totals"]
-    assert t["in_place"] == 12 and t["total"] == 16 and t["gaps"] == 4
+    assert t["in_place"] == 10 and t["total"] == 14 and t["gaps"] == 4
     assert t["cost_month"] == 155000                       # the "not sure" ₹ counts as ₹0 and is flagged
     assert t["growth_month"] == 77500 and t["hours_week"] == 23 and t["hours_back_week"] == 11.5
     assert t["unsure_amounts"] == 1 and not t["capped"]
@@ -68,7 +72,7 @@ async def test_totals_growth_hours_and_top_gaps_with_no_tokens(client):
     assert rows["ops_payments"]["growth_unlocked"] == 45000 and rows["ops_payments"]["hours_back"] == 3
     assert res["top_gaps"] == ["ops_payments", "lead_magnet", "ops_sops"]
     ops = next(e for e in res["engines"] if e["key"] == "operations")
-    assert ops["in_place"] == 2 and ops["total"] == 4 and ops["cost_month"] == 115000 and ops["hours_week"] == 16
+    assert ops["in_place"] == 1 and ops["total"] == 3 and ops["cost_month"] == 115000 and ops["hours_week"] == 16
     assert res["change"] is None and res["note"] == "Estimated from your own numbers."
     assert (await m.get("/api/me")).json()["runs"]["used"] == before          # 0 AI tokens
 
@@ -127,9 +131,9 @@ async def test_an_item_drops_out_when_its_feature_is_switched_off(client):
     adm = await admin_client()
     assert (await adm.patch("/api/admin/config/features/social_media", json={"on": False})).status_code == 200
     keys = [i["key"] for i in (await m.get("/api/audit")).json()["items"]]
-    assert "brand_social" not in keys and len(keys) == 15
+    assert "brand_social" not in keys and len(keys) == 13
     res = (await m.post("/api/audit", json={"answers": {k: {"status": "have"} for k in keys}})).json()
-    assert res["totals"]["total"] == 15
+    assert res["totals"]["total"] == 13
 
 
 async def test_event_day_shows_when_a_fix_opens(client):
@@ -145,15 +149,14 @@ async def test_event_day_shows_when_a_fix_opens(client):
     assert fx["lead_website"]["state"] == "open" and fx["sales_invoicing"]["state"] == "open"
     assert fx["conv_inquiries"] == {"state": "day", "label": "Inquiries", "path": "/inquiries", "opens_day": 2}
     assert fx["data_money"]["state"] == "day" and fx["data_money"]["opens_day"] == 3
-    assert fx["ops_dashboard"]["state"] == "open"                  # the Dashboard is open from Day 1
-    assert fx["brand_brochure"]["state"] == "plan"                 # brochures open once the member pays
+    assert fx["conv_deal_value"]["state"] == "day" and fx["conv_deal_value"]["opens_day"] == 2
 
 
 async def test_admin_edits_items_rates_and_the_cap(client):
     m = await v23_member("9811000010")
     adm = await admin_client()
     view = (await adm.get("/api/admin/audit")).json()
-    assert len(view["items"]) == 16 and view["cap_pct"] == 50 and view["stats"]["audits"] == 0
+    assert len(view["items"]) == 14 and view["cap_pct"] == 50 and view["stats"]["audits"] == 0
     r = await adm.put("/api/admin/audit/items/lead_magnet", json={"statement": "A free guide on my website collects leads every week",
                                                                    "rate": 0.25, "hours_rate": 1})
     assert r.status_code == 200
@@ -177,3 +180,14 @@ async def test_admin_edits_items_rates_and_the_cap(client):
     item = next(i for i in r["items"] if i["key"] == "lead_magnet")
     assert not item["changed"] and item["rate"] == 0.5 and r["stats"]["audits"] == 1 and r["stats"]["owners"] == 1
     assert (await m.get("/api/admin/audit")).status_code == 403
+
+
+async def test_edits_made_to_the_earlier_questions_dont_reword_the_day1_ones(client):
+    """Admin edits saved for the 16 statements used before (config "items") are not read: the 14 keep their own words."""
+    m = await v23_member("9811000012")
+    from app import engine_audit as ea
+    await db().config.update_one({"_id": "engine_audit"}, {"$set": {"items": {"lead_website": {"statement": "My website brings me inquiries every week"}}}},
+                                 upsert=True)
+    ea.forget_cache()
+    item = next(i for i in (await m.get("/api/audit")).json()["items"] if i["key"] == "lead_website")
+    assert item["statement"] == "A website that brings you inquiries every week, without you chasing anyone"
