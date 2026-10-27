@@ -45,6 +45,10 @@ class InputsIn(BaseModel):
     offers: str | None = Field(default=None, max_length=si.MAX_LEN["offers"])
     audience: str | None = Field(default=None, max_length=si.MAX_LEN["audience"])
     pains: str | None = Field(default=None, max_length=si.MAX_LEN["pains"])
+    # an owner who reached the website step without a business (an admin number skips onboarding): its name and city, so the
+    # business can be made from these and the 4 answers
+    business_name: str | None = Field(default=None, min_length=2, max_length=80)
+    city: str | None = Field(default=None, max_length=80)
 
     @field_validator("website_url")
     @classmethod
@@ -75,7 +79,28 @@ async def inputs_view(ws: str, owner: dict) -> dict:
                 "error": doc.get("error"), "matches": doc.get("url") == inp["competitor_url"],
                 "summary": doc.get("summary") if doc.get("status") == "ok" else None}
     return {"inputs": inp, "questions": si.QUESTIONS, "hints": si.HINTS, "competitor": comp,
-            "can_read_competitor": plans.has(owner, "competitor_watch"), "answered": si.answered(inp)}
+            "can_read_competitor": plans.has(owner, "competitor_watch"), "answered": si.answered(inp),
+            # no business yet, or no name or description: the website step asks for the name and city too
+            "business": {"name": b.get("name", ""), "city": b.get("city", ""), "complete": bool(b.get("name") and b.get("industry"))}}
+
+
+def _business_from_answers(b: dict, body: "InputsIn") -> dict:
+    """The fields a missing or half-made business gets from the website step: its name and city as typed, what it does from
+    "What is your business about?", what it sells and who for from the other answers. Nothing the owner already has is
+    overwritten."""
+    out: dict = {}
+    if body.business_name and not b.get("name"):
+        out["name"] = body.business_name.strip()
+    if body.city and not b.get("city"):
+        out["city"] = body.city.strip()
+    if body.about and not b.get("industry"):
+        out["industry"] = body.about.strip().split("\n")[0][:200]
+    if body.offers and not b.get("offers"):
+        names = [x.strip(" .-•") for x in re.split(r"[,;\n]", body.offers) if x.strip(" .-•")][:12]
+        out["offers"] = [{"name": n[:120], "price": "", "unit": ""} for n in names]
+    if body.audience and not b.get("ideal_customer"):
+        out["ideal_customer"] = body.audience.strip()[:300]
+    return out
 
 
 @router.get("")
@@ -85,11 +110,17 @@ async def get_inputs(ctx: Ctx = Depends(owner_ctx)):
 
 @router.put("")
 async def save_inputs(body: InputsIn, ctx: Ctx = Depends(owner_ctx)):
-    b = await db().businesses.find_one({"owner_id": ctx.ws})
-    if not b:
-        raise HTTPException(400, "Tell us about your business first")
+    b = await db().businesses.find_one({"owner_id": ctx.ws}) or {}
+    made = _business_from_answers(b, body)
+    if not (b.get("name") or made.get("name")):
+        raise HTTPException(400, "Type your business name first")
+    if made:
+        await db().businesses.update_one({"owner_id": ctx.ws}, {"$set": {**made, "updated_at": now()},
+                                                                "$setOnInsert": {"_id": new_id(), "owner_id": ctx.ws, "created_at": now()}},
+                                         upsert=True)
+        b = await db().businesses.find_one({"owner_id": ctx.ws})
     patch = {f"inputs.{k}": (re.sub(r"[ \t]+", " ", v).strip() if isinstance(v, str) else v)
-             for k, v in body.model_dump(exclude_none=True).items()}
+             for k, v in body.model_dump(exclude_none=True, exclude={"business_name", "city"}).items()}
     if body.website_url and body.has_website is None:
         patch["inputs.has_website"] = True
     if any(k in body.model_fields_set and getattr(body, k) is not None for k in si.QUESTIONS):

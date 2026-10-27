@@ -139,19 +139,22 @@ function Builder({ onBuilt }) {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [fromHub, setFromHub] = useState(false);
+  const [biz, setBiz] = useState({ name: "", city: "" });   // only when the business isn't set up yet (an admin skips onboarding)
   useEffect(() => {
     api("/inputs").then((v) => {
-      setD(v); setSite(v.inputs.website_url || ""); setRival(v.inputs.competitor_url || ""); setAns(answersOf(v.inputs));
+      setD(v); setBiz({ name: v.business?.name || "", city: v.business?.city || "" }); setSite(v.inputs.website_url || ""); setRival(v.inputs.competitor_url || ""); setAns(answersOf(v.inputs));
       setWay(v.inputs.has_website === false ? "answers" : v.inputs.website_url ? "website" : null);
     }).catch((e) => setErr(e.message));
   }, []);
   if (!d) return err ? <FormError msg={err} /> : null;
   const noSite = d.inputs.has_website === false;
+  const needBiz = d.business && !d.business.complete;
   const firstRead = rival.trim() && !(d.competitor && d.competitor.matches && d.competitor.status === "ok");
   const build = async () => {
     setBusy(true); setErr("");
     try {
       const body = { competitors: rival.trim() ? [rival.trim()] : [] };
+      if (needBiz) Object.assign(body, { business_name: biz.name.trim(), city: biz.city.trim(), about: ans.about || undefined });
       if (way === "website") Object.assign(body, { website_url: site.trim(), has_website: true });
       else Object.assign(body, { website_url: "", has_website: false, ...ans });
       await api("/inputs", { method: "PUT", body });
@@ -164,7 +167,7 @@ function Builder({ onBuilt }) {
     try { await api("/site/generate", { method: "POST" }); await refresh(); onBuilt(); }
     catch (e) { if (!e.handled) setErr(e.message); } finally { setFromHub(false); }
   };
-  const ready = way === "website" ? site.trim().length > 3 : Q_KEYS.every((k) => (ans[k] || "").trim().length > 1);
+  const ready = (!needBiz || (biz.name.trim().length > 1 && (way !== "website" || (ans.about || "").trim().length > 2))) && (way === "website" ? site.trim().length > 3 : Q_KEYS.every((k) => (ans[k] || "").trim().length > 1));
   return (
     <div className="stack">
       {noSite && way === "answers" ? (
@@ -182,6 +185,17 @@ function Builder({ onBuilt }) {
       )}
       {way && (
         <div className="panel">
+          {needBiz && (
+            <div className="grid2">
+              <Field label="Your business name"><input className="input" maxLength={80} value={biz.name} onChange={(e) => setBiz({ ...biz, name: e.target.value })} placeholder="Riya Tiffins" /></Field>
+              <Field label="City"><input className="input" maxLength={80} value={biz.city} onChange={(e) => setBiz({ ...biz, city: e.target.value })} placeholder="Pune" /></Field>
+            </div>
+          )}
+          {needBiz && way === "website" && (
+            <Field label="What does your business do?" hint="One line, the way you'd say it to a customer.">
+              <input className="input" maxLength={400} value={ans.about || ""} onChange={(e) => setAns({ ...ans, about: e.target.value })} />
+            </Field>
+          )}
           {way === "website" && (
             <Field label="Your website" hint="We read your home, about, services and contact pages.">
               <input className="input" inputMode="url" placeholder="www.yourbusiness.in" value={site} onChange={(e) => setSite(e.target.value)} />
@@ -195,7 +209,7 @@ function Builder({ onBuilt }) {
           <FormError msg={err} />
           <div className="row">
             <button className="btn primary ai" disabled={!ready || busy} onClick={build}>{busy ? "Building your website…" : "Build my website"}</button>
-            <span className="small muted">{way === "answers" && !ready ? "Answer all 4 questions to build it. " : ""}Uses 1 AI token{firstRead ? " (plus 1 to read your competitor's website the first time)" : ""}. Takes about a minute. Nothing goes live until you publish.</span>
+            <span className="small muted">{needBiz && biz.name.trim().length < 2 ? "Type your business name. " : way === "answers" && !ready ? "Answer all 4 questions to build it. " : ""}Uses 1 AI token{firstRead ? " (plus 1 to read your competitor's website the first time)" : ""}. Takes about a minute. Nothing goes live until you publish.</span>
           </div>
         </div>
       )}
