@@ -5,13 +5,15 @@ import { Busy, FormError, Sheet, Stat } from "../ui.jsx";
 import { Loading } from "../v2.jsx";
 import "./audit.css";
 
-/* Engine Audit (v2.3): the Day 1 activity. Have it / Missing / Not sure for each engine's accomplishments; for a gap, roughly
+/* Engine Audit (v2.3): the Day 1 activity. Have it or Missing for each of the 14 processes; for a gap, roughly
    what it costs a month and the hours it takes a week. Totals add up live, here on the phone (the server does the same sums
    when the audit is saved). 0 tokens. */
 
 const fmt = (n) => "₹" + new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(Math.round(n || 0));
 const hrs = (n) => { const v = Math.round((n || 0) * 10) / 10; return `${v}`; };
-const CHOICES = [["have", "Have it"], ["missing", "Missing"], ["unsure", "Not sure"]];
+const CHOICES = [["have", "Have it"], ["missing", "Missing"]];
+// an audit or draft saved when there was a "Not sure" answer: read as Missing
+const statusOf = (s) => (s === "unsure" ? "missing" : s);
 const NOTE = "Estimated from your own numbers.";
 
 function num(v) { const x = Number(v); return Number.isFinite(x) && x > 0 ? x : 0; }
@@ -20,11 +22,10 @@ function num(v) { const x = Number(v); return Number.isFinite(x) && x > 0 ? x : 
 export function compute(items, answers, revenueMonth, capPct) {
   const rows = items.map((it) => {
     const a = answers[it.key] || {};
-    const gap = a.status === "missing" || a.status === "unsure";
-    const cost = gap && !a.cost_unsure ? Math.min(num(a.monthly_cost), 1e9) : 0;
-    const hours = gap && !a.hours_unsure ? Math.min(num(a.hours_week), 1000) : 0;
-    return { key: it.key, engine: it.engine, status: a.status || null, cost, hours, growth: cost * it.rate, back: hours * it.hours_rate,
-             unsure: gap && (a.cost_unsure || a.hours_unsure) };
+    const gap = a.status === "missing";
+    const cost = gap ? Math.min(num(a.monthly_cost), 1e9) : 0;
+    const hours = gap ? Math.min(num(a.hours_week), 1000) : 0;
+    return { key: it.key, engine: it.engine, status: a.status || null, cost, hours, growth: cost * it.rate, back: hours * it.hours_rate };
   });
   const growthRaw = rows.reduce((s, r) => s + r.growth, 0);
   const cap = revenueMonth > 0 ? Math.round(revenueMonth * capPct / 100) : null;
@@ -74,7 +75,7 @@ function Totals({ t, year, setYear, capPct }) {
 
 function Item({ it, a, onChange }) {
   const set = (patch) => onChange({ ...a, ...patch });
-  const gap = a.status === "missing" || a.status === "unsure";
+  const gap = a.status === "missing";
   return (
     <div className={`au-item ${a.status ? `is-${a.status}` : ""}`}>
       <p className="au-st" id={`au-${it.key}`}>{it.statement}</p>
@@ -89,21 +90,17 @@ function Item({ it, a, onChange }) {
             <span>Roughly how much is this costing you a month?</span>
             <div className="au-in">
               <span className="au-pre">₹</span>
-              <input className="input" inputMode="numeric" placeholder="e.g. 25000" disabled={a.cost_unsure}
-                value={a.cost_unsure ? "" : (a.monthly_cost ?? "")}
+              <input className="input" inputMode="numeric" placeholder="e.g. 25000" value={a.monthly_cost ?? ""}
                 onChange={(e) => set({ monthly_cost: e.target.value.replace(/[^\d.]/g, "") })} aria-label="Rupees a month" />
-              <label className="au-ns"><input type="checkbox" checked={!!a.cost_unsure} onChange={(e) => set({ cost_unsure: e.target.checked })} />Not sure</label>
             </div>
             <small className="muted">{it.hint_cost}</small>
           </label>
           <label className="au-q">
             <span>Roughly how many hours a week does this take from you or your team?</span>
             <div className="au-in">
-              <input className="input" inputMode="decimal" placeholder="e.g. 5" disabled={a.hours_unsure}
-                value={a.hours_unsure ? "" : (a.hours_week ?? "")}
+              <input className="input" inputMode="decimal" placeholder="e.g. 5" value={a.hours_week ?? ""}
                 onChange={(e) => set({ hours_week: e.target.value.replace(/[^\d.]/g, "") })} aria-label="Hours a week" />
               <span className="au-post">hours</span>
-              <label className="au-ns"><input type="checkbox" checked={!!a.hours_unsure} onChange={(e) => set({ hours_unsure: e.target.checked })} />Not sure</label>
             </div>
             <small className="muted">{it.hint_hours}</small>
           </label>
@@ -118,8 +115,7 @@ function cleanAnswers(answers) {
   const out = {};
   Object.entries(answers).forEach(([k, a]) => {
     if (!a || !a.status) return;
-    out[k] = { status: a.status, cost_unsure: !!a.cost_unsure, hours_unsure: !!a.hours_unsure,
-               monthly_cost: num(a.monthly_cost) || null, hours_week: num(a.hours_week) || null };
+    out[k] = { status: statusOf(a.status), monthly_cost: num(a.monthly_cost) || null, hours_week: num(a.hours_week) || null };
   });
   return out;
 }
@@ -151,7 +147,7 @@ function Take({ data, initial, onDone, onCancel }) {
     <div className="au-take">
       <div className="panel">
         <span className="label">How it works</span>
-        <p>Tap <b>Have it</b>, <b>Missing</b> or <b>Not sure</b> for each line. For a gap, say roughly what it costs you a month and the hours
+        <p>Tap <b>Have it</b> or <b>Missing</b> for each line. For a gap, say roughly what it costs you a month and the hours
           it takes a week — a rough guess is fine. The totals add up as you go. It takes about 5 minutes and uses 0 tokens.</p>
         <label className="au-q">
           <span>Your sales in a typical month (optional)</span>
@@ -217,7 +213,7 @@ function Result({ data, audit, onRetake }) {
   const t = audit.totals;
   const fixes = Object.fromEntries(data.items.map((i) => [i.key, i.fix]));
   const statements = Object.fromEntries(audit.answers.map((r) => [r.item_key, r]));
-  const gaps = audit.answers.filter((r) => r.status === "missing" || r.status === "unsure");
+  const gaps = audit.answers.filter((r) => statusOf(r.status) === "missing");
   const c = audit.change;
   const m = year ? 12 : 1;
   const w = year ? 52 : 1;
@@ -234,7 +230,6 @@ function Result({ data, audit, onRetake }) {
       <div className="row between au-note">
         <span className="small muted">
           {NOTE} Not a promise or a guarantee.{t.capped ? ` Growth is capped at a conservative level: ${t.cap_pct}% of a month's sales (${fmt(t.cap_amount)}).` : ""}
-          {t.unsure_amounts ? ` ${t.unsure_amounts} gap${t.unsure_amounts > 1 ? "s have" : " has"} an amount you weren't sure of, counted as 0.` : ""}
         </span>
         <div className="au-toggle" role="group" aria-label="Show totals for">
           <button type="button" aria-pressed={!year} onClick={() => setYear(false)}>Month</button>
@@ -276,7 +271,7 @@ function Result({ data, audit, onRetake }) {
                 <div className="stack" style={{ gap: 6 }}>
                   <b>{r.statement}</b>
                   <span className="small muted">
-                    {r.cost_unsure ? "Cost not sure" : <><span className="money">{fmt(r.monthly_cost)}</span> a month</>} · {r.hours_unsure ? "hours not sure" : `${hrs(r.hours_week)} hours a week`}
+                    <span className="money">{fmt(r.monthly_cost)}</span> a month · {hrs(r.hours_week)} hours a week
                   </span>
                   <div><Fix fix={fixes[k]} /></div>
                 </div>
@@ -339,9 +334,10 @@ export default function Audit() {
       </Sheet>
     );
   }
-  const initial = data.draft && Object.keys(data.draft.answers || {}).length ? data.draft
+  const initial = data.draft && Object.keys(data.draft.answers || {}).length
+    ? { ...data.draft, answers: Object.fromEntries(Object.entries(data.draft.answers).map(([k, a]) => [k, { ...a, status: statusOf(a?.status) }])) }
     : data.latest ? { answers: Object.fromEntries(data.latest.answers.map((r) => [r.item_key, {
-        status: r.status, monthly_cost: r.monthly_cost || "", hours_week: r.hours_week || "", cost_unsure: r.cost_unsure, hours_unsure: r.hours_unsure }])),
+        status: statusOf(r.status), monthly_cost: r.monthly_cost || "", hours_week: r.hours_week || "" }])),
         revenue_month: null }
       : { answers: {} };
   return (

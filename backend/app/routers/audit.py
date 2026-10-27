@@ -34,11 +34,9 @@ HISTORY = 12
 
 
 class Answer(BaseModel):
-    status: str | None = Field(default=None, pattern="^(have|missing|unsure)$")
+    status: str | None = Field(default=None, pattern="^(have|missing)$")
     monthly_cost: float | None = Field(default=None, ge=0, le=ea.MAX_COST)
     hours_week: float | None = Field(default=None, ge=0, le=ea.MAX_HOURS)
-    cost_unsure: bool = False
-    hours_unsure: bool = False
 
 
 class AuditIn(BaseModel):

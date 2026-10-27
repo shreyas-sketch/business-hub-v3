@@ -2,7 +2,7 @@
 Engine Audit (v2.3): the 4-3-2-1 audit, done on the hub — the Day 1 activity of the 3-day "your time back" event.
 
 The owner checks their business against the 6 engines: the 14 processes of the AI Advantage Day 1 audit ("A website that
-brings you inquiries every week, without you chasing anyone"). For each one the owner taps Have it, Missing or Not sure. For a gap they
+brings you inquiries every week, without you chasing anyone"). For each one the owner taps Have it or Missing. For a gap they
 can say roughly what it costs a month in rupees and how many hours a week it takes from them or their team, and they see
 straight away which OwnerDesk feature fixes it.
 
@@ -16,8 +16,9 @@ Items follow the feature registry: an item whose feature is switched off (or tha
 
 config {_id "engine_audit", items_day1 {key: {statement, hint_cost, hint_hours, rate, hours_rate, on}}, cap_pct, updated_at}
        (items: the admin's edits to the 16 statements used before the Day 1 audit's 14; no longer read)
-engine_audits {_id, owner_id, answers [{item_key, engine, feature, status, monthly_cost, hours_week, cost_unsure,
-               hours_unsure, growth_unlocked, hours_back}], totals {...}, revenue {month, source}, completed_at, by}
+engine_audits {_id, owner_id, answers [{item_key, engine, feature, status, monthly_cost, hours_week, growth_unlocked,
+               hours_back}], totals {...}, revenue {month, source}, completed_at, by}
+  (audits saved before "Not sure" was taken out may hold status "unsure" and cost_unsure / hours_unsure: read as Missing)
 engine_audit_drafts {_id owner_id, answers {key: {...}}, revenue, updated_at}
 """
 import io
@@ -166,21 +167,18 @@ def _num(v, top: float) -> float:
 
 
 def compute(items: list[dict], answers: dict, revenue_month: float | None, cap_pct: int) -> dict:
-    """answers: {item_key: {status: have|missing|unsure, monthly_cost, hours_week, cost_unsure, hours_unsure}}.
+    """answers: {item_key: {status: have|missing, monthly_cost, hours_week}}.
     Returns the per-item rows, per-engine totals, overall totals and the top 3 gaps. The page does the same sums live."""
     rows = []
     for it in items:
         a = answers.get(it["key"]) or {}
-        status = a.get("status") if a.get("status") in ("have", "missing", "unsure") else None
-        gap = status in ("missing", "unsure")
-        cost_unsure = bool(a.get("cost_unsure")) and gap
-        hours_unsure = bool(a.get("hours_unsure")) and gap
-        cost = 0.0 if (not gap or cost_unsure) else _num(a.get("monthly_cost"), MAX_COST)
-        hours = 0.0 if (not gap or hours_unsure) else _num(a.get("hours_week"), MAX_HOURS)
+        status = {"have": "have", "missing": "missing", "unsure": "missing"}.get(a.get("status"))   # "unsure": an older draft
+        gap = status == "missing"
+        cost = _num(a.get("monthly_cost"), MAX_COST) if gap else 0.0
+        hours = _num(a.get("hours_week"), MAX_HOURS) if gap else 0.0
         rows.append({"item_key": it["key"], "engine": it["engine"], "feature": it["feature"], "statement": it["statement"],
-                     "status": status, "monthly_cost": round(cost), "hours_week": round(hours, 1), "cost_unsure": cost_unsure,
-                     "hours_unsure": hours_unsure, "growth_unlocked": cost * float(it["rate"]),
-                     "hours_back": hours * float(it["hours_rate"])})
+                     "status": status, "monthly_cost": round(cost), "hours_week": round(hours, 1),
+                     "growth_unlocked": cost * float(it["rate"]), "hours_back": hours * float(it["hours_rate"])})
     growth_total = sum(r["growth_unlocked"] for r in rows)
     cap_amount = round(revenue_month * cap_pct / 100) if revenue_month and revenue_month > 0 else None
     capped = bool(cap_amount is not None and growth_total > cap_amount)
@@ -191,17 +189,16 @@ def compute(items: list[dict], answers: dict, revenue_month: float | None, cap_p
 
     def sums(rs: list[dict]) -> dict:
         return {"in_place": sum(1 for r in rs if r["status"] == "have"), "total": len(rs),
-                "answered": sum(1 for r in rs if r["status"]), "gaps": sum(1 for r in rs if r["status"] in ("missing", "unsure")),
+                "answered": sum(1 for r in rs if r["status"]), "gaps": sum(1 for r in rs if r["status"] == "missing"),
                 "cost_month": round(sum(r["monthly_cost"] for r in rs)), "growth_month": round(sum(r["growth_unlocked"] for r in rs)),
-                "hours_week": round(sum(r["hours_week"] for r in rs), 1), "hours_back_week": round(sum(r["hours_back"] for r in rs), 1),
-                "unsure_amounts": sum(1 for r in rs if r["cost_unsure"] or r["hours_unsure"])}
+                "hours_week": round(sum(r["hours_week"] for r in rs), 1), "hours_back_week": round(sum(r["hours_back"] for r in rs), 1)}
 
     engines = []
     for e in plans.ENGINES:
         rs = [r for r in rows if r["engine"] == e["key"]]
         if rs:
             engines.append({"key": e["key"], "label": e["label"], **sums(rs)})
-    gaps = sorted((r for r in rows if r["status"] in ("missing", "unsure")), key=lambda r: (-r["monthly_cost"], -r["hours_week"]))
+    gaps = sorted((r for r in rows if r["status"] == "missing"), key=lambda r: (-r["monthly_cost"], -r["hours_week"]))
     return {"rows": rows, "engines": engines, "totals": {**sums(rows), "capped": capped, "cap_amount": cap_amount, "cap_pct": cap_pct},
             "top_gaps": [r["item_key"] for r in gaps[:3] if r["monthly_cost"] or r["hours_week"]] or [r["item_key"] for r in gaps[:3]],
             "note": NOTE}
@@ -233,7 +230,7 @@ def hours(x: float) -> str:
     return f"{int(v)}" if v == int(v) else f"{v}"
 
 
-STATUS_WORD = {"have": "In place", "missing": "Missing", "unsure": "Not sure", None: "Not answered"}
+STATUS_WORD = {"have": "In place", "missing": "Missing", "unsure": "Missing", None: "Not answered"}   # "unsure": an older audit
 
 
 def pdf(audit: dict, business: str) -> bytes:
@@ -374,9 +371,7 @@ def pdf(audit: dict, business: str) -> bytes:
                 if r["status"] in ("missing", "unsure"):
                     c.setFillColor(HexColor(C["ivory70"]))
                     c.setFont("day1-body", 8.5)
-                    cost = "₹ not sure" if r.get("cost_unsure") else f"{inr(r['monthly_cost'])} a month"
-                    hrs = "hours not sure" if r.get("hours_unsure") else f"{hours(r['hours_week'])} hours a week"
-                    c.drawString(M, y, f"{cost} · {hrs} · Fixed by {plans.label_of(r['feature'])}"[:130])
+                    c.drawString(M, y, f"{inr(r['monthly_cost'])} a month · {hours(r['hours_week'])} hours a week · Fixed by {plans.label_of(r['feature'])}"[:130])
                     y -= 12
                 y -= 6
         c.showPage()
