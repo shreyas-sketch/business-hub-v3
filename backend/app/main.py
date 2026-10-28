@@ -14,13 +14,13 @@ from .db import connect, ensure_indexes
 from . import auto_quote, employz_import, files as files_store, mailer, razorpay_invoices  # noqa: F401  (auto_quote registers its agents)
 from .routers import (admin, admin_config, agents, auth, bankreader, billing, brandkit, cashflow, competitors, leadresponse, reputation, winback, compliance, dashboard, day1, desk, event, followups, domains, growth, hooks, hub, inquiries, gateway, kits, knowledge, leadideas, sitemagnets, membership, money,
                       expenses, gstsetaside, moneyinsights, office, onboard, program, public, recordings, rhythm, social, sopset, team, tools, workforce)
-from .routers import audit, brochures, crm, employz as employz_router, expenseai, inputs, keyperson, multiplier, onboarding as onboarding_admin, socialmedia
+from .routers import audit, brochures, crm, employz as employz_router, expenseai, inputs, keyperson, multiplier, onboarding as onboarding_admin, socialmedia, tenders
 from .sites import rewrite_to_site, slug_from_host
 
 FEATURE_ROUTERS = (kits, membership, team, billing, agents, money, office, recordings, admin_config, onboard, tools, rhythm,
                    program, desk, growth, hooks, workforce, domains, day1, knowledge, compliance, cashflow, followups, brandkit, sopset, social, leadideas, dashboard, inquiries, gateway, sitemagnets, event, expenses, moneyinsights, gstsetaside, bankreader, competitors, reputation, winback, leadresponse)
 # v2.3 (OwnerDesk): each module has `router`, and may have `admin` (admin pages) and `public` (no login) routers too
-V23_ROUTERS = (audit, crm, keyperson, brochures, socialmedia, multiplier, expenseai, inputs, onboarding_admin, employz_router)
+V23_ROUTERS = (audit, crm, keyperson, brochures, socialmedia, multiplier, expenseai, inputs, onboarding_admin, employz_router, tenders)
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
 DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"

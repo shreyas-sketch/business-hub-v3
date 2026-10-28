@@ -51,6 +51,7 @@ MENU = [
     ("market_research", "brand", "Content & company research", None),   # main's: kept on with v2.3
     ("key_person", "data", "Key-person knowledge", None),
     ("expenses", "data", "Expenses & bank statement", None),
+    ("tender_finder", "data", "Tender finder", None),       # added after the setup first ran: on by its code default on a live hub
     ("plans_billing", "account", "Plans & billing", None),
     ("connections", "account", "Connections", None),
     ("recordings", "account", "Recordings", None),

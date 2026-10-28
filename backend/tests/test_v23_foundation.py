@@ -47,7 +47,7 @@ async def test_the_setup_gives_the_engine_menu_with_only_the_agreed_features(cli
     assert by_group["Conversion engine"] == ["Inquiries", "CRM", "Pipeline & Opportunities", "Lead Response", "WhatsApp chats"]
     assert by_group["Operations engine"] == ["Dashboard", "Payment follow-up", "Compliance calendar", "GST set-aside", "SOP Writer"]
     assert by_group["Brand engine"] == ["Brand kit", "Social media", "Content & company research"]
-    assert by_group["Data engine"] == ["Key-person knowledge", "Expenses & bank statement"]
+    assert by_group["Data engine"] == ["Key-person knowledge", "Expenses & bank statement", "Tender finder"]
     assert by_group["Account"] == ["Plans & billing", "Connections", "Recordings"]
     assert not any(i["locked"] for i in items(me).values())
     # everything else is switched off, the helpers behind the pages stay on
