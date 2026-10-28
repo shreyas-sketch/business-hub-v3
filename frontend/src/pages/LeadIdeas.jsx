@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
-import { Busy, FormError, Sheet, useHub, useLoad } from "../ui.jsx";
+import { Busy, FormError, LoadError, Sheet, useHub, useLoad } from "../ui.jsx";
 import { Loading, Pill } from "../v2.jsx";
 import "./levers.css";
 
@@ -17,7 +17,7 @@ export function LeadIdeasPanel() {
   const [loaded, , loadErr] = useLoad("/levers/ideas");
   const [err, setErr] = useState("");
   useEffect(() => { if (loaded) setD(loaded); }, [loaded]);
-  if (!d) return <div className="panel">{loadErr ? <FormError msg={loadErr.message} /> : <Loading />}</div>;
+  if (!d) return <div className="panel">{loadErr ? <LoadError err={loadErr} /> : <Loading />}</div>;
   const cur = d.current;
   const sources = Object.entries(d.sources || {});
   const tierName = (feature) => me?.tiers?.[me?.feature_tiers?.[feature] || "lite"]?.name || "Membership";

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api, upload } from "../api.js";
-import { Busy, Copy, Field, FormError, Sheet, canAct, useHub, useLoad } from "../ui.jsx";
+import { Busy, Copy, Field, FormError, LoadError, Sheet, canAct, useHub, useLoad } from "../ui.jsx";
 import { Loading, Pill, Tabs } from "../v2.jsx";
 import "./brandkit.css";
 import Brochures from "./BrandBrochures.jsx";
@@ -378,7 +378,7 @@ export default function BrandKit() {
   const head = { kicker: "Brand · Brand kit", id: "BR-01", pillar: "Brand",
     title: <>One voice, one look, <em>everywhere</em>.</>,
     sub: "Your brand message for every place you speak, your colours and fonts, and ready designs for social media, WhatsApp and print." };
-  if (!kit) return <Sheet {...head}>{err ? <FormError msg={err.message} /> : <Loading />}</Sheet>;
+  if (!kit) return <Sheet {...head}>{err ? <LoadError err={err} /> : <Loading />}</Sheet>;
   return (
     <Sheet {...head} actions={kit.exists ? <a className="btn sm" href="/api/brand-kit/pdf">Download brand kit PDF</a> : null}>
       <Tabs tabs={[["messages", "Messages"], ["design", "Design"], ["designs", "Designs"], ["brochures", "Brochures"]]} value={tab} onChange={setTab} />

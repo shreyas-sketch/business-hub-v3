@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ago, api, day, rs } from "../api.js";
-import { Busy, Field, FormError, Sheet, Stat, useHub, useLoad } from "../ui.jsx";
+import { Busy, Field, FormError, LoadError, Sheet, Stat, useHub, useLoad } from "../ui.jsx";
 import { Loading, Num, Pill } from "../v2.jsx";
 import "./program.css";
 import "./levers.css";
@@ -83,7 +83,7 @@ function GrowthIdeas() {
   const [more, setMore] = useState(false);
   useEffect(() => { if (loaded) setD(loaded); }, [loaded]);
   useEffect(() => setMore(false), [lever]);
-  if (!d) return <div className="panel">{loadErr ? <FormError msg={loadErr.message} /> : <Loading />}</div>;
+  if (!d) return <div className="panel">{loadErr ? <LoadError err={loadErr} /> : <Loading />}</div>;
   const lv = d.levers.find((x) => x.key === lever) || d.levers[0];
   const write = async (key) => { setD(await api(`/multiplier/${key}`, { method: "POST" })); };
   const writeAll = async () => {

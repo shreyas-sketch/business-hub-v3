@@ -162,7 +162,7 @@ async def _numbers(ws: str, periods: list[dict]) -> tuple[dict[str, dict], list[
     blank = {"sales": 0, "invoices": 0, "gateway_invoices": 0, "credit": 0, "credit_notes": 0, "uploaded": 0, "upload_rows": 0,
              "upload_rows_no_gst": 0, "upload_rows_duplicate": 0, "bills": 0, "bills_count": 0, "bills_no_gst": 0,
              "bills_not_claimable": 0, "bills_waiting": 0, "bank_in": 0, "bank_rows": 0, "bank_accounts": 0, "bank_short": []}
-    out = {p["key"]: dict(blank) for p in periods}
+    out = {p["key"]: {**blank, "bank_short": []} for p in periods}   # its own list per month: a short statement is one month's
     capped: list[str] = []
 
     def which(d: date | None) -> dict | None:

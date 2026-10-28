@@ -397,13 +397,20 @@ async def pdf_link(q: dict) -> str:
     return f"{settings.app_url}/i/{token}"
 
 
+def needs_price(q: dict) -> bool:
+    """A quotation that adds up to ₹0 (its lines have no rates yet): nothing to send a customer until it has a price."""
+    return q.get("kind") == "quote" and float((q.get("totals") or {}).get("total") or 0) <= 0
+
+
 async def _qview(q: dict) -> dict:
-    b = await db().businesses.find_one({"owner_id": q["ws"]}, {"name": 1}) or {}
-    url = await pdf_link(q)
     from .. import razorpay_invoices
     out = public(q)
     out.pop("share_token", None)
     out["rzp"] = razorpay_invoices.view(q.get("rzp"))
+    if needs_price(q):   # no customer link, PDF link or message until it has a price
+        return {**out, "needs_price": True, "share_text": None, "pdf_url": None, "whatsapp_link": None}
+    b = await db().businesses.find_one({"owner_id": q["ws"]}, {"name": 1}) or {}
+    url = await pdf_link(q)
     text = share_text(q, b.get("name") or "us", url, razorpay_invoices.pay_url(q))
     out["share_text"] = text
     out["pdf_url"] = url
@@ -614,6 +621,8 @@ async def quote_status(qid: str, body: StatusIn, ctx: Ctx = Depends(feature("quo
     q = await db().quotes.find_one({"_id": qid, "ws": ctx.ws, "kind": "quote"})
     if not q:
         raise HTTPException(404, "Not found")
+    if body.status == "sent" and needs_price(q):
+        raise HTTPException(400, "This quotation adds up to ₹0. Press Edit and add the prices before you send it.")
     patch = {"status": body.status, "updated_at": now()}
     if body.status == "sent" and not q.get("sent_on"):
         patch["sent_on"] = today().isoformat()

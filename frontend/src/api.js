@@ -18,6 +18,9 @@ function fieldError(e) {
 }
 
 /** v2.3: owners see "AI tokens" where older server messages still say "AI tokens". */
+/** How long the AI tokens last: an event account's tokens are for the event, everyone else's for the month. */
+export const tokenSpan = (me) => (me?.event ? "for the event" : "this month");
+
 export const tokenWords = (text) => String(text || "")
   .replace(/\bAI tokens\b/g, "AI tokens").replace(/\bAI token\b/g, "AI token")
   .replace(/\bruns left\b/g, "tokens left").replace(/\bYour run was\b/g, "Your token was").replace(/\bthis month's runs\b/g, "this month's tokens")

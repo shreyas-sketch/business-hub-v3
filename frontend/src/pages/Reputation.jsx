@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { ago, api, localPhone } from "../api.js";
-import { Busy, Copy, Field, FormError, Sheet, Switch, canAct, useHub, useLoad } from "../ui.jsx";
+import { Busy, Copy, Field, FormError, LoadError, Sheet, Switch, canAct, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Pill, Tabs } from "../v2.jsx";
 import "./reputation.css";
 
@@ -326,7 +326,7 @@ function AskList({ link }) {
         <p className="small muted">The message asks for honest feedback — good or bad — with your review link. Nothing is offered in return:
           Google doesn't allow that. It opens your own WhatsApp; you press send. Nobody is suggested twice in {h?.gap_days || 90} days.</p>
       )}
-      {!h ? (err ? <FormError msg={err.message} /> : <Loading />) : !h.items.length ? (
+      {!h ? (err ? <LoadError err={err} /> : <Loading />) : !h.items.length ? (
         <p className="small muted">No recent customers to ask right now. Customers you mark won in Leads, or add in Customers, show up here.</p>
       ) : (
         <div className="rep-people">
@@ -391,7 +391,7 @@ export default function Reputation() {
   const [tab, setTab] = useState("todo");
   const [pasting, setPasting] = useState(false);
   const head = { kicker: "Scale · Reviews & reputation", id: "SC-12", pillar: "Scale" };
-  if (!d) return <Sheet {...head} title={<>Every review, <em>answered</em>.</>}>{err ? <FormError msg={err.message} /> : <Loading />}</Sheet>;
+  if (!d) return <Sheet {...head} title={<>Every review, <em>answered</em>.</>}>{err ? <LoadError err={err} /> : <Loading />}</Sheet>;
 
   const c = d.counts;
   const waiting = c.new + c.drafted;

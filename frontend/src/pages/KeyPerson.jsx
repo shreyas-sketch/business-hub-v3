@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ago, api, waLink } from "../api.js";
-import { Busy, Copy, Field, FormError, Sheet, useHub, useLoad } from "../ui.jsx";
+import { ago, api, tokenSpan, waLink } from "../api.js";
+import { Busy, Copy, Field, FormError, LoadError, Sheet, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Pill } from "../v2.jsx";
 import "./expenses.css";
 import "./data.css";
@@ -244,7 +244,7 @@ function SkillStep({ p, set }) {
 }
 
 function Person({ id, onBack, onGone }) {
-  const { refresh } = useHub();
+  const { me, refresh } = useHub();
   const [p, setP] = useState(null);
   const [err, setErr] = useState("");
   useEffect(() => { api(`/key-person/${id}`).then(setP).catch((e) => setErr(e.message)); }, [id]);
@@ -254,7 +254,7 @@ function Person({ id, onBack, onGone }) {
     <div className="stack">
       <div className="row between">
         <button className="btn sm ghost" onClick={onBack}>← Everyone</button>
-        <span className="small muted">Each AI step uses 1 token · {p.tokens_left} left this month</span>
+        <span className="small muted">Each AI step uses 1 token · {p.tokens_left} left {tokenSpan(me)}</span>
       </div>
       <div>
         <h2 style={{ margin: 0 }}>{p.name}</h2>
@@ -287,7 +287,7 @@ export default function KeyPerson() {
   if (open) return <Sheet {...head} title={title} sub={sub}><Person id={open} onBack={() => { go(null); reload(); }} onGone={() => { go(null); reload(); }} /></Sheet>;
   return (
     <Sheet {...head} title={title} sub={sub}>
-      {err && <FormError msg={err.message} />}
+      {err && <LoadError err={err} />}
       {!list ? <Loading /> : (
         <>
           {(adding || !list.people.length) ? <AddPerson onAdded={(p) => { setAdding(false); go(p.id); }} onCancel={list.people.length ? () => setAdding(false) : null} /> : (

@@ -342,7 +342,7 @@ async def _approval_status(ids: list[str]) -> dict:
     ids = [i for i in ids if i]
     if not ids:
         return {}
-    return {a["_id"]: a async for a in db().approvals.find({"_id": {"$in": ids}}, {"status": 1, "via": 1, "decided_at": 1, "text": 1, "to_phone": 1})}
+    return {a["_id"]: a async for a in db().approvals.find({"_id": {"$in": ids}}, {"status": 1, "via": 1, "decided_at": 1, "text": 1, "to_phone": 1, "opened_at": 1})}
 
 
 def _sent_at(d: dict, a: dict | None) -> datetime | None:
@@ -401,7 +401,8 @@ def _draft_view(d: dict, a: dict | None) -> dict:
     text = (a or {}).get("text") or d.get("text", "")      # the Send list may have edited it
     if d.get("approval_id"):
         status = (a or {}).get("status") or "pending"
-        wa = {"status": status, "via": (a or {}).get("via"), "link": appr.own_link({"to_phone": d.get("phone", ""), "text": text})}
+        wa = {"status": status, "via": (a or {}).get("via"), "link": appr.own_link({"to_phone": d.get("phone", ""), "text": text}),
+              "opened": bool((a or {}).get("opened_at"))}
     em = {"status": d["email_status"], "to": d.get("email", "")} if d.get("email_status") else None
     return {"id": d["_id"], "name": d["name"], "phone": d.get("phone", ""), "email": d.get("email", ""), "kind": d["kind"],
             "kind_label": winback_tasks.LABELS.get(d["kind"], ""), "text": text, "subject": d["subject"], "email_text": d["email_text"],
@@ -544,9 +545,20 @@ async def _decide(ctx: Ctx, draft_id: str, action: str) -> dict:
 
 @router.post("/win-back/{draft_id}/whatsapp")
 async def whatsapp_tap(draft_id: str, ctx: Ctx = Depends(feature("win_back", "manager"))):
-    """Tap-to-send: opens the owner's own WhatsApp with the message typed (the page opens the link in the tap itself)."""
-    out = await _decide(ctx, draft_id, "own")
+    """Tap-to-send: opens the owner's own WhatsApp with the message typed (the page opens the link in the tap itself).
+    Opened isn't sent: it stays waiting until the owner says it went (…/whatsapp-sent)."""
+    d = await _own_draft(ctx, draft_id)
+    if not d.get("approval_id"):
+        raise HTTPException(400, "This customer has no WhatsApp number.")
+    out = await appr.opened(ctx.ws, d["approval_id"], ctx.actor)
     return {"link": out["link"]}
+
+
+@router.post("/win-back/{draft_id}/whatsapp-sent")
+async def whatsapp_sent(draft_id: str, ctx: Ctx = Depends(feature("win_back", "manager"))):
+    """The owner says the message went from their own WhatsApp."""
+    await _decide(ctx, draft_id, "own")
+    return {"ok": True}
 
 
 @router.post("/win-back/{draft_id}/send")

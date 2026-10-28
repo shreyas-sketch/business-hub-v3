@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { ago, api } from "../api.js";
-import { Busy, Field, FormError, Sheet, useHub, useLoad } from "../ui.jsx";
+import { Busy, Field, FormError, LoadError, Sheet, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Pill } from "../v2.jsx";
 import "./competitors.css";
 
@@ -250,7 +250,7 @@ export default function Competitors() {
   const [checkErr, setCheckErr] = useState("");
   const reloadAll = () => { reload(); reloadPast(); };
 
-  if (!d) return <Sheet {...HEAD} title={<>Watch what your <em>competitors</em> change.</>} sub={SUB}>{err ? <FormError msg={err.message} /> : <Loading />}</Sheet>;
+  if (!d) return <Sheet {...HEAD} title={<>Watch what your <em>competitors</em> change.</>} sub={SUB}>{err ? <LoadError err={err} /> : <Loading />}</Sheet>;
 
   const { competitors, latest, google_available: google, max } = d;
   const n = latest ? latest.items.filter(changed).length : 0;

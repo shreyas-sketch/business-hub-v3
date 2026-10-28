@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
-import { Busy, Copy, Field, FormError, canAct, useHub, useLoad } from "../ui.jsx";
+import { Busy, Copy, Field, FormError, LoadError, canAct, useHub, useLoad } from "../ui.jsx";
 import { Loading, Pill } from "../v2.jsx";
 
 /* Brochures (v2.3, a Brand kit tab — paid members): a business brochure and a products & services brochure, written as text
@@ -71,7 +71,7 @@ export default function Brochures() {
   const [err, setErr] = useState("");
   useEffect(() => { if (loaded) setD(loaded); }, [loaded]);
   const canEdit = canAct(me, "owner");
-  if (!d) return <div className="panel">{loadErr ? <FormError msg={loadErr.message} /> : <Loading />}</div>;
+  if (!d) return <div className="panel">{loadErr ? <LoadError err={loadErr} /> : <Loading />}</div>;
   if (!d.open) {
     return (
       <div className="panel active">

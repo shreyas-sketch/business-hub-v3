@@ -158,6 +158,13 @@ async def send_approval(approval_id: str, ctx: Ctx = Depends(approver)):
     return {"ok": True, "approval": _approval(out["approval"])}
 
 
+@router.post("/approvals/{approval_id}/opened")
+async def opened_approval(approval_id: str, ctx: Ctx = Depends(approver)):
+    """Opened in the owner's WhatsApp: still waiting until they confirm it went (POST …/own)."""
+    out = await appr.opened(ctx.ws, approval_id, ctx.actor)
+    return {"link": out["link"], "approval": _approval(out["approval"])}
+
+
 @router.post("/approvals/{approval_id}/own")
 async def own_approval(approval_id: str, ctx: Ctx = Depends(approver)):
     out = await appr.decide(ctx.ws, approval_id, ctx.actor, "own")

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { ago, api } from "../api.js";
-import { Busy, Field, FormError, Sheet, useHub, useLoad } from "../ui.jsx";
+import { Busy, Field, FormError, LoadError, Sheet, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Pill } from "../v2.jsx";
 import "./member.css";
 
@@ -73,7 +73,7 @@ export default function MemberCall() {
   return (
     <Sheet kicker="Learn · Member call" id="MB-03" title={<>Bring your questions, <em>live</em>.</>}
       sub="Once a month, a live call for members. Send your questions before it, join on the day, and watch the recording after.">
-      {!d ? (err ? <FormError msg={err.message} /> : <Loading />) : (
+      {!d ? (err ? <LoadError err={err} /> : <Loading />) : (
         <>
           {d.upcoming.length === 0 ? <Empty>The next call will show here — you'll get a notice.</Empty>
             : <div className="stack">{d.upcoming.map((c) => <UpcomingCall key={c.id} c={c} onSent={reload} />)}</div>}

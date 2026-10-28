@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { api, rupees, setLimitHandler, setLockedHandler, localPhone } from "./api.js";
+import { api, rupees, setLimitHandler, setLockedHandler, localPhone, tokenSpan } from "./api.js";
 import { Copy, Gate, HubCtx, Logo, Modal } from "./ui.jsx";
 import { Finder, Icon, allPages, findPage, rememberPage } from "./shell.jsx";
 import Landing from "./pages/Landing.jsx";
@@ -273,7 +273,7 @@ function Shell({ me, children }) {
             <div className="me-menu" role="menu">
               <div className="who"><b>{me.user.name || name}</b><span className="small muted">{me.user.plan_name}{me.workspace.is_team ? ` · ${me.workspace.role}` : ""}</span></div>
               <div className="stack" style={{ gap: 6 }}>
-                <span className="small muted">AI tokens this month: {me.runs.left} left</span>
+                <span className="small muted">AI tokens {tokenSpan(me)}: {me.runs.left} left</span>
                 <div className="meter ai-meter"><i style={{ width: `${runsPct}%` }} /></div>
               </div>
               <div>

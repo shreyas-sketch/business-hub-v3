@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ago, api } from "../api.js";
-import { Busy, Copy, Field, FormError, Sheet, Switch, canAct, useHub, useLoad } from "../ui.jsx";
+import { Busy, Copy, Field, FormError, LoadError, Sheet, Switch, canAct, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Pill, Tabs } from "../v2.jsx";
 import TemplatePicker from "../components/Templates.jsx";
 import QuoteStatus from "../components/QuoteStatus.jsx";
@@ -169,12 +169,16 @@ function FollowUp({ it, reload }) {
       {f.ready && open && <div className="prompt">{f.ready.text}</div>}
       {f.ready && manager && it.phone && (
         <div className="row">
-          <Busy className="btn sm primary" run={async () => {
+          <Busy className={`btn sm ${f.ready.opened ? "" : "primary"}`} run={async () => {
             const w = window.open("", "_blank");
-            const r = await api(`/approvals/${f.ready.id}/own`, { method: "POST" });
+            const r = await api(`/approvals/${f.ready.id}/opened`, { method: "POST" });   // opened, not sent: asked below
             if (w) w.location = r.link; else window.location.href = r.link;
             reload();
-          }}>Send on WhatsApp</Busy>
+          }}>{f.ready.opened ? "Open WhatsApp again" : "Send on WhatsApp"}</Busy>
+          {f.ready.opened && <Busy className="btn sm primary" run={async () => {
+            await api(`/approvals/${f.ready.id}/own`, { method: "POST" });
+            toast("Marked as sent"); reload();
+          }}>Yes, it's sent</Busy>}
           <Busy className="btn sm ghost" run={async () => { await api(`/approvals/${f.ready.id}/skip`, { method: "POST" }); toast("Skipped"); reload(); }}>Skip this one</Busy>
         </div>
       )}
@@ -209,7 +213,7 @@ export default function Inquiries() {
       {paste && <Paste prefill={shared || ""} onDone={() => { setPaste(false); if (shared) nav("/inquiries", { replace: true }); reload(); }} />}
       {canAct(me, "manager") && s && s.address !== undefined && <Setup s={s} reload={reloadS} />}
       <Tabs value={tab} onChange={setTab} tabs={[["all", "All"], ["new", `New${c.new ? ` · ${c.new}` : ""}`], ["proposal_sent", "Proposal sent"], ["in_pipeline", "In pipeline"]]} />
-      {!data ? (err ? <FormError msg={err.message} /> : <Loading />) : !items.length ? (
+      {!data ? (err ? <LoadError err={err} /> : <Loading />) : !items.length ? (
         <Empty>{tab === "all" ? (IOS ? "No inquiries yet. Share your website, or paste a WhatsApp inquiry with the button above." : "No inquiries yet. Share your website, or add a WhatsApp inquiry above.") : "Nothing here."}</Empty>
       ) : (
         <div className="stack">

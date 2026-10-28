@@ -281,10 +281,11 @@ async def _followups(ws: str, lead_ids: list[str], running: bool) -> dict:
     if not lead_ids:
         return out
     async for a in db().approvals.find({"ws": ws, "agent": "followup", "kind": "followup", "lead_id": {"$in": lead_ids}},
-                                       {"lead_id": 1, "status": 1, "text": 1, "n": 1, "created_at": 1}).limit(3000):
+                                       {"lead_id": 1, "status": 1, "text": 1, "n": 1, "created_at": 1, "opened_at": 1}).limit(3000):
         f = out.setdefault(a["lead_id"], {"ready": None, "sent": 0, "next_at": None, "next_n": None})
         if a["status"] == "pending":
-            f["ready"] = {"id": a["_id"], "n": a.get("n"), "of": len(settings.followup_days), "text": a.get("text", ""), "at": a["created_at"].isoformat()}
+            f["ready"] = {"id": a["_id"], "n": a.get("n"), "of": len(settings.followup_days), "text": a.get("text", ""), "at": a["created_at"].isoformat(),
+                          "opened": bool(a.get("opened_at"))}
         elif a["status"] == "sent":
             f["sent"] += 1
     if not running:

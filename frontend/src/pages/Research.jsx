@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { ago, api } from "../api.js";
-import { Busy, Copy, Field, FormError, Sheet, useHub, useLoad } from "../ui.jsx";
+import { Busy, Copy, Field, FormError, LoadError, Sheet, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Pill } from "../v2.jsx";
 import "./competitors.css";
 
@@ -165,7 +165,7 @@ function CompaniesPanel({ data, onDone }) {
 export default function Research() {
   const [data, reload, err] = useLoad("/research");
   const title = <>Posts to make, companies to <em>find</em>.</>;
-  if (!data) return <Sheet {...HEAD} title={title} sub={SUB}>{err ? <FormError msg={err.message} /> : <Loading />}</Sheet>;
+  if (!data) return <Sheet {...HEAD} title={title} sub={SUB}>{err ? <LoadError err={err} /> : <Loading />}</Sheet>;
   return (
     <Sheet {...HEAD} title={title} sub={SUB}>
       <div className="cw-note">The hub doesn't scrape social media or collect anyone's personal details. It never opens these searches for you — you do, and you note company details only.</div>

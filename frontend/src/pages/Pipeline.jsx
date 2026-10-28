@@ -412,6 +412,8 @@ function EditDeal({ id, focus, board, stages, onClose, onChanged }) {
     if (f.status === "lost" && !reason) throw new Error("Pick why they didn't buy.");
     if (f.value !== "" && !(Number(f.value) >= 0)) throw new Error("The value must be a number, or empty.");
     const was = isOpen(d) ? "open" : d.status;
+    const noted = note.trim().length >= 2;   // a note typed but not added yet goes in with the update, never lost
+    if (noted) { await saveNote(); setNote(""); }   // cleared at once: a retry after a failed update can't add it twice
     let x = d;
     if (f.pstage !== d.pstage && isOpen(d)) x = await api(`/crm/deals/${id}/move`, { method: "POST", body: { pstage: f.pstage } });
     // only what changed is sent, so "Recently updated" and the history stay true
@@ -425,17 +427,24 @@ function EditDeal({ id, focus, board, stages, onClose, onChanged }) {
     if (f.status !== was) Object.assign(body, f.status === "open" ? { status: "contacted" } : { status: f.status, ...(f.status === "lost" ? { lost_reason: reason } : {}) });
     else if (f.status === "lost" && reason !== (d.lost_reason || "")) body.lost_reason = reason;
     if (Object.keys(body).length) x = await api(`/crm/deals/${id}`, { method: "PATCH", body });
-    if (x === d) { onClose(); return; }
+    if (x === d) {
+      if (noted) { toast(kind === "call" ? "Call logged" : kind === "meeting" ? "Meeting logged" : "Note added"); onChanged(null); }
+      onClose();
+      return;
+    }
     toast(f.status === "won" && was !== "won" ? `${x.name} — won${x.value ? `: ${rs(x.value)}` : ""}` : "Opportunity updated");
     onChanged(x);
     onClose();
   };
-  const logIt = async () => {
+  const saveNote = async () => {
     if (kind !== "note" && d.contact && me.features?.crm) {
       await api(`/crm/contacts/${d.contact.id}/activities`, { method: "POST", body: { kind, text: note.trim(), lead_id: d.id } });
     } else {
       await api(`/crm/deals/${id}`, { method: "PATCH", body: { note: note.trim() } });
     }
+  };
+  const logIt = async () => {
+    await saveNote();
     setNote("");
     toast(kind === "call" ? "Call logged" : kind === "meeting" ? "Meeting logged" : "Note added");
     const x = await api(`/crm/deals/${id}`);   // the history only: what's typed on the left stays as it is until Update

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ago, api, rs } from "../api.js";
-import { Busy, FormError, Sheet, Switch, useHub, useLoad } from "../ui.jsx";
+import { Busy, FormError, LoadError, Sheet, Switch, useHub, useLoad } from "../ui.jsx";
 import { Loading, Pill } from "../v2.jsx";
 import "./dashboard.css";
 
@@ -292,7 +292,7 @@ export default function Dashboard() {
 
   const head = { kicker: "Start · Dashboard", id: "DB-01", title: <>Your business, <em>today</em>.</>,
     sub: "Live from your hub: leads, money, posts, targets and what needs you. Tap any tile to open it." };
-  if (!data) return <Sheet {...head}>{err ? <FormError msg={err.message} /> : <Loading />}</Sheet>;
+  if (!data) return <Sheet {...head}>{err ? <LoadError err={err} /> : <Loading />}</Sheet>;
   return (
     <Sheet {...head} actions={!editing && <button className="btn sm ghost" onClick={() => setEditing(true)}>Edit dashboard</button>}>
       {editing && <Editor data={data} onCancel={() => setEditing(false)} onSaved={(d) => { setData(d); setAt(new Date().toISOString()); setEditing(false); }} />}

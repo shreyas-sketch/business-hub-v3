@@ -56,7 +56,19 @@ def _shape_map(r: dict) -> list[dict]:
 
 
 async def _map(ws: str) -> dict:
-    return await db().sop_maps.find_one({"_id": ws}) or {}
+    """The process map, without SOPs that were deleted from the SOP library (that process can be written again)."""
+    m = await db().sop_maps.find_one({"_id": ws}) or {}
+    ids = {p["sop_id"] for p in m.get("processes") or [] if p.get("sop_id")}
+    if ids:
+        alive = {d["_id"] async for d in db().kits.find({"_id": {"$in": list(ids)}, "ws": ws, "kind": "sop"}, {"_id": 1})}
+        gone = list(ids - alive)
+        if gone:   # only those processes: a batch writing other SOPs at this moment keeps what it writes
+            await db().sop_maps.update_one({"_id": ws}, {"$set": {"processes.$[p].sop_id": None, "processes.$[p].status": None}},
+                                           array_filters=[{"p.sop_id": {"$in": gone}}])
+            for p in m["processes"]:
+                if p.get("sop_id") in gone:
+                    p.update(sop_id=None, status=None)
+    return m
 
 
 def _view(m: dict) -> dict:

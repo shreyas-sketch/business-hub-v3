@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { localPhone, rs } from "../api.js";
-import { FormError, Gate, Sheet, canAct, useHub, useLoad } from "../ui.jsx";
+import { Gate, LoadError, Sheet, canAct, useHub, useLoad } from "../ui.jsx";
 import { Loading, Pill } from "../v2.jsx";
 import SalesUpload from "./SalesUpload.jsx";
 import "./moneyinsights.css";
@@ -126,7 +126,7 @@ function Sources({ r }) {
 
 function Inner() {
   const [r, reload, err] = useLoad("/customer-risk");
-  if (!r) return <Sheet {...HEAD} title={<>Who your sales <em>depend</em> on.</>}>{err ? <FormError msg={err.message} /> : <Loading />}</Sheet>;
+  if (!r) return <Sheet {...HEAD} title={<>Who your sales <em>depend</em> on.</>}>{err ? <LoadError err={err} /> : <Loading />}</Sheet>;
   return (
     <Sheet {...HEAD} title={<>Who your sales <em>depend</em> on.</>}
       sub="If one or two customers make most of your sales, losing one hurts. And regular customers who stop buying are easy to miss. Both, from your own sales.">

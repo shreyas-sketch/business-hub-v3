@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { api } from "../api.js";
-import { Busy, Field, FormError, Sheet, canAct, useHub, useLoad } from "../ui.jsx";
+import { Busy, Field, FormError, LoadError, Sheet, canAct, useHub, useLoad } from "../ui.jsx";
 import { Loading, Pill, Tabs } from "../v2.jsx";
 import PostActions, { PostingSummary, usePostedRefs } from "./PostActions.jsx";
 import { PostCard, dateLabel } from "./Week.jsx";
@@ -119,7 +119,7 @@ export default function Calendar() {
       sub="Posts for every Monday, Wednesday and Friday, plus Indian festivals and occasions. Next month's posts are written for you on the 25th at 9am.">
       <PostingSummary summary={log?.summary} />
       <Tabs tabs={opts} value={month} onChange={pick} />
-      {!ready ? (err ? <FormError msg={err.message} /> : <Loading />) : (
+      {!ready ? (err ? <LoadError err={err} /> : <Loading />) : (
         <>
           {d.festivals.length > 0 && (
             <div className="stack" style={{ gap: 8 }}>

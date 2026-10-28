@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { api } from "../api.js";
+import { api, tokenSpan } from "../api.js";
 import { Busy, FormError, canAct, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Pill } from "../v2.jsx";
 import "./data.css";
@@ -89,7 +89,7 @@ function Advice({ months }) {
       <FormError msg={err} />
       <div className="row">
         <Busy className="btn primary ai" onError={(e) => setErr(e.message)} run={ask}>{a ? "Get new advice" : "Get AI advice"} · 1 token</Busy>
-        <span className="small muted">{me.runs.left} tokens left this month</span>
+        <span className="small muted">{me.runs.left} tokens left {tokenSpan(me)}</span>
       </div>
       {a && (
         <div className="da-advice">
