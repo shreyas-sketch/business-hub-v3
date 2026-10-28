@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
-import { FormError, Sheet, Stat, Switch, useHub, useLoad } from "../ui.jsx";
+import { LoadError, Sheet, Stat, Switch, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Pill } from "../v2.jsx";
 import "./member.css";
 
@@ -46,7 +46,7 @@ export default function Board() {
   return (
     <Sheet kicker="Grow · Cohort board" id="MB-04" title={<>Who showed up <em>this</em> week.</>}
       sub="Owners from your workshop batch, ranked by this week's score, then by streak. Scores start again every Monday.">
-      {!d ? (err ? <FormError msg={err.message} /> : <Loading />) : !d.cohort ? (
+      {!d ? (err ? <LoadError err={err} /> : <Loading />) : !d.cohort ? (
         <Empty>
           The cohort board shows owners from the same workshop batch. Your account isn't linked to a batch — that happens when you sign up
           from your workshop's link. Your streak and weekly score still count on <Link to="/week">This week</Link>.

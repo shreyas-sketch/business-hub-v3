@@ -84,6 +84,14 @@ export function Busy({ run, children, className = "btn", onError, ...p }) {
 
 export const FormError = ({ msg }) => (msg ? <p className="form-err" role="alert">{msg}</p> : null);
 
+/** Something on the page couldn't load: why, and a way to try again (the whole page, so everything on it loads afresh). */
+export const LoadError = ({ err }) => (
+  <div className="stack" style={{ gap: 8 }}>
+    <FormError msg={err?.message || "This didn't load."} />
+    <div><button type="button" className="btn sm" onClick={() => window.location.reload()}>Try again</button></div>
+  </div>
+);
+
 export const Field = ({ label, hint, children }) => (
   <label className="field"><span className="label">{label}</span>{children}{hint && <span className="hint">{hint}</span>}</label>
 );

@@ -268,5 +268,16 @@ async def update(ws: str, actor: str, kind: str, kit_id: str, content: dict) -> 
     return await db().kits.find_one({"_id": kit_id})
 
 
+# what wrote a document, in words (older documents keep the internal key, so it's named here, where it's shown)
+AGENT_LABELS = {"sop_set": "SOP writer", "key_person": "Key-person knowledge"}
+
+
+def agent_label(v: str | None) -> str | None:
+    return AGENT_LABELS.get(v, v) if v else v
+
+
 def view(doc: dict) -> dict:
-    return public(doc)
+    out = public(doc)
+    if out.get("by_agent"):
+        out["by_agent"] = agent_label(out["by_agent"])
+    return out

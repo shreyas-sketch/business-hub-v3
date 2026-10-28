@@ -25,12 +25,14 @@ function Message({ a, connected, onDone }) {
   const guard = async (fn) => { try { await fn(); } catch (e) { if (e.status === 409) finish(); throw e; } };
   const who = a.to_name || "the customer";
 
-  // The link opens in the click itself (no pop-up blocker); the hub then records it as sent.
-  const sentOwn = async () => {
+  // The link opens in the click itself (no pop-up blocker). Opening WhatsApp isn't sending: the hub asks, and only marks it
+  // sent once the owner says it went.
+  const [asking, setAsking] = useState(!!a.opened_at);
+  const openedOwn = async () => {
+    setAsking(true);
     try {
       await save();
-      await api(`/approvals/${a.id}/own`, { method: "POST" });
-      finish(`Marked as sent to ${who}`);
+      await api(`/approvals/${a.id}/opened`, { method: "POST" });
     } catch (e) {
       if (e.status === 409) finish();
       if (!e.handled) toast(e.message, "err");
@@ -51,13 +53,23 @@ function Message({ a, connected, onDone }) {
         {a.money && <Pill kind="money">Money — always waits for you</Pill>}
       </div>
       {a.send_error && <div className="notice small">{a.send_error}</div>}
+      {asking && (
+        <div className="row notice small">
+          <span>Did the message go to {who} on WhatsApp?</span>
+          <Busy className="btn sm primary" run={() => guard(async () => {
+            await api(`/approvals/${a.id}/own`, { method: "POST" });
+            finish(`Marked as sent to ${who}`);
+          })}>Yes, it's sent</Busy>
+          <button className="btn sm ghost" onClick={() => setAsking(false)}>Not yet</button>
+        </div>
+      )}
       <textarea className="textarea" aria-label={`Message to ${who}`} maxLength={900} value={text} onChange={(e) => setText(e.target.value)} />
       {connected && TEMPLATED.includes(a.kind) && (
         <span className="hint">Sent from your number, this goes as your approved WhatsApp template with these details. Your own edits go out when you tap Send on WhatsApp.</span>
       )}
       <div className="row">
         {okText
-          ? <a className="btn primary" href={linkFor(a, clean)} target="_blank" rel="noopener" onClick={sentOwn}>Send on WhatsApp</a>
+          ? <a className={`btn ${asking ? "" : "primary"}`} href={linkFor(a, clean)} target="_blank" rel="noopener" onClick={openedOwn}>{asking ? "Open WhatsApp again" : "Send on WhatsApp"}</a>
           : <button className="btn primary" disabled>Send on WhatsApp</button>}
         {connected && (
           <Busy className="btn" disabled={!okText} run={() => guard(async () => {

@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ago, api } from "../api.js";
-import { Busy, Field, FormError, Locked, Sheet, canAct, useHub, useLoad } from "../ui.jsx";
+import { ago, api, tokenSpan } from "../api.js";
+import { Busy, Field, FormError, LoadError, Locked, Sheet, canAct, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Pill, Tabs, ToolOutput } from "../v2.jsx";
 import PostActions, { usePostedRefs } from "./PostActions.jsx";
 import "./member.css";
@@ -91,7 +91,7 @@ function ToolForm({ t }) {
         {hasExample && <button className="btn ghost" onClick={() => setVals({ ...blankFor(t), ...t.example })}>Fill an example</button>}
       </div>
       <span className="small muted">
-        {missing.length > 0 ? `Fill in: ${missing.join(", ")}. ` : ""}Uses one AI token · {me.runs?.left ?? 0} left this month.
+        {missing.length > 0 ? `Fill in: ${missing.join(", ")}. ` : ""}Uses one AI token · {me.runs?.left ?? 0} left {tokenSpan(me)}.
       </span>
       {out && (
         <div className="stack">
@@ -129,7 +129,7 @@ export default function Tools() {
   const panelRef = useRef(null);
   const head = { kicker: "Scale · AI tools", id: "MB-05", title: <>Tools that know your <em>business</em>.</>,
     sub: "Pick a tool, answer a question or two, and get a ready draft in your voice — no setting up. Every draft is saved in My outputs." };
-  if (!d) return <Sheet {...head}>{err ? <FormError msg={err.message} /> : <Loading />}</Sheet>;
+  if (!d) return <Sheet {...head}>{err ? <LoadError err={err} /> : <Loading />}</Sheet>;
 
   const tools = d.tools || [];
   const desks = d.desks.filter((x) => tools.some((t) => t.desk === x));

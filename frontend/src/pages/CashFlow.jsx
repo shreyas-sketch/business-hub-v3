@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, rs } from "../api.js";
-import { Busy, Field, FormError, Gate, Sheet, canAct, useHub, useLoad } from "../ui.jsx";
+import { Busy, Field, FormError, Gate, LoadError, Sheet, canAct, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Pill } from "../v2.jsx";
 import "./cashflow.css";
 
@@ -193,7 +193,7 @@ function CashInner() {
   const [fresh, setFresh] = useState(false);
   const daysWithEvents = useMemo(() => (f?.days || []).filter((d) => d.events.length), [f]);
   const head = { kicker: "Structure · Cash flow", id: "ST-07", pillar: "Structure", money: true };
-  if (!f) return <Sheet {...head} title={<>The next <em>30 days</em>.</>}>{err ? <FormError msg={err.message} /> : <Loading />}</Sheet>;
+  if (!f) return <Sheet {...head} title={<>The next <em>30 days</em>.</>}>{err ? <LoadError err={err} /> : <Loading />}</Sheet>;
 
   if (!f.ready) {
     return (

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { localPhone, rs } from "../api.js";
-import { FormError, Gate, Sheet, canAct, useHub, useLoad } from "../ui.jsx";
+import { Gate, LoadError, Sheet, canAct, useHub, useLoad } from "../ui.jsx";
 import { Loading, Pill } from "../v2.jsx";
 import SalesUpload from "./SalesUpload.jsx";
 import "./moneyinsights.css";
@@ -149,7 +149,7 @@ function Payers({ g }) {
 
 function Inner() {
   const [g, reload, err] = useLoad("/getting-paid");
-  if (!g) return <Sheet {...HEAD} title={<>How long money really <em>takes</em>.</>}>{err ? <FormError msg={err.message} /> : <Loading />}</Sheet>;
+  if (!g) return <Sheet {...HEAD} title={<>How long money really <em>takes</em>.</>}>{err ? <LoadError err={err} /> : <Loading />}</Sheet>;
   return (
     <Sheet {...HEAD} title={<>How long money really <em>takes</em>.</>}
       sub="What you ask customers for, against how long they actually take — and what's still owed, by how late it is.">

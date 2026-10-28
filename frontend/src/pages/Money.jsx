@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ago, api, day, localPhone } from "../api.js";
 import { paise as inr } from "../billing.js";
-import { Busy, Field, FormError, Gate, Sheet, Stat, canAct, useHub, useLoad } from "../ui.jsx";
+import { Busy, Field, FormError, Gate, LoadError, Sheet, Stat, canAct, useHub, useLoad } from "../ui.jsx";
 import { Pill } from "../v2.jsx";
 import { AutoFollowups } from "./Agents.jsx";
 
@@ -42,7 +42,7 @@ function AddForm({ onAdded }) {
 
 function History({ id }) {
   const [h, , err] = useLoad(`/followups/history/${id}`);
-  if (err) return <FormError msg={err.message} />;
+  if (err) return <LoadError err={err} />;
   if (!h) return <span className="small muted">Loading…</span>;
   return (
     <div className="stack" style={{ gap: 8 }}>

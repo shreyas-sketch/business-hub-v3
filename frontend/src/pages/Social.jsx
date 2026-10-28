@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, day } from "../api.js";
-import { Busy, Copy, Field, FormError, Sheet, canAct, useHub, useLoad } from "../ui.jsx";
+import { Busy, Copy, Field, FormError, LoadError, Sheet, canAct, useHub, useLoad } from "../ui.jsx";
 import { Loading, Pill } from "../v2.jsx";
 import "./social.css";
 
@@ -114,7 +114,7 @@ export default function Social() {
   const head = { kicker: "Brand · Social media", id: "BR-02", pillar: "Brand",
     title: <>A week of posts, <em>ready</em>.</>,
     sub: "Each post is an image in your colours and fonts, and a caption. Copy the caption, download the image, post it, then mark it posted." };
-  if (!d) return <Sheet {...head}>{loadErr ? <FormError msg={loadErr.message} /> : <Loading />}</Sheet>;
+  if (!d) return <Sheet {...head}>{loadErr ? <LoadError err={loadErr} /> : <Loading />}</Sheet>;
   const canManage = canAct(me, "manager");
   const write = async () => {
     const r = await api("/social-media/write", { method: "POST" });

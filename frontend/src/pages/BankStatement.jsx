@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ago, api, upload } from "../api.js";
+import { ago, api, tokenSpan, upload } from "../api.js";
 import { Busy, Field, FormError, Sheet, useHub } from "../ui.jsx";
 import { Empty, Loading, Pill, Tabs } from "../v2.jsx";
 import "./expenses.css";
@@ -137,7 +137,7 @@ function Suggest({ s, sugg, onAsk }) {
       <FormError msg={err} />
       <div className="row">
         <Busy className={`btn ai ${waiting ? "" : "primary"}`} onError={(e) => setErr(e.message)} run={onAsk}>{sugg.asked ? "Suggest again" : "Suggest categories with AI"} · 1 token</Busy>
-        <span className="small muted">{me.runs.left} tokens left this month</span>
+        <span className="small muted">{me.runs.left} tokens left {tokenSpan(me)}</span>
       </div>
     </div>
   );

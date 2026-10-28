@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api, upload } from "../api.js";
-import { Busy, Field, FormError, Sheet, Switch, canAct, useHub, useLoad } from "../ui.jsx";
+import { Busy, Field, FormError, LoadError, Sheet, Switch, canAct, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Num, Pill, Tabs } from "../v2.jsx";
 import "./expenses.css";
 import DataNav from "./DataNav.jsx";
@@ -647,7 +647,7 @@ export default function Expenses() {
         {!adding && <button className="btn primary" onClick={() => setAdding(true)}>Add an expense</button>}
       </div>
 
-      {listErr && <FormError msg={listErr.message} />}
+      {listErr && <LoadError err={listErr} />}
       {sumErr && <FormError msg={sumErr.message} />}
       <Stats sum={sum} list={list} month={month} manager={manager} />
       <Caps sum={sum} list={list} manager={manager} />

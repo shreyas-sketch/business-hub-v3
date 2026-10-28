@@ -164,6 +164,18 @@ async def expire(query: dict, note: str = "") -> int:
     return r.modified_count
 
 
+async def opened(ws: str, approval_id: str, actor: str) -> dict:
+    """The owner opened the message in their own WhatsApp. Nothing is sent yet — they may close WhatsApp without sending —
+    so it stays waiting until they say it went ("own")."""
+    a = await db().approvals.find_one_and_update({"_id": approval_id, "ws": ws, "status": "pending"},
+                                                 {"$set": {"opened_at": now(), "opened_by": actor}}, return_document=True)
+    if not a:
+        if await db().approvals.find_one({"_id": approval_id, "ws": ws}, {"_id": 1}):
+            raise HTTPException(409, "This message was already handled.")
+        raise HTTPException(404, "Not found")
+    return {"link": own_link(a), "approval": a}
+
+
 async def decide(ws: str, approval_id: str, actor: str, action: str) -> dict:
     """send | own | skip — exactly once per approval, even with a double click or two managers at once."""
     approval = await db().approvals.find_one({"_id": approval_id, "ws": ws})

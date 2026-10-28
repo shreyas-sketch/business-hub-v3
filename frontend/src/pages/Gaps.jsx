@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { api, day } from "../api.js";
-import { Busy, FormError, Locked, Sheet, useHub, useLoad } from "../ui.jsx";
+import { Busy, FormError, LoadError, Locked, Sheet, useHub, useLoad } from "../ui.jsx";
 import { Loading } from "../v2.jsx";
 import { ScoreBars } from "./Week.jsx";
 import "./member.css";
@@ -152,7 +152,7 @@ export default function Gaps() {
   return (
     <Sheet kicker="Structure · Gaps scan" id="MB-07" title={<>Find the <em>silent</em> killers.</>}
       sub="12 honest answers, about 2 minutes. You get a score for 8 areas of your business and this month's 3 fixes.">
-      {!d ? (err ? <FormError msg={err.message} /> : <Loading />)
+      {!d ? (err ? <LoadError err={err} /> : <Loading />)
         : taking || !latest ? <Scan questions={d.questions} initial={latest?.answers} onDone={done} onCancel={latest ? () => setTaking(false) : null} />
         : <Result scan={latest} history={d.history} onRetake={() => { setTaking(true); window.scrollTo({ top: 0 }); }} />}
     </Sheet>

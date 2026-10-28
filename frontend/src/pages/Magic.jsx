@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, day, rs } from "../api.js";
-import { Busy, Field, FormError, Sheet, Stat, useHub, useLoad } from "../ui.jsx";
+import { Busy, Field, FormError, LoadError, Sheet, Stat, useHub, useLoad } from "../ui.jsx";
 import { Loading, Num, Pill } from "../v2.jsx";
 import "./member.css";
 
@@ -189,7 +189,7 @@ export default function Magic() {
   return (
     <Sheet kicker="Structure · Magic Number" id="MB-06" title={<>Your <em>Magic</em> Number.</>}
       sub="Work back from the money you want to the inquiries you need each day.">
-      {!d ? (err ? <FormError msg={err.message} /> : <Loading />) : <Body initial={d} />}
+      {!d ? (err ? <LoadError err={err} /> : <Loading />) : <Body initial={d} />}
     </Sheet>
   );
 }

@@ -486,7 +486,8 @@ function QuoteCard({ q, onEdit, onInvoice, reload, showInvoices, onInvoiced }) {
             {q.sent_on ? ` · sent ${day(q.sent_on)}` : ""}{q.status === "sent" && q.followups ? ` · follow-up ${q.followups} of 3` : ""}
             {!q.customer?.phone ? " · no number" : ""}
           </span>
-          {q.source === "inquiry" && open && (
+          {q.needs_price && open && <span className="small" style={{ color: "var(--amber)" }}>This adds up to ₹0. Press Edit and add the prices — it can be sent once it has one.</span>}
+          {q.source === "inquiry" && open && !q.needs_price && (
             <span className="small" style={{ color: unpriced ? "var(--amber)" : "var(--teal)" }}>
               Drafted from their inquiry. {unpriced ? `${unpriced} ${unpriced === 1 ? "line needs" : "lines need"} a price — press Edit before sending.` : "Check the prices, then send it."}
             </span>
@@ -498,22 +499,22 @@ function QuoteCard({ q, onEdit, onInvoice, reload, showInvoices, onInvoiced }) {
         </div>
       </div>
       <div className="row" style={{ gap: 8 }}>
-        {open && (
+        {open && !q.needs_price && (
           <a className="btn sm primary" href={sendLink(q)} target="_blank" rel="noreferrer"
             onClick={() => { if (q.status === "draft") setStatus("sent", "Marked as sent").catch(() => {}); }}>
             {q.status === "sent" ? "Send again on WhatsApp" : "Send on WhatsApp"}
           </a>
         )}
-        {q.status === "draft" && <Busy className="btn sm" run={() => setStatus("sent", "Marked as sent")}>Mark sent</Busy>}
+        {q.status === "draft" && !q.needs_price && <Busy className="btn sm" run={() => setStatus("sent", "Marked as sent")}>Mark sent</Busy>}
         {open && <Busy className="btn sm" run={() => setStatus("accepted", `${q.number} accepted`)}>Accepted</Busy>}
         {open && <Busy className="btn sm ghost" run={() => setStatus("lost", `${q.number} marked lost`)}>Lost</Busy>}
         {!q.invoice_id && q.status !== "lost" && <button className="btn sm" onClick={() => onInvoice(q)}>Make invoice</button>}
         {q.invoice_id && <button className="btn sm ghost" onClick={showInvoices}>See the invoice</button>}
-        <a className="btn sm ghost" href={q.pdf_url} target="_blank" rel="noreferrer">PDF</a>
-        <Copy text={q.pdf_url} label="Copy PDF link" className="btn sm ghost" />
+        {q.pdf_url && <a className="btn sm ghost" href={q.pdf_url} target="_blank" rel="noreferrer">PDF</a>}
+        {q.pdf_url && <Copy text={q.pdf_url} label="Copy PDF link" className="btn sm ghost" />}
         <a className="btn sm ghost" href={`/api/quotes/${q.id}/print`} target="_blank" rel="noreferrer">Print</a>
-        <Copy text={q.share_text} label="Copy text" className="btn sm ghost" />
-        {open && <button className="btn sm ghost" onClick={() => onEdit(q)}>Edit</button>}
+        {q.share_text && <Copy text={q.share_text} label="Copy text" className="btn sm ghost" />}
+        {open && <button className={`btn sm ${q.needs_price ? "primary" : "ghost"}`} onClick={() => onEdit(q)}>Edit</button>}
         {q.status === "draft" && (
           <Busy className="btn sm ghost" run={async () => {
             if (!window.confirm(`Delete draft ${q.number}?`)) return;

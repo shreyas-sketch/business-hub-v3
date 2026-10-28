@@ -264,10 +264,9 @@ async def edit_stages(body: StagesIn, ctx: Ctx = Depends(feature("pipeline", "ma
     stages = []
     for s in body.stages:
         sid = s.id if s.id and s.id in old_by_id and s.id not in taken else None
-        if sid:
-            taken.add(sid)
-        else:
+        if not sid:   # a new stage: an id no other stage has, old or new ("Quote Sent" and "Quote-Sent" made the same one)
             sid = crm.stage_id(s.name, taken | set(old_by_id))
+        taken.add(sid)
         stages.append({"id": sid, "name": s.name.strip(), "ff": s.ff, "hint": s.hint.strip()})
     if len({s["name"].lower() for s in stages}) != len(stages):
         raise HTTPException(400, "Two stages have the same name. Give each stage its own name.")
@@ -472,6 +471,8 @@ async def add_deal(body: DealIn, ctx: Ctx = Depends(feature("pipeline"))):
     if body.phone.strip() and not phone:
         raise HTTPException(400, "Enter a valid 10-digit mobile number, or leave it empty.")
     email = crm.norm_email(body.email)
+    if body.email.strip() and not email:
+        raise HTTPException(400, "That email address doesn't look right. Fix it, or leave it empty.")
     source = body.source if body.source in SOURCE_KEYS or body.source == "manual" else "manual"
     lead = {"_id": new_id(), "owner_id": ctx.ws, "site_id": None, "name": body.name.strip(), "phone": phone or "", "email": email or "",
             "company": body.company.strip(), "message": body.note.strip(), "status": "new", "stage": st["ff"], "pstage": st["id"],
@@ -539,8 +540,8 @@ async def _apply_deal_patch(ctx: Ctx, before: dict, patch: dict, note: str | Non
         if "follow_up_on" in patch and patch["follow_up_on"] != before.get("follow_up_on") and patch["follow_up_on"]:
             await crm.add_activity(ctx.ws, cid, before["_id"], "followup", f"Follow-up set for {crm.day_text(patch['follow_up_on'])}"
                                    + (f": {after.get('follow_up_note')}" if after.get("follow_up_note") else ""), ctx.actor, who)
-        if note:
-            await crm.add_activity(ctx.ws, cid, before["_id"], "note", note, ctx.actor, who)
+    if note:   # on the deal's own history too when it has no contact (no phone or email to make one from)
+        await crm.add_activity(ctx.ws, cid, before["_id"], "note", note, ctx.actor, who)
     if "follow_up_on" in patch or (patch.get("status") in ("won", "lost")):
         await crm.set_reminder(ctx.ws, "deal", before["_id"], after.get("follow_up_on") if after.get("status") in crm.OPEN else None)
     if patch.get("status") and patch["status"] != before.get("status"):

@@ -30,7 +30,7 @@ async def list_kits(kind: str, ctx: Ctx = Depends(get_ctx)):
     k = kits.kind_of(kind)
     _allow(ctx, k, write=False)
     return [{"id": d["_id"], "title": d["title"], "created_at": d["created_at"].isoformat(), "updated_at": d["updated_at"].isoformat(),
-             "by_agent": d.get("by_agent")}
+             "by_agent": kits.agent_label(d.get("by_agent"))}
             async for d in db().kits.find({"ws": ctx.ws, "kind": kind}, {"content": 0}).sort("updated_at", -1).limit(200)]
 
 

@@ -271,13 +271,21 @@ async def test_results_count_only_a_real_purchase_after_the_message(client):
     await switch_on(c, per_week=4)
     assert (await c.post("/api/win-back/run")).json()["status"] == "done"
     drafts = {x["name"]: x for x in (await c.get("/api/win-back")).json()["drafts"]}
-    # Sunrise: tapped "Send on WhatsApp" — the link opens the owner's own WhatsApp with the message typed
-    r = await c.post(f"/api/win-back/{drafts['Sunrise Fabrics']['id']}/whatsapp")
+    # Sunrise: tapped "Send on WhatsApp" — the link opens the owner's own WhatsApp with the message typed. Opened isn't sent:
+    # it waits (and can be opened again) until the owner says it went
+    sunrise = drafts["Sunrise Fabrics"]["id"]
+    r = await c.post(f"/api/win-back/{sunrise}/whatsapp")
     assert r.status_code == 200 and r.json()["link"].startswith("https://wa.me/919871200001?text=Hello%20Sunrise")
-    assert (await c.post(f"/api/win-back/{drafts['Sunrise Fabrics']['id']}/whatsapp")).status_code == 409   # once
+    view = next(x for x in (await c.get("/api/win-back")).json()["drafts"] if x["id"] == sunrise)
+    assert view["whatsapp"]["status"] == "pending" and view["whatsapp"]["opened"]
+    assert (await c.post(f"/api/win-back/{sunrise}/whatsapp")).status_code == 200
+    assert (await c.post(f"/api/win-back/{sunrise}/whatsapp-sent")).status_code == 200
+    assert (await c.post(f"/api/win-back/{sunrise}/whatsapp-sent")).status_code == 409   # once
+    assert (await c.post(f"/api/win-back/{sunrise}/whatsapp")).status_code == 409
     # Kaveri: sent too; Greenleaf (Customers list): sent; Pinewood: skipped
-    assert (await c.post(f"/api/win-back/{drafts['Kaveri Foods']['id']}/whatsapp")).status_code == 200
-    assert (await c.post(f"/api/win-back/{drafts['Greenleaf Agencies']['id']}/whatsapp")).status_code == 200
+    for name in ("Kaveri Foods", "Greenleaf Agencies"):
+        assert (await c.post(f"/api/win-back/{drafts[name]['id']}/whatsapp")).status_code == 200
+        assert (await c.post(f"/api/win-back/{drafts[name]['id']}/whatsapp-sent")).status_code == 200
     assert (await c.post(f"/api/win-back/{drafts['Pinewood Studio']['id']}/skip")).status_code == 200
     pine = await db().winback_drafts.find_one({"_id": drafts["Pinewood Studio"]["id"]})
     assert pine["status"] == "skipped" and pine["email_status"] == "skipped"

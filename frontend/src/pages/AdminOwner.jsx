@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ago, api, day, localPhone } from "../api.js";
-import { Busy, Copy, Field, FormError, Sheet, Stat, useHub, useLoad } from "../ui.jsx";
+import { Busy, Copy, Field, FormError, LoadError, Sheet, Stat, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Pill } from "../v2.jsx";
 import { GrantAdd } from "./AdminFeatures.jsx";
 import QuoteStatus from "../components/QuoteStatus.jsx";
@@ -117,7 +117,7 @@ function Step({ uid, st, onSaved }) {
 
 function SetupSteps({ o }) {
   const [s, reload, error] = useLoad(`/admin/owners/${o.id}/setup`, [o.id]);
-  if (error) return <FormError msg={error.message} />;
+  if (error) return <LoadError err={error} />;
   if (!s) return <Loading />;
   let month = 0;
   return (
@@ -224,7 +224,7 @@ function OwnerConnections({ o }) {
     <div className="stack">
       <span className="label">Connections</span>
       <p className="small muted">The WhatsApp tool, Employz.ai and the AI Telecaller, set up by the team for this owner. Keys and passwords are never shown again after saving.</p>
-      {error ? <FormError msg={error.message} />
+      {error ? <LoadError err={error} />
         : !list ? <Loading />
         : !list.length ? <Empty>No connections are switched on for anyone. Switch on WhatsApp chats, Employz.ai CRM or AI Telecaller in Features & plans.</Empty>
         : list.map((c) => <ConnForm key={c.kind} uid={o.id} c={c} onSaved={reload} />)}

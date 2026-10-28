@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ago, api, rs } from "../api.js";
-import { Busy, Field, FormError, Sheet, Switch, useHub, useLoad } from "../ui.jsx";
+import { ago, api, rs, tokenSpan } from "../api.js";
+import { Busy, Field, FormError, LoadError, Sheet, Switch, useHub, useLoad } from "../ui.jsx";
 import { Loading, Num, Pill } from "../v2.jsx";
 import SharedInputs from "../components/SharedInputs.jsx";
 import "./knowledge.css";
@@ -33,7 +33,7 @@ function SectionHead({ s, children }) {
 /** "Update my hub": what was built from the old details, and the AI tokens bringing it up to date will use — shown before
     anything runs. Saving the Knowledge Hub never spends runs on its own. */
 function UpdateHub({ updates, onChange }) {
-  const { toast, refresh } = useHub();
+  const { me, toast, refresh } = useHub();
   const [plan, setPlan] = useState(null);
   const key = (updates || []).map((u) => `${u.key}:${u.reason}:${u.updated}`).join(",");
   useEffect(() => { api("/knowledge/update").then(setPlan).catch(() => setPlan(null)); }, [key]);
@@ -44,7 +44,7 @@ function UpdateHub({ updates, onChange }) {
       <div className="stack" style={{ gap: 4 }}>
         <span className="label">Update my hub</span>
         <p className="small">Built from your old details: {plan.items.map((i) => i.label).join(", ")}.</p>
-        <p className="small muted">Updating uses {plan.runs} AI {plan.runs === 1 ? "token" : "tokens"} — you have {plan.runs_left} left this month. Anything you edited yourself is kept.</p>
+        <p className="small muted">Updating uses {plan.runs} AI {plan.runs === 1 ? "token" : "tokens"} — you have {plan.runs_left} left {tokenSpan(me)}. Anything you edited yourself is kept.</p>
       </div>
       <div className="row">
         <Busy className="btn primary ai" disabled={short} run={async () => {
@@ -53,7 +53,7 @@ function UpdateHub({ updates, onChange }) {
           const done = Object.values(r.result).filter((v) => v.startsWith("refreshed")).length;
           toast(done ? `Updated ${done} ${done === 1 ? "thing" : "things"}` : "Nothing could be updated just now", done ? "ok" : "warn");
         }}>Update my hub · {plan.runs} {plan.runs === 1 ? "token" : "tokens"}</Busy>
-        {short && <span className="small" style={{ color: "var(--amber)" }}>Not enough tokens left this month for all of it.</span>}
+        {short && <span className="small" style={{ color: "var(--amber)" }}>Not enough tokens left {tokenSpan(me)} for all of it.</span>}
       </div>
     </div>
   );
@@ -271,7 +271,7 @@ export default function Knowledge() {
 
   const head = { kicker: "Structure · Knowledge Hub", id: "KH-01", pillar: "Structure", title: <>Your <em>Knowledge Hub</em>.</>,
     sub: "Fill it once. Your website, brand kit, compliance calendar, cash flow, targets and every AI writer read from it." };
-  if (!d) return <Sheet {...head}>{err ? <FormError msg={err.message} /> : <Loading />}</Sheet>;
+  if (!d) return <Sheet {...head}>{err ? <LoadError err={err} /> : <Loading />}</Sheet>;
   const c = d.completeness;
   const sec = Object.fromEntries(c.sections.map((s) => [s.key, s]));
   const b = d.basics || {};

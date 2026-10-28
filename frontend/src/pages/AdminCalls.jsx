@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
-import { Busy, Copy, Field, FormError, Sheet, useHub, useLoad } from "../ui.jsx";
+import { Busy, Copy, Field, FormError, LoadError, Sheet, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Pill } from "../v2.jsx";
 import "./admin.css";
 
@@ -113,7 +113,7 @@ export default function AdminCalls() {
     <Sheet kicker="Admin · Member calls" id="A-05" pillar="Admin" title={<>The monthly <em>member call</em>.</>}
       sub="Schedule the call, tell every invited owner, and read their questions by business before you go live.">
       <ScheduleForm tierNames={tierNames} onAdded={reload} />
-      {error ? <FormError msg={error.message} /> : !calls ? <Loading /> : (
+      {error ? <LoadError err={error} /> : !calls ? <Loading /> : (
         <>
           <div className="stack">
             <span className="label">Coming up</span>

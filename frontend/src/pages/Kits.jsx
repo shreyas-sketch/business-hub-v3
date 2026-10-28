@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import VoiceNote from "../components/VoiceNote.jsx";
 import KitPage from "../kit.jsx";
-import { ago, api } from "../api.js";
+import { ago, api, tokenSpan } from "../api.js";
 import { Busy, Field, FormError, Gate, Modal, Sheet, Switch, canAct, useHub } from "../ui.jsx";
 import { Loading, Pill } from "../v2.jsx";
 import "./sops.css";
@@ -286,7 +286,7 @@ function SopSet({ onWritten }) {
           <b>{toWrite.length ? `Write ${toWrite.length} SOP${toWrite.length === 1 ? "" : "s"}` : "Tick the processes you want SOPs for"}</b>
           {toWrite.length > 0 && (
             <span className={`small ${short ? "sop-short" : "muted"}`}>
-              That uses {runs} AI tokens ({d.runs_per_sop || 2} for each SOP). You have {left} left this month.
+              That uses {runs} AI tokens ({d.runs_per_sop || 2} for each SOP). You have {left} left {tokenSpan(me)}.
               {short ? " Untick a few, or wait for next month's tokens." : " A token that fails is refunded."}
             </span>
           )}

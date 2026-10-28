@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { ago, api } from "../api.js";
-import { Busy, Copy, FormError, Sheet, useHub, useLoad } from "../ui.jsx";
+import { Busy, Copy, FormError, LoadError, Sheet, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Pill } from "../v2.jsx";
 import "./data.css";
 
@@ -238,7 +238,7 @@ export default function Tenders() {
   const title = <>Government tenders that <em>fit</em> your business.</>;
   const sub = "Open tenders on GeM, the Government e-Marketplace, found with the words a government buyer uses for what you sell. Apply on GeM, or get help to apply first.";
   const go = (id, build = false) => setParams(id ? { bid: String(id) } : {}, { state: { build } });
-  if (loadErr) return <Sheet {...head} title={title} sub={sub}><FormError msg={loadErr.message} /></Sheet>;
+  if (loadErr) return <Sheet {...head} title={title} sub={sub}><LoadError err={loadErr} /></Sheet>;
   if (!data) return <Sheet {...head} title={title} sub={sub}><Loading /></Sheet>;
   if (open) {
     return (

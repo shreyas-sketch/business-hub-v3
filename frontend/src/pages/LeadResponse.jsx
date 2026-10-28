@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
-import { Busy, Field, FormError, Gate, Sheet, Switch, canAct, useHub, useLoad } from "../ui.jsx";
+import { Busy, Field, FormError, Gate, LoadError, Sheet, Switch, canAct, useHub, useLoad } from "../ui.jsx";
 import { Loading, Pill } from "../v2.jsx";
 import "./agents22.css";
 
@@ -179,7 +179,7 @@ function Channels({ list }) {
 function Inner() {
   const [d, reload, err] = useLoad("/lead-response");
   const title = <>Every inquiry answered in <em>2 minutes</em>.</>;
-  if (!d) return <Sheet {...HEAD} title={title}>{err ? <FormError msg={err.message} /> : <Loading />}</Sheet>;
+  if (!d) return <Sheet {...HEAD} title={title}>{err ? <LoadError err={err} /> : <Loading />}</Sheet>;
   return (
     <Sheet {...HEAD} title={title}
       sub="Every new inquiry gets a first reply within 2 minutes, day or night — with a call or visit booked. Prices and quotes come to you.">

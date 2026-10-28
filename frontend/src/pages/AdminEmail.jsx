@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { api, day } from "../api.js";
-import { Busy, FormError, Sheet, useHub, useLoad } from "../ui.jsx";
+import { Busy, FormError, LoadError, Sheet, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Pill, Tabs } from "../v2.jsx";
 
 /* Admin → Email: is the sending domain set up, which owners bounce or get complaints, and a switch to pause one owner's
@@ -34,7 +34,7 @@ export default function AdminEmail() {
     <Sheet kicker="Admin · Email" id="AD-09" title={<>Customer email <em>health</em>.</>}
       sub="Follow-ups, proposals and invoices go out by email from the hub's sending domain. Keep bounces and complaints low, or the provider stops sending for everyone."
       actions={<Link className="btn sm ghost" to="/admin">Back to admin</Link>}>
-      {err ? <FormError msg={err.message} /> : !d ? <Loading /> : (
+      {err ? <LoadError err={err} /> : !d ? <Loading /> : (
         <>
           <div className="panel">
             <span className="label">Sending domain</span>

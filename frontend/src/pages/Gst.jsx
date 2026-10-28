@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { api, rs } from "../api.js";
-import { Busy, FormError, Gate, Sheet, canAct, useHub, useLoad } from "../ui.jsx";
+import { Busy, FormError, Gate, LoadError, Sheet, canAct, useHub, useLoad } from "../ui.jsx";
 import { Loading, Pill } from "../v2.jsx";
 import "./gst.css";
 
@@ -189,7 +189,7 @@ function GstInner() {
   const [d, reload, err] = useLoad("/gst-setaside");
   const head = { kicker: "Structure · GST set-aside", id: "ST-15", pillar: "Structure", money: true };
   const title = <>Keep this much <em>aside</em> for GST.</>;
-  if (!d) return <Sheet {...head} title={title}>{err ? <FormError msg={err.message} /> : <Loading />}</Sheet>;
+  if (!d) return <Sheet {...head} title={title}>{err ? <LoadError err={err} /> : <Loading />}</Sheet>;
   const f = me?.features || {};
   const owner = canAct(me, "owner");
   const toKnowledge = owner

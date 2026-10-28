@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, localPhone, rs } from "../api.js";
-import { Busy, Copy, Field, FormError, Gate, Sheet, Switch, canAct, useHub, useLoad } from "../ui.jsx";
+import { Busy, Copy, Field, FormError, Gate, LoadError, Sheet, Switch, canAct, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Num, Pill } from "../v2.jsx";
 import SalesUpload from "./SalesUpload.jsx";
 import "./moneyinsights.css";
@@ -112,7 +112,7 @@ function Draft({ x, d, reload }) {
   const em = x.email_draft;
   const done = () => { reload(); refresh?.(); };
   const tap = async () => {
-    try { await api(`/win-back/${x.id}/whatsapp`, { method: "POST" }); toast(`Marked as sent to ${x.name}`); }
+    try { await api(`/win-back/${x.id}/whatsapp`, { method: "POST" }); }   // opened, not sent: asked on the card
     catch (e) { if (!e.handled) toast(e.message, "err"); }
     done();
   };
@@ -132,7 +132,10 @@ function Draft({ x, d, reload }) {
       <div className="acts" style={{ display: "grid", gap: 8 }}>
         {(waiting || open) && <div className="prompt">{x.text}</div>}
         <div className="row">
-          {wa?.status === "pending" && <a className="btn sm primary" href={wa.link} target="_blank" rel="noopener" onClick={tap}>Send on WhatsApp</a>}
+          {wa?.status === "pending" && <a className={`btn sm ${wa.opened ? "" : "primary"}`} href={wa.link} target="_blank" rel="noopener" onClick={tap}>{wa.opened ? "Open WhatsApp again" : "Send on WhatsApp"}</a>}
+          {wa?.status === "pending" && wa.opened && (
+            <Busy className="btn sm primary" run={async () => { await api(`/win-back/${x.id}/whatsapp-sent`, { method: "POST" }); toast(`Marked as sent to ${x.name}`); done(); }}>Yes, it's sent</Busy>
+          )}
           {wa?.status === "pending" && d.connected && (
             <Busy className="btn sm" run={async () => { await api(`/win-back/${x.id}/send`, { method: "POST" }); toast(`Sent to ${x.name} from your number`); done(); }}>Send from my number</Busy>
           )}
@@ -217,7 +220,7 @@ function Results({ r }) {
 
 function Inner() {
   const [d, reload, err] = useLoad("/win-back");
-  if (!d) return <Sheet {...HEAD} title={<>Bring back customers who <em>went quiet</em>.</>}>{err ? <FormError msg={err.message} /> : <Loading />}</Sheet>;
+  if (!d) return <Sheet {...HEAD} title={<>Bring back customers who <em>went quiet</em>.</>}>{err ? <LoadError err={err} /> : <Loading />}</Sheet>;
   return (
     <Sheet {...HEAD} title={<>Bring back customers who <em>went quiet</em>.</>}
       sub={`Every Tuesday, customers who haven't bought in ${d.settings.days} days get a short, personal hello on WhatsApp — and by email when you have their address. The hub writes it; nothing goes out until you tap Send.`}>

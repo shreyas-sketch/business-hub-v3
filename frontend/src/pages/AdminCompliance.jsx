@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
-import { Busy, Field, FormError, Sheet, Switch, useHub, useLoad } from "../ui.jsx";
+import { Busy, Field, FormError, LoadError, Sheet, Switch, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Pill } from "../v2.jsx";
 import "./compliance.css";
 
@@ -148,7 +148,7 @@ export default function AdminCompliance() {
     <Sheet kicker="Admin · Compliance rules" id="AD-08" title={<>The rules every <em>due date</em> comes from.</>}
       sub="Owners' compliance calendars are built from this table and their business identity. The AI never sets a date."
       actions={<Link className="btn sm ghost" to="/admin">Back to admin</Link>}>
-      {err ? <FormError msg={err.message} /> : !d ? <Loading /> : (
+      {err ? <LoadError err={err} /> : !d ? <Loading /> : (
         <>
           <Review review={d.review} onSaved={(m) => { toast(m); reload(); }} />
           <div className="row between">

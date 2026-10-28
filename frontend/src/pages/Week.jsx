@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, rs, waLink } from "../api.js";
-import { Busy, Copy, Field, FormError, Sheet, useHub, useLoad } from "../ui.jsx";
+import { Busy, Copy, Field, FormError, LoadError, Sheet, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Num, Pill } from "../v2.jsx";
 import PostActions, { usePostedRefs } from "./PostActions.jsx";
 import "./member.css";
@@ -93,7 +93,7 @@ export default function Week() {
   const [refs, reloadRefs] = usePostedRefs([wk ? `week:${wk}` : null, tp?.date ? `cal:${String(tp.date).slice(0, 7)}` : null], !!d);
   const head = { kicker: "Start · This week", id: "MB-01", title: <>Five minutes, <em>every</em> day.</>,
     sub: "Today's one action, this week's 7 posts and 3 actions. Check in on Friday and see your weekly score." };
-  if (!d) return <Sheet {...head}>{err ? <FormError msg={err.message} /> : <Loading />}</Sheet>;
+  if (!d) return <Sheet {...head}>{err ? <LoadError err={err} /> : <Loading />}</Sheet>;
 
   const w = d.week;
   const s = d.streak;

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, rs, upload } from "../api.js";
-import { Busy, Copy, Field, FormError, Gate, Modal, Sheet, useHub, useLoad } from "../ui.jsx";
+import { Busy, Copy, Field, FormError, Gate, LoadError, Modal, Sheet, useHub, useLoad } from "../ui.jsx";
 import { Empty, Loading, Pill, Tabs } from "../v2.jsx";
 import "./compliance.css";
 
@@ -219,7 +219,7 @@ function Documents() {
   return (
     <div className="stack cp-docs">
       <Field label="Search your documents"><input className="input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="FSSAI, insurance, rent…" /></Field>
-      {err ? <FormError msg={err.message} /> : !docs ? <Loading /> : !docs.length ? (
+      {err ? <LoadError err={err} /> : !docs ? <Loading /> : !docs.length ? (
         <Empty>{term ? "Nothing matches that search." : "No documents yet. Attach a licence, certificate or agreement to any item in your calendar."}</Empty>
       ) : docs.map((i) => (
         <div key={i.id} className="cp-doc">
@@ -359,7 +359,7 @@ function ComplianceInner() {
   const isOwner = me?.workspace?.role === "owner";
   const year = useMemo(() => (d?.all || []).filter((i) => i.status !== "done" || (i.due_date || "") >= todayIso()), [d]);
   const head = { kicker: "Systems · Compliance calendar", id: "SY-09", pillar: "Systems" };
-  if (!d) return <Sheet {...head} title={<>Every filing, <em>on time</em>.</>}>{err ? <FormError msg={err.message} /> : <Loading />}</Sheet>;
+  if (!d) return <Sheet {...head} title={<>Every filing, <em>on time</em>.</>}>{err ? <LoadError err={err} /> : <Loading />}</Sheet>;
   const week = d.items.filter((i) => i.status === "upcoming" && i.days_left <= 7).length;
   const title = d.overdue.length ? <>{d.overdue.length} {d.overdue.length === 1 ? "item is" : "items are"} <em className="money">overdue</em>.</>
     : week ? <>{week} due <em>this week</em>.</> : <>Every filing, <em>on time</em>.</>;
