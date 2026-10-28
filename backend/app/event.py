@@ -774,6 +774,32 @@ async def late_apply(run_id: str) -> dict | None:
         return None
 
 
+def event_access(user: dict, code: str, ev: dict) -> dict | None:
+    """The event's Membership access for a new participant, or None when they keep what they have. It lasts until the event's
+    last day, or — with no last day set — until the team presses End access. A last day that has passed gives none. Never
+    over a plan they keep anyway (paid, or set by the admin); a shorter trial is stretched, a longer one is never cut."""
+    until = ev.get("trial_until")
+    if until is None:
+        until = plans.EVENT_OPEN_UNTIL
+    if not isinstance(until, datetime) or until <= now():
+        return None
+    sources = plans.plan_sources(user)
+    kept = max((plans.rank(t) for k, t in sources.items() if k != "trial"), default=0)
+    trial = user.get("trial") or {}
+    valid = isinstance(trial.get("until"), datetime) and trial["until"] > now()
+    better = valid and (plans.rank(trial.get("plan", "free")) > plans.rank("lite")      # a higher plan's trial is never swapped down
+                        or (plans.rank(trial.get("plan", "free")) == plans.rank("lite") and trial["until"] >= until))
+    if kept >= plans.rank("lite") or better:
+        return None
+    return {"plan": "lite", "until": until, "reason": "event", "cohort": code}
+
+
+def access_line(until: datetime) -> str:
+    if plans.open_ended(until):
+        return "Membership features are open for you until the event's access is closed."
+    return f"Membership features are open until {until.astimezone(IST).strftime('%d %b, %I:%M %p')}."
+
+
 def _empty(v) -> bool:
     return v in (None, "", [], {})
 
@@ -895,20 +921,10 @@ async def apply(run: dict, user: dict, email: str, name: str, late: bool = False
         user_patch["name"] = name[:80]
     if not user.get("cohort"):
         user_patch["cohort"] = run["cohort"]
-    ev = event_of(await cohort(run["cohort"]))
-    until = ev.get("trial_until")
-    if isinstance(until, datetime) and until > now():
-        # Membership features until the event's last day — unless they already have Membership or more that they keep anyway
-        # (paid, or set by the admin). A shorter trial is stretched to the event's end; a longer one is never cut.
-        sources = plans.plan_sources(user)
-        kept = max((plans.rank(t) for k, t in sources.items() if k != "trial"), default=0)
-        trial = user.get("trial") or {}
-        valid = isinstance(trial.get("until"), datetime) and trial["until"] > now()
-        better = valid and (plans.rank(trial.get("plan", "free")) > plans.rank("lite")      # a higher plan's trial is never swapped down
-                            or (plans.rank(trial.get("plan", "free")) == plans.rank("lite") and trial["until"] >= until))
-        if kept < plans.rank("lite") and not better:
-            user_patch["trial"] = {"plan": "lite", "until": until, "reason": "event", "cohort": run["cohort"]}
-            out["trial"] = until.isoformat()
+    trial = event_access(user, run["cohort"], event_of(await cohort(run["cohort"])))
+    if trial:
+        user_patch["trial"] = trial
+        out["trial"] = "open" if plans.open_ended(trial["until"]) else trial["until"].isoformat()
     if user_patch:
         try:
             await db().users.update_one({"_id": ws}, {"$set": user_patch})
@@ -923,7 +939,7 @@ async def apply(run: dict, user: dict, email: str, name: str, late: bool = False
     await db().event_runs.update_one({"_id": run["_id"]}, {"$set": {"applied": out, "applied_at": now()}})
     await track("event_saved", ws, cohort=run["cohort"])
     if out.get("trial"):
-        await notify(ws, f"Your event pack is in your hub. Membership features are open until {until.astimezone(IST).strftime('%d %b, %I:%M %p')}.")
+        await notify(ws, f"Your event pack is in your hub. {access_line(user_patch['trial']['until'])}")
     return out
 
 

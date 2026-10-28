@@ -77,7 +77,7 @@ function Member({ m, checks, stages, prices, reload }) {
         </div>
         <div className="row" style={{ gap: 6 }}>
           <Pill kind={PILL[a.status]}>{a.label}</Pill>
-          <span className="small muted">{a.status === "paid" && a.paid_until ? `until ${day(a.paid_until)}` : a.status === "event" ? `until ${day(a.event_until)}${a.event_day ? ` · Day ${a.event_day}` : ""}` : ""}</span>
+          <span className="small muted">{a.status === "paid" && a.paid_until ? `until ${day(a.paid_until)}` : a.status === "event" ? `${a.event_until ? `until ${day(a.event_until)}` : "until End access"}${a.event_day ? ` · Day ${a.event_day}` : ""}` : ""}</span>
         </div>
       </div>
       <div className="onb-checks">
