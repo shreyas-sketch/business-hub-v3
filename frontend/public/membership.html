@@ -1064,7 +1064,7 @@ var AIA_CONFIG = {
   annual:  { price: 19997, paymentUrl: "https://rzp.io/rzp/ZeBIaeww" },   // Annual Razorpay link
 
   gstText: "+ GST",                            // e.g. "+ 18% GST", or "" if price includes GST
-  offerEndsAt: "2026-10-27T23:59:00+05:30",    // countdown end (IST). null = hide countdown
+  offerEndsAt: null,                           // countdown end (IST), e.g. "2026-10-27T23:59:00+05:30". null = no countdown, Join now always on
 
   // Blanks from the deck. Leave null and the page leaves the number out.
   publicMonthlyPrice: null,                    // e.g. 4999 → "General public: ₹4,999 a month" struck through
