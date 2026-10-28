@@ -52,7 +52,7 @@ def _access(u: dict) -> dict:
         status, label = "ended", "Event ended"
     else:
         status, label = "free", "Free"
-    return {"status": status, "label": label, "paid_until": _iso(paid_until), "event_until": _iso(trial.get("until")) if trial.get("reason") == "event" else None,
+    return {"status": status, "label": label, "paid_until": _iso(paid_until), "event_until": _iso(trial.get("until")) if trial.get("reason") == "event" and not plans.open_ended(trial.get("until")) else None,
             "cohort": trial.get("cohort") or u.get("cohort"), "plan_name": plans.PLANS[plans.effective_plan(u)]["name"],
             "event_day": plans.event_day(u)}
 

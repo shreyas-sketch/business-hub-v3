@@ -48,7 +48,7 @@ def plan_view(user: dict) -> dict:
     sub = user.get("sub") or {}
     until = {"purchase": (user.get("access") or {}).get(effective), "subscription": sub.get("paid_until"),
              "trial": (user.get("trial") or {}).get("until")}.get(source)
-    return {"plan": effective, "plan_name": plans.PLANS[effective]["name"], "source": source, "until": core.iso(until),
+    return {"plan": effective, "plan_name": plans.PLANS[effective]["name"], "source": source, "until": None if plans.open_ended(until) else core.iso(until),
             "sources": sources}
 
 
@@ -112,7 +112,7 @@ def _membership_start(user: dict):
     at = now()
     ends = []
     trial = user.get("trial") or {}
-    if trial.get("until") and trial["until"] > at and plans.rank(trial.get("plan", "free")) >= plans.rank("lite"):
+    if trial.get("until") and trial["until"] > at and not plans.open_ended(trial["until"]) and plans.rank(trial.get("plan", "free")) >= plans.rank("lite"):
         ends.append(trial["until"])
     paid_until = (user.get("sub") or {}).get("paid_until")
     if paid_until and paid_until > at:

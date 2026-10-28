@@ -609,3 +609,44 @@ async def test_an_email_another_account_uses_doesnt_stop_the_save(client):
     user = await db().users.find_one({"phone": "+919833099002"})
     assert user.get("email") != "taken@example-dup.in" and user["name"] == "Riya" and user["trial"]["reason"] == "event"
     assert (await db().users.find_one({"phone": "+919833099001"}))["email"] == "taken@example-dup.in"
+
+
+async def test_with_no_last_day_the_event_gives_membership_until_the_team_ends_it(client):
+    admin = await open_event()
+    assert (await admin.put(f"/api/admin/event/{CODE}", json={"open": True, "ai": True, "pack_cap": 400, "ai_cap": 300,
+                                                               "trial_until": None})).status_code == 200
+    made = await make(client, form(None, business_name="Riya Tiffins", about="Home-cooked lunch tiffins delivered to offices"))
+    await ev.drain()
+    run = await db().event_runs.find_one({"token": made["token"]})
+    new = {"_id": "u-open", "phone": "+919833081121", "ref_code": "ROPEN01", "plan": "free"}
+    await db().users.insert_one(new)
+    out = await ev.apply(run, new, "", "")
+    assert out["trial"] == "open"
+    user = await db().users.find_one({"_id": "u-open"})
+    assert user["trial"]["plan"] == "lite" and plans.open_ended(user["trial"]["until"])
+    assert plans.effective_plan(user) == "lite" and plans.has(user, "website") and not plans.is_paid(user)
+
+    from app.routers.billing import _membership_start, plan_view
+    assert _membership_start(user) is None and plan_view(user)["until"] is None   # paying starts Membership now; no year 2100 shown
+
+    # End access still closes it
+    assert (await admin.post(f"/api/admin/event/{CODE}/end-access")).json()["ended"] == 1
+    assert plans.effective_plan(await db().users.find_one({"_id": "u-open"})) == "free"
+
+
+async def test_signing_up_with_the_event_code_gives_membership_not_free(client):
+    admin = await open_event()
+    owner = await new_owner("9833081131", cohort=CODE)
+    me = (await owner.get("/api/me")).json()
+    assert me["user"]["effective_plan"] == "lite" and me["features"]["website"]
+    assert me["event"]["cohort"] == CODE and me["event"]["until"]                 # the event's last day is set: it shows
+
+    assert (await admin.put(f"/api/admin/event/{CODE}", json={"open": True, "ai": True, "pack_cap": 400, "ai_cap": 300,
+                                                               "trial_until": None})).status_code == 200
+    later = await new_owner("9833081132", cohort=CODE)
+    me = (await later.get("/api/me")).json()
+    assert me["user"]["effective_plan"] == "lite" and me["user"]["trial_until"] is None and me["event"]["until"] is None
+
+    await admin.post(f"/api/admin/event/{CODE}/end-access")                       # after the event: a new sign-up is Free
+    late = await new_owner("9833081133", cohort=CODE)
+    assert (await late.get("/api/me")).json()["user"]["effective_plan"] == "free"

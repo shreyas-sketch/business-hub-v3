@@ -89,7 +89,7 @@ function Settings({ e, reload }) {
       <div className="ev-settings">
         <Field label="Packs, at most"><input className="input" type="number" min={1} max={20000} value={f.pack_cap} onChange={(x) => setF({ ...f, pack_cap: x.target.value })} /></Field>
         <Field label="Packs with AI, at most"><input className="input" type="number" min={0} max={20000} value={f.ai_cap} onChange={(x) => setF({ ...f, ai_cap: x.target.value })} /></Field>
-        <Field label="Membership features open until" hint="The last day of the event. Empty: none.">
+        <Field label="Membership features open until" hint="The last day of the event. Empty: open until you press End access.">
           <input className="input" type="date" value={f.trial_until} onChange={(x) => setF({ ...f, trial_until: x.target.value })} />
         </Field>
         <Field label="AI tokens per attendee" hint="For the whole event."><input className="input" type="number" min={1} max={10000} value={f.tokens} onChange={(x) => setF({ ...f, tokens: x.target.value })} /></Field>

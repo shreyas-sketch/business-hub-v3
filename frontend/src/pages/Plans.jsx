@@ -22,7 +22,7 @@ function whereFrom(b) {
     if (sub.status === "pending") return `Membership · your last payment didn't go through; Razorpay is retrying`;
     return `Membership · renews every month${sub.paid_until ? `, next on ${day(sub.paid_until)}` : ""}`;
   }
-  if (b.source === "trial") return `Free from your invite · until ${day(b.until)}`;
+  if (b.source === "trial") return b.until ? `Free from your invite · until ${day(b.until)}` : "Event access · open until the event's access is closed";
   return b.plan === "free" ? "Given free at the Business AI workshop" : "Set up for you by the Business AI team";
 }
 
@@ -241,7 +241,7 @@ function PlansV23() {
   const status = me.paid
     ? { label: "Your plan", title: m.name, line: m.paid_until ? `Paid until ${day(m.paid_until)}.` : "Switched on for you by the OwnerDesk team." }
     : me.event
-      ? { label: "Event access", title: "Your event access", line: `Open until ${day(me.event.until)}${me.event.day ? ` · Day ${me.event.day} of the event` : ""}. Everything you make stays in your hub.` }
+      ? { label: "Event access", title: "Your event access", line: `${me.event.until ? `Open until ${day(me.event.until)}` : "Open until the event's access is closed"}${me.event.day ? ` · Day ${me.event.day} of the event` : ""}. Everything you make stays in your hub.` }
       : { label: "Your plan", title: "Free", line: "Your Knowledge Hub and Engine Audit stay open. Everything you made is saved — join to open the engines again." };
   const ask = () => { api("/upgrade-click", { method: "POST", body: { tier: "lite", from_feature: "plans" } }).catch(() => {}); setContact(true); };
   return (

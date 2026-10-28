@@ -12,7 +12,7 @@ from ..db import db, now
 from ..messaging import send_otp
 from ..security import (client_ip, clear_session, current_user, hash_otp, hash_password, issue_session, new_otp, normalise_phone,
                         otp_matches, password_matches, rate_limit)
-from ..services import attach_referral, invite_link, new_id, new_ref_code, runs_own_hub, runs_status, track
+from ..services import attach_referral, invite_link, new_id, new_ref_code, notify, runs_own_hub, runs_status, track
 from ..sites import site_url
 
 router = APIRouter(prefix="/api")
@@ -232,7 +232,7 @@ async def _accept_team_invite(user: dict) -> dict:
 
 async def _create_user(phone: str, body: VerifyIn) -> tuple[dict, bool]:
     invite = await db().team_invites.find_one({"phone": phone, "status": "pending"})
-    cohort = None
+    cohort, c = None, None
     if body.cohort:
         c = await db().cohorts.find_one({"code": body.cohort.strip().upper()[:40]})
         cohort = c["code"] if c else None
@@ -258,6 +258,12 @@ async def _create_user(phone: str, body: VerifyIn) -> tuple[dict, bool]:
         await track("team_join", invite["owner_id"], member=user["_id"])
         return await db().users.find_one({"_id": user["_id"]}), True
     await track("signup", user["_id"], cohort=cohort, src=body.src or ("cohort" if cohort else "direct"))
+    if c and c.get("event") and not c["event"].get("ended_at"):   # a live event's code: Membership access, not Free
+        from .. import event as ev
+        trial = ev.event_access(user, cohort, ev.event_of(c))
+        if trial:
+            await db().users.update_one({"_id": user["_id"]}, {"$set": {"trial": trial}})
+            await notify(user["_id"], ev.access_line(trial["until"]))
     await attach_referral(user, body.ref, body.src)
     return await db().users.find_one({"_id": user["_id"]}), True
 
@@ -297,7 +303,8 @@ async def me(user: dict = Depends(current_user)):
                  "role": "admin" if user.get("role") == "admin" and user["phone"] in settings.admin_phones else "owner",
                  "plan": owner.get("plan", "free"), "effective_plan": effective, "plan_name": plans.PLANS[effective]["name"],
                  "plan_source": plans.plan_source(owner),
-                 "trial_until": trial["until"].isoformat() if trial.get("until") and sources.get("trial") == effective != owner.get("plan", "free") else None,
+                 "trial_until": trial["until"].isoformat() if trial.get("until") and not plans.open_ended(trial["until"])
+                 and sources.get("trial") == effective != owner.get("plan", "free") else None,
                  "access_until": (owner.get("access") or {})[effective].isoformat() if (owner.get("access") or {}).get(effective) else None,
                  "subscription": {"status": sub.get("status"), "paid_until": sub["paid_until"].isoformat() if sub.get("paid_until") else None} if sub else None},
         "workspace": {"role": role, "owner_name": owner.get("name", ""), "is_team": role != "owner"},
@@ -343,7 +350,7 @@ def _v23_me(owner: dict) -> dict:
         "engines": plans.engines_for(owner),
         "feature_locks": locks,
         "paid": plans.is_paid(owner),
-        "event": {"cohort": trial.get("cohort"), "day": plans.event_day(owner), "until": trial["until"].isoformat()} if trial else None,
+        "event": {"cohort": trial.get("cohort"), "day": plans.event_day(owner), "until": None if plans.open_ended(trial["until"]) else trial["until"].isoformat()} if trial else None,
         "membership": {"name": lite["name"], "price_minor": lite["price_minor"], "price_year_minor": lite.get("price_year_minor", 0),
                        "runs": lite["runs"] + lite.get("extra_runs", 0), "images": lite.get("images", 30),
                        "paid_until": access_until.isoformat() if hasattr(access_until, "isoformat") else None},

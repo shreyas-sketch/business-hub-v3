@@ -19,7 +19,7 @@ Brand and Data on Day 3 (Admin → Live event → the event day).
 import copy
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 from .config import settings
 from .db import db, now
@@ -343,6 +343,14 @@ def rank(tier: str) -> int:
 
 def _valid(until, at: datetime) -> bool:
     return bool(until) and until > at
+
+
+# Event access with no last day set: open until the team presses End access (Admin → Live event).
+EVENT_OPEN_UNTIL = datetime(2100, 1, 1, tzinfo=timezone.utc)
+
+
+def open_ended(until) -> bool:
+    return isinstance(until, datetime) and until >= EVENT_OPEN_UNTIL
 
 
 def plan_sources(user: dict, at: datetime | None = None) -> dict:

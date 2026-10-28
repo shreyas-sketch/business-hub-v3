@@ -414,7 +414,7 @@ const APPLIED = { knowledge: "Knowledge Hub", compliance: "Compliance calendar",
 function Saved({ applied, pending }) {
   const a = applied || {};
   const kept = Object.entries(a).filter(([k, x]) => x === "kept" && APPLIED[k]).map(([k]) => APPLIED[k]);
-  const trial = a.trial ? new Date(a.trial).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : null;
+  const trial = a.trial === "open" ? "the event's access is closed" : a.trial ? new Date(a.trial).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : null;
   return (
     <div className="stack">
       <h2>Saved. It's in your <em>hub</em>.</h2>
