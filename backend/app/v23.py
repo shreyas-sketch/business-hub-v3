@@ -7,6 +7,7 @@ Features & plans, and the code's own defaults — and the tests written against 
 - The menu becomes Start, the 6 engines and Account. Only the features below show in it — his agreed list, plus five that
   were already live in main and stay on (Win-Back, Lead Response, WhatsApp chats, GST set-aside, research).
 - Features that other pages need keep working behind the scenes ("show" off).
+- Team logins stay on at their own plan, so existing Growth and LegacyWorkforce teams can still log in (KEEP).
 - Everything else is switched off for everyone. The admin can switch any of it back on.
 - All of it is in the Membership plan (₹1,999 a month or ₹19,999 a year, paid outside the hub on Razorpay; the team marks
   the member as paid in Admin → Onboarding). The free plan keeps the Knowledge Hub, the Engine Audit and Plans.
@@ -62,6 +63,10 @@ BEHIND = {
     "content_calendar": "brand", "brand_message": "brand", "brochures": "brand", "competitor_watch": "brand", "bank_reader": "data",
     "whatsapp_tool": "account",
 }
+# Kept on at their own plan (tier untouched), in the Account menu only for owners whose plan has them. Team logins: switched
+# off, every manager and staff login of an existing Growth or LegacyWorkforce owner would be refused ("team access is paused").
+# No teaser, so the Membership menu stays as agreed.
+KEEP = {"team_logins": "account"}
 # opened once the member pays: the brochures and linking Employz.ai. Connecting their own WhatsApp number (whatsapp_tool) is
 # open to event accounts too: WhatsApp chats, kept on in main, needs it, and event attendees were promised WhatsApp connections.
 PAID_ONLY = ("brochures", "crm_sync")
@@ -90,6 +95,8 @@ def desired() -> dict[str, dict]:
     for key, engine in BEHIND.items():
         out[key] = {"on": True, "show": False, "engine": engine, "tier": "free" if key in FREE else "lite", "paid_only": key in PAID_ONLY,
                     "day": -1, **({"label": BEHIND_LABELS[key]} if key in BEHIND_LABELS else {})}
+    for key, engine in KEEP.items():
+        out[key] = {"on": True, "show": True, "engine": engine, "teaser": False, "paid_only": False, "day": -1}
     for key in plans.DEFAULT_FEATURES:
         if key not in out:
             out[key] = {"on": False, "show": False}
