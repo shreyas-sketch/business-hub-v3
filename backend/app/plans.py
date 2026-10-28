@@ -198,6 +198,7 @@ DEFAULT_FEATURES: dict[str, dict] = {
     "brochures":       F("lite", "Structure", "Brochures", "A business brochure and a products and services brochure, written from your brand kit, website and competitor research", None, "owner"),
     "whatsapp_tool":   F("growth", "Systems", "WhatsApp tool", "Connect your own WhatsApp number through the WhatsApp service you use, so messages go from your number", None, "owner"),
     "key_person":      F("lite", "Structure", "Key-person knowledge", "What your key employee knows, written down as an AI agent skill, a role card and SOPs — so the business doesn't depend on one person", "/key-person", "owner"),
+    "tender_finder":   F("lite", "Grow", "Tender finder", "Open government tenders on GeM that fit your business, with a link to apply and help to apply for each one", "/tenders", "manager"),
 }
 V23_NEW = ("engine_audit", "lead_ideas", "crm", "social_media", "brochures", "key_person")
 # Each feature's engine. Anything not listed here sits under "More" (only seen when the admin switches it on).
@@ -213,7 +214,7 @@ DEFAULT_ENGINE = {
     "cash_flow": "operations",
     "brand_kit": "brand", "brand_message": "brand", "social_media": "brand", "content_calendar": "brand", "brochures": "brand",
     "launch_kit": "brand", "competitor_watch": "brand",
-    "key_person": "data", "expenses": "data", "bank_reader": "data", "gst_setaside": "data", "customer_risk": "data", "getting_paid": "data",
+    "key_person": "data", "expenses": "data", "tender_finder": "data", "bank_reader": "data", "gst_setaside": "data", "customer_risk": "data", "getting_paid": "data",
     "whatsapp_tool": "account", "plans_billing": "account", "connections": "account", "recordings": "account", "member_call": "account", "invite": "account",
     "team_logins": "account",
 }

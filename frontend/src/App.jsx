@@ -87,6 +87,7 @@ const LeadIdeas = lazy(() => import("./pages/LeadIdeas.jsx"));
 const Social = lazy(() => import("./pages/Social.jsx"));
 const KeyPerson = lazy(() => import("./pages/KeyPerson.jsx"));
 const KeyPersonForm = lazy(() => import("./pages/KeyPersonForm.jsx"));
+const Tenders = lazy(() => import("./pages/Tenders.jsx"));
 const Engine = lazy(() => import("./pages/Engine.jsx"));
 const AdminOnboarding = lazy(() => import("./pages/AdminOnboarding.jsx"));
 const kit = (name) => lazy(() => import("./pages/Kits.jsx").then((m) => ({ default: m[name] })));
@@ -123,6 +124,7 @@ const PAGES = [
   // v2.3 (OwnerDesk)
   ["/audit", Audit, "engine_audit", "owner"], ["/contacts", Contacts, "crm", "staff"], ["/contacts/:id", Contacts, "crm", "staff"],
   ["/lead-ideas", LeadIdeas, "lead_ideas", "manager"], ["/social", Social, "social_media", "staff"], ["/key-person", KeyPerson, "key_person", "owner"],
+  ["/tenders", Tenders, "tender_finder", "manager"],
   ["/engine/:key", Engine, null, "staff"],
 ];
 
