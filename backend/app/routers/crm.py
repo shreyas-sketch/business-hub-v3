@@ -26,11 +26,11 @@ Nothing here messages a customer. A WhatsApp button only opens the owner's own W
 import csv
 import io
 import re
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from starlette.datastructures import UploadFile
 
 from .. import crm, dashboard_cache
@@ -55,6 +55,17 @@ LEAD_TO_SOURCE = {"website": "website", "guide": "website", "lead_magnet": "webs
 
 
 # ───────────────────────── helpers ─────────────────────────
+def _real_day(v: str | None) -> str | None:
+    """A date field: empty, or a day that exists — "2026-02-30" matches the pattern but would break the reminder after the
+    deal or contact was already saved."""
+    if v:
+        try:
+            date.fromisoformat(v)
+        except ValueError:
+            raise ValueError("Use a real date, like 2026-11-05")
+    return v
+
+
 async def _competitor(ws: str) -> dict | None:
     """The competitor summary (fork C's Competitor Watch summary), when the hub has one. Never required."""
     try:
@@ -291,6 +302,8 @@ class DealIn(BaseModel):
     follow_up_on: str = Field(default="", pattern=r"^(|\d{4}-\d{2}-\d{2})$")
     note: str = Field(default="", max_length=1000)
 
+    _days = field_validator("expected_close", "follow_up_on")(_real_day)
+
 
 class DealPatch(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=80)
@@ -304,6 +317,8 @@ class DealPatch(BaseModel):
     status: str | None = Field(default=None, pattern="^(new|contacted|won|lost)$")
     lost_reason: str | None = Field(default=None, max_length=80)
     note: str | None = Field(default=None, max_length=1000)
+
+    _days = field_validator("expected_close", "follow_up_on")(_real_day)
 
 
 class MoveIn(BaseModel):
@@ -589,6 +604,8 @@ class ContactPatch(BaseModel):
     follow_up_on: str | None = Field(default=None, pattern=r"^(|\d{4}-\d{2}-\d{2})$")
     follow_up_note: str | None = Field(default=None, max_length=300)
     assignee_id: str | None = Field(default=None, max_length=40)
+
+    _days = field_validator("follow_up_on")(_real_day)
 
 
 class ActivityIn(BaseModel):
