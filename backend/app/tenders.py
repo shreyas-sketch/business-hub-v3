@@ -68,9 +68,11 @@ class RelayTransport(httpx.AsyncBaseTransport):
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         if request.url.host == httpx.URL(GEM).host:
+            # a Request built with a stream gets no Host header of its own: give it the relay's, in place of GeM's
             headers = [(k, v) for k, v in request.headers.multi_items() if k.lower() != "host"]
             request = httpx.Request(request.method, request.url.copy_with(scheme=self.base.scheme, host=self.base.host, port=self.base.port),
-                                    headers=[*headers, ("X-Relay-Key", self.key)], stream=request.stream, extensions=request.extensions)
+                                    headers=[("Host", self.base.netloc.decode("ascii")), *headers, ("X-Relay-Key", self.key)],
+                                    stream=request.stream, extensions=request.extensions)
         return await self.inner.handle_async_request(request)
 
     async def aclose(self) -> None:
