@@ -98,6 +98,14 @@ class FakeGem:
         return httpx.Response(404)
 
 
+@pytest.fixture(autouse=True)
+def open_by_plan(monkeypatch):
+    """The tests here are about the finder itself: open it by plan, as it will be once it leaves its trial with one account
+    (test_grants_only.py covers that)."""
+    monkeypatch.setitem(plans.DEFAULT_FEATURES["tender_finder"], "grants_only", False)
+    monkeypatch.setitem(plans.META["tender_finder"], "grants_only", False)
+
+
 @pytest.fixture
 def gem(monkeypatch):
     fake = FakeGem()

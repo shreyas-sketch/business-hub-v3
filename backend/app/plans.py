@@ -10,7 +10,8 @@ A plan can come from four places — the admin, a referral trial, the Membership
 and the highest one that is still valid wins. The admin can also give one owner a single feature until a date (a grant).
 
 v2.3 (OwnerDesk): every feature also has an engine (the 6 engines of a business, plus start / more / account), a "show"
-switch (in the menu or only working behind other pages), "paid_only" (closed during a free or event trial) and an optional
+switch (in the menu or only working behind other pages), "paid_only" (closed during a free or event trial), "grants_only"
+(open only to the owners the admin has granted it to, whatever their plan, and out of everyone else's menu) and an optional
 event day. The engine menu, the hidden features and the new prices are switched on together by the v2.3 setup
 (app/v23.py), stored in the same `config` collection as any admin change — so the code defaults stay as they were.
 During a live event, an attendee's engines open day by day: Lead and Sales on Day 1, Conversion and Operations on Day 2,
@@ -220,14 +221,16 @@ DEFAULT_ENGINE = {
 }
 for _i, (_k, _f) in enumerate(DEFAULT_FEATURES.items()):
     _f.update(key=_k, order=_i * 10, on=_k not in V23_NEW, teaser=True, sub="", engine=DEFAULT_ENGINE.get(_k, "more"), show=True,
-              paid_only=False, day=-1)   # day -1: the engine's own day
+              paid_only=False, grants_only=False, day=-1)   # day -1: the engine's own day
 DEFAULT_FEATURES["business_brain"]["sub"] = "Business Brain"
+# The tender finder is being tried out with one account: open only where the admin grants it (Admin → grants).
+DEFAULT_FEATURES["tender_finder"]["grants_only"] = True
 # One dashboard: the Control Room is the Dashboard with the Growth tiles switched on, so it has no menu entry of its own
 # (its Monday CEO report and /control stay).
 DEFAULT_FEATURES["control_room"]["path"] = None
 
 FEATURE_EDITABLE = {"tier": str, "group": str, "label": str, "what": str, "order": int, "on": bool, "teaser": bool,
-                    "engine": str, "show": bool, "paid_only": bool, "day": int}
+                    "engine": str, "show": bool, "paid_only": bool, "grants_only": bool, "day": int}
 
 # Hub-wide settings outside the registry (the v2.3 setup turns the engine menu on; the admin edits the account links).
 DEFAULT_UI = {"menu": "groups", "community_link": "", "support_email": "", "pay_monthly_link": "", "pay_yearly_link": "", "v23": None}
@@ -393,7 +396,8 @@ def granted(user: dict, feature: str, at: datetime | None = None) -> bool:
 
 
 def has(user: dict, feature: str) -> bool:
-    """On for everyone (the admin's switch), and either in the owner's plan or granted to this owner by the admin.
+    """On for everyone (the admin's switch), and either in the owner's plan or granted to this owner by the admin (only the
+    grant counts for a grants_only feature).
     v2.3: a paid-only feature stays closed during a free or event trial, and during a live event a menu feature opens on
     its engine's day."""
     m = META.get(feature)
@@ -401,6 +405,8 @@ def has(user: dict, feature: str) -> bool:
         return False
     if granted(user, feature):
         return True
+    if m.get("grants_only"):
+        return False
     if rank(effective_plan(user)) < rank(m["tier"]):
         return False
     if m.get("paid_only") and not is_paid(user):
@@ -492,7 +498,8 @@ def feature_view(key: str) -> dict:
     m = META[key]
     return {"key": key, "label": m["label"], "sub": m.get("sub", ""), "what": m["what"], "tier": m["tier"], "group": m["group"], "path": m["path"],
             "role": m["role"], "order": m["order"], "on": m["on"], "teaser": m["teaser"], "core": m["core"],
-            "engine": m.get("engine", "more"), "show": m.get("show", True), "paid_only": m.get("paid_only", False), "day": m.get("day", -1)}
+            "engine": m.get("engine", "more"), "show": m.get("show", True), "paid_only": m.get("paid_only", False),
+            "grants_only": m.get("grants_only", False), "day": m.get("day", -1)}
 
 
 def ladder() -> list[dict]:
@@ -516,7 +523,7 @@ def menu_for(owner: dict, role: str) -> list[dict]:
         if not m["path"] or not m["on"] or ROLES.index(m["role"]) > rank_role:
             continue
         unlocked = has(owner, key)
-        if not unlocked and not m["teaser"]:
+        if not unlocked and (not m["teaser"] or m.get("grants_only")):
             continue
         groups[m["group"]].append({"key": key, "path": m["path"], "label": m["label"], "sub": m.get("sub", ""), "what": m.get("what", ""), "locked": not unlocked,
                                    "tier": m["tier"], "tier_name": PLANS[m["tier"]]["name"], "tier_short": PLANS[m["tier"]]["short"],
@@ -534,7 +541,7 @@ def engine_menu(owner: dict, role: str) -> list[dict]:
             continue
         unlocked = has(owner, key)
         by_day = not unlocked and day_locked(owner, key)
-        if not unlocked and not by_day and not m["teaser"]:
+        if not unlocked and (m.get("grants_only") or not by_day and not m["teaser"]):
             continue
         sections[m.get("engine") if m.get("engine") in sections else "more"].append({
             "key": key, "path": m["path"], "label": m["label"], "sub": m.get("sub", ""), "locked": not unlocked,

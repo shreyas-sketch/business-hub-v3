@@ -157,6 +157,9 @@ export function Gate({ feature, role = "staff", children, title, what, kicker = 
     return <Sheet kicker={kicker} id={id} title={<>Ask the owner for <em>access</em>.</>} sub="This part of the hub is for the business owner or a manager." />;
   }
   const why = feature && !me.features?.[feature] ? me.feature_locks?.[feature] : null;
+  if (why?.lock === "grant") {   // open only to the accounts the team has given it to: joining doesn't open it
+    return <Sheet kicker={kicker} id={id} title={<>Not open on <em>your account</em>.</>} sub="The OwnerDesk team opens this part of the hub account by account." />;
+  }
   if (why?.lock === "day") {   // v2.3: a later day of the live event
     return (
       <Sheet kicker={kicker} id={id} title={<>This opens on <em>Day {why.opens_day}</em>.</>}
