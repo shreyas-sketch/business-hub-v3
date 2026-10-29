@@ -308,12 +308,14 @@ def facts(text: str) -> dict:
     docs = re.search(r"Document required\s*\n?from seller\s*\n(.+?)\n\*?(?:In case|Do you want|Minimum)", flat, re.I | re.S)
     emd_amount = _after(flat, r"EMD Amount", r"([0-9][0-9,]*)")
     emd = re.search(r"EMD Detail\s*\n\s*Required\s*\n\s*(Yes|No)", flat, re.I)
-    turnover = _after(flat, r"Minimum Average Annual\s*\n?Turnover of the bidder[^\n]*(?:\n[^\n]*Years\))?", r"([0-9][^\n]{0,40})")
+    turnover = _after(flat, r"Minimum Average Annual\s*Turnover of the\s*bidder[^\n]*(?:\n[^\n]*Years\))?", r"([0-9][^\n]{0,40})")
     experience = _after(flat, r"Years of Past Experience Required for\s*\n?same/similar service", r"([^\n]{1,40})") or \
         _after(flat, r"Years of Past Experience Required", r"([^\n]{1,40})")
     out = {
-        "ends": _after(flat, r"Bid End Date/Time", r"(\d{2}-\d{2}-\d{4} \d{2}:\d{2}(?::\d{2})?)"),
+        "ends": _after(flat, r"(?:Bid|RA) End Date/Time", r"(\d{2}-\d{2}-\d{4} \d{2}:\d{2}(?::\d{2})?)"),
         "opens": _after(flat, r"Bid Opening\s*\n?Date/Time", r"(\d{2}-\d{2}-\d{4} \d{2}:\d{2}(?::\d{2})?)"),
+        "starts": _after(flat, r"RA Start Date/Time", r"(\d{2}-\d{2}-\d{4} \d{2}:\d{2}(?::\d{2})?)"),
+        "parent_bid": _after(flat, r"Please refer to Bid document of", r"(GEM/\d{4}/B/\d+)"),
         "ministry": _after(flat, r"Ministry/State Name"),
         "department": _after(flat, r"Department Name"),
         "organisation": _after(flat, r"Organisation Name"),
@@ -325,8 +327,9 @@ def facts(text: str) -> dict:
         "past_performance": _after(flat, r"Past Performance", r"(\d{1,3} ?%)"),
         "turnover": turnover,
         "experience": experience,
-        "mse_relaxation": _after(flat, r"MSE Relaxation for Years of\s*\n?Experience and Turnover", r"(Yes|No)"),
-        "startup_relaxation": _after(flat, r"Startup Relaxation for Years of\s*\n?Experience and Turnover", r"(Yes|No)"),
+        # a bid says "Relaxation", a reverse auction "Exemption", and the line breaks fall in different places
+        "mse_relaxation": _after(flat, r"MSE (?:Relaxation|Exemption) for Years of\s+Experience\s+and\s+Turnover", r"(Yes|No)"),
+        "startup_relaxation": _after(flat, r"Startup (?:Relaxation|Exemption) for Years of\s+Experience\s+and\s+Turnover", r"(Yes|No)"),
         "emd_required": "Yes" if emd_amount else emd.group(1).title() if emd else "",
         "emd_amount": emd_amount,
         "mse_preference": _after(flat, r"MSE Purchase Preference\s*\n?MSE Purchase Preference", r"(Yes|No)"),

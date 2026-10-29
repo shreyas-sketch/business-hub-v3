@@ -27,11 +27,17 @@ export const tokenWords = (text) => String(text || "")
   .replace(/\b(\d+) runs\b/g, "$1 tokens").replace(/\b1 run\b/g, "1 token");
 
 export async function api(path, { method = "GET", body } = {}) {
-  const res = await fetch(`/api${path}`, {
-    method, credentials: "same-origin",
-    headers: body ? { "content-type": "application/json" } : {},
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(`/api${path}`, {
+      method, credentials: "same-origin",
+      headers: body ? { "content-type": "application/json" } : {},
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    // no answer at all (the connection dropped, or the hub was restarting): the browser's own "Failed to fetch" says nothing
+    const e = new Error("The connection to OwnerDesk dropped. Check your internet and try again."); e.status = 0; e.network = true; throw e;
+  }
   const data = await res.json().catch(() => ({}));
   if (res.status === 402 && data.detail?.code === "runs_exhausted") {
     onLimit(data.detail);

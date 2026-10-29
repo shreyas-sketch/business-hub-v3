@@ -311,3 +311,20 @@ async def test_gem_requests_go_through_the_relay_in_india(gem, monkeypatch):
     assert seen[1].headers["cookie"] == "ci_session=abc"      # GeM's session cookie went back with the search
     assert "Bid End Date/Time" in await tn.bid_text(found[0]["url"])
     assert seen[-1].url.path == "/showbidDocument/5002"
+
+
+def test_a_reverse_auction_document_is_read_by_rules_too():
+    """A reverse auction's document uses its own labels ("RA End Date/Time", "Exemption" for "Relaxation"), breaks the turnover
+    label in another place, and sends the seller to the bid it came from for the full terms."""
+    text = "\n".join([
+        "RA Number: GEM/2026/R/700001", "RA Details", "RA Start Date/Time 30-10-2026 16:00:00", "RA End Date/Time 31-10-2026 16:00:00",
+        "Ministry/State Name Ministry Of Railways", "Department Name Central Railway Workshop", "Organisation Name Parel Workshop",
+        "Total Quantity 4", "Item Category Modular Office Furniture", "Minimum Average Annual Turnover of the",
+        "bidder (For the last 3 Financial Years)", "12 Lakh (s)", "MSE Exemption for Years of Experience and", "Turnover", "Yes",
+        "Startup Exemption for Years of Experience", "and Turnover", "No",
+        "Please refer to Bid document of GEM/2026/B/7000001 for technical specification, terms &"])
+    f = tn.facts(text)
+    assert f["ends"] == "31-10-2026 16:00:00" and f["starts"] == "30-10-2026 16:00:00"
+    assert f["turnover"].startswith("12 Lakh") and f["mse_relaxation"] == "Yes" and f["startup_relaxation"] == "No"
+    assert f["parent_bid"] == "GEM/2026/B/7000001" and f["organisation"] == "Parel Workshop" and f["quantity"] == "4"
+    assert "opens" not in f
