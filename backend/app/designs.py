@@ -130,7 +130,8 @@ class Canvas:
             f = self.font(role, size, text, bold)
             lines = self.wrap(text, f, width)
             lh = int(size * leading)
-            if len(lines) * lh <= max_h or size <= min_size:
+            # a single long word (a business name in the brand mark) can't wrap: it has to shrink to the width too
+            if (len(lines) * lh <= max_h and all(f.getlength(x) <= width for x in lines)) or size <= min_size:
                 break
             size = int(size * 0.92)
         lines = lines[: max(1, max_h // lh)]
@@ -182,11 +183,19 @@ def render(key: str, fields: dict, design: dict, business: dict, logo: Image.Ima
         head = f.get("headline") or f.get("title", "")
         used = c.text(head, P, top, W - 2 * P, int(H * 0.30), "heading", int(W * 0.095), c.on_primary, leading=1.12)
         sub = f.get("body") or f.get("sub", "")
-        used += int(H * 0.03) + c.text(sub, P, top + used + int(H * 0.03), W - 2 * P, int(H * 0.28), "body", int(W * 0.045), c.on_primary, leading=1.35)
+        footer_y = H - P - int(W * 0.03)
+        pill_size = int(W * 0.036)
+        # the button sits above the footer, and the body stops above the button (it shrinks to fit rather than run under it)
+        pill_y = footer_y - int(H * 0.03) - int(pill_size * 2.1)
+        body_y = top + used + int(H * 0.03)
+        body_end = pill_y - int(H * 0.03) if f.get("cta") else footer_y - int(H * 0.03)
+        if body_end - body_y >= int(W * 0.03):
+            used += int(H * 0.03) + c.text(sub, P, body_y, W - 2 * P, min(int(H * 0.28), body_end - body_y), "body", int(W * 0.045),
+                                           c.on_primary, leading=1.35, min_size=14)
         if f.get("cta"):
-            c.pill(f["cta"], P, min(top + used + int(H * 0.05), H - P - int(W * 0.09)), int(W * 0.036), c.accent, c.on_accent)
+            c.pill(f["cta"], P, min(top + used + int(H * 0.05), pill_y), pill_size, c.accent, c.on_accent)
         footer = " · ".join(x for x in (name, business.get("whatsapp", "")) if x)
-        c.text(footer, P, H - P - int(W * 0.03), W - 2 * P, int(W * 0.05), "body", int(W * 0.03), c.on_primary, min_size=14)
+        c.text(footer, P, footer_y, W - 2 * P, int(W * 0.05), "body", int(W * 0.03), c.on_primary, min_size=14)
     elif key == "festival":
         c.img.paste(c.primary, (0, 0, W, H))
         for i in range(0, W, int(W / 9)):

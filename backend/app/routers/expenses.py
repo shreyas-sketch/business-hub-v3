@@ -29,6 +29,7 @@ from pymongo import ReturnDocument
 from pymongo.errors import BulkWriteError, DuplicateKeyError
 
 from .. import files
+from ..bankstatement import payee_label
 from ..billing import inr
 from ..context import Ctx, feature
 from ..dashboard_cache import bust
@@ -303,8 +304,15 @@ def _check(doc: dict, changed: set, known: set) -> None:
         g = parse_gstin(doc["vendor_gstin"])
         if not g["valid"]:
             bad(f"Vendor's GST number: {g['error']}")
+    if changed & {"gst_claimable", "vendor_gstin"} and doc.get("gst_claimable") and doc.get("gst", 0) > 0 and not doc.get("vendor_gstin"):
+        bad("To claim the GST back, add the vendor's GST number from the bill.")   # no supplier GSTIN on the bill, no input credit
     if "category" in changed and doc["category"] not in known:
         bad("Pick a category from the list.")
+
+
+def _claimable(doc: dict) -> bool:
+    """GST counts as claimable only with GST on the bill and the vendor's GST number on it."""
+    return bool(doc.get("gst_claimable") and doc.get("gst", 0) > 0 and doc.get("vendor_gstin"))
 
 
 def _can_edit(ctx: Ctx, d: dict) -> bool:
@@ -402,7 +410,7 @@ async def add_expense(body: ExpenseIn, ctx: Ctx = Depends(exp_ctx)):
     kind, custom, _ = await _setup(ctx.ws)
     data = _clean(body.model_dump())
     _check(data, set(data), {c["key"] for c in categories_for(kind, custom)})
-    doc = {"_id": new_id(), "ws": ctx.ws, **data, "gst_claimable": bool(data["gst_claimable"] and data["gst"] > 0), "bill_file_id": None,
+    doc = {"_id": new_id(), "ws": ctx.ws, **data, "gst_claimable": _claimable(data), "bill_file_id": None,
            "status": "approved" if ctx.at_least("manager") else "to_approve", "source": "owner", "bank_ref": "", "cash_item_id": None,
            "created_by": ctx.actor, "created_at": now(), "updated_at": now()}
     await db().expenses.insert_one(doc)
@@ -419,7 +427,7 @@ async def edit_expense(expense_id: str, body: ExpensePatch, ctx: Ctx = Depends(e
     changed = {k for k, v in patch.items() if d.get(k) != v}
     merged = {**d, **patch}
     _check(merged, changed, {c["key"] for c in categories_for(kind, custom)})
-    patch["gst_claimable"] = bool(merged.get("gst_claimable") and merged.get("gst", 0) > 0)
+    patch["gst_claimable"] = _claimable(merged)
     patch.update(updated_at=now(), updated_by=ctx.actor)
     r = await db().expenses.update_one(_guard(ctx, expense_id), {"$set": patch})
     if not r.matched_count:
@@ -891,7 +899,8 @@ async def add_from_bank(ws: str, actor: str, rows: list[dict], include_salaries:
     """Adds bank statement payments as approved expenses (source "bank", paid by bank, no GST).
 
     rows: [{"date": "YYYY-MM-DD", "amount": ₹ (positive), "payee", "narration", "category", "bank_ref"}], at most 2,000.
-    The vendor is the payee ("Bank payment" when there is none). The narration is never stored: managers can see Expenses,
+    The vendor is the payee, or else a short name from the narration with numbers and IDs removed ("Bank payment" when
+    nothing is left). The narration is never stored: managers can see Expenses,
     and a narration can carry a person's name or what a payment was for. Salary rows (category salaries/salary/wages/payroll)
     are left out unless include_salaries is True, so the owner brings them in on purpose.
     Skips a bank_ref this business already has (or that repeats in the rows), cash withdrawals and transfers, and money in
@@ -935,6 +944,8 @@ async def add_from_bank(ws: str, actor: str, rows: list[dict], include_salaries:
             ref = "auto:" + hashlib.sha256(f"{base}|{occurrences[base]}".encode()).hexdigest()[:20]
         if category in SALARY_CATEGORIES:
             category = "salaries"
+        if not payee:   # a bill payment or bank charge: a short name from the narration, so they don't all add up under one name
+            payee = payee_label(str(r.get("narration") or ""))
         prepared.append({"date": day, "amount": paise, "vendor": (payee or "Bank payment")[:80],
                          "category": category if category in known else "other", "bank_ref": ref})
     refs = list({p["bank_ref"] for p in prepared})

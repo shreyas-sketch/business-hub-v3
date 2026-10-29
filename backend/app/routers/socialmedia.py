@@ -144,8 +144,10 @@ def starter_posts(p: dict, msgs: dict, site_content: dict, today: date) -> list[
     def add(template, fields, caption):
         if template == "social_square" and len(fields.get("headline") or "") > 45:
             fields["body"] = fit(fields.get("body", ""), 110)      # a 3-line headline leaves room for less text
-        if any(str(v).strip() for v in fields.values()):
-            out.append({"template": template, "fields": {k: str(v or "").strip() for k, v in fields.items()}, "caption": caption.strip()})
+        clean = {k: str(v or "").strip() for k, v in fields.items()}
+        same = any(x["template"] == template and x["fields"] == clean for x in out)
+        if any(clean.values()) and not same:      # never the same post twice
+            out.append({"template": template, "fields": clean, "caption": caption.strip()})
 
     one = core.get("one_line") or brand.get("message") or web.get("headline") or site_content.get("headline") or name
     pitch = core.get("pitch") or brand.get("pitch") or web.get("subheadline") or site_content.get("subheadline") or p.get("industry", "")
@@ -184,8 +186,15 @@ def starter_posts(p: dict, msgs: dict, site_content: dict, today: date) -> list[
             break
         if isinstance(q, dict) and q.get("q"):
             add("social_square", {"headline": fit(q["q"], 90), "body": fit(q.get("a", ""), 150), "cta": cta}, f"{q['q']}\n\n{q.get('a', '')}")
-    while len(out) < STARTER:      # a short profile: who they are, said plainly
-        add("social_square", {"headline": name, "body": fit(p.get("industry", ""), 150), "cta": cta}, f"{name} — {p.get('industry', '')}{', ' + city if city else ''}")
+    # A short profile: who they are, said plainly, a few different ways. Fewer than 7 posts beats the same post repeated.
+    industry = p.get("industry", "")
+    for headline, body, caption in ((name, fit(industry, 150), f"{name} — {industry}{', ' + city if city else ''}"),
+                                    (f"{name} in {city}" if city else "", fit(industry, 150), f"{name} — {industry}, {city}"),
+                                    (cta, short_pitch, f"{cta}\n\n{pitch}\n\n{name}")):
+        if len(out) >= STARTER:
+            break
+        if headline and body:
+            add("social_square", {"headline": fit(headline, 90), "body": body, "cta": cta}, caption)
     return out[:STARTER]
 
 

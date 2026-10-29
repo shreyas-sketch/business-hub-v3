@@ -204,6 +204,11 @@ async def test_validation_errors_and_the_gst_on_a_bill(client):
     assert odd["gst"] == 47.62 and (await db().expenses.find_one({"_id": odd["id"]}))["gst"] == 4762
     plain = await add(c, **{**ok, "gst": 0, "gst_claimable": True})   # nothing to claim without GST
     assert plain["gst_claimable"] is False
+    # GST without the vendor's GST number on the bill can't be claimed back
+    r = await c.post("/api/expenses", json={**ok, "gst": 1800, "gst_claimable": True})
+    assert r.status_code == 422 and "vendor's GST number" in r.json()["detail"]
+    unclaimed = await add(c, **ok, gst=1800)
+    assert unclaimed["gst_claimable"] is False
 
     # edits are checked against the whole entry
     r = await c.patch(f"/api/expenses/{bill['id']}", json={"amount": 1500})
@@ -243,7 +248,7 @@ async def test_staff_and_manager_rules(client):
     assert {i["id"]: i["added_by"] for i in everyone["items"]}[s_exp["id"]] == "Ravi Staff"
     assert (await owner.get("/api/expenses?status=to_approve")).json()["items"][0]["id"] == s_exp["id"]
     # waiting entries count in what was spent, but their GST isn't claimable until approved
-    g = await add(staff, amount=1180, gst=180, gst_claimable=True, category="purchases", vendor="Sharma Steel Traders")
+    g = await add(staff, amount=1180, gst=180, gst_claimable=True, category="purchases", vendor="Sharma Steel Traders", vendor_gstin=gstin())
     assert (await owner.get("/api/expenses")).json()["totals"]["gst_claimable"] == 0.0
     s = (await owner.get("/api/expenses/summary")).json()
     assert s["gst_claimable"] == 0.0 and s["gst_claimable_waiting"] == 180.0 and s["to_approve"] == 2
