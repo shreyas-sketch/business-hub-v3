@@ -339,7 +339,9 @@ def _v23_me(owner: dict) -> dict:
     for k, m in plans.META.items():
         if not m["on"] or plans.has(owner, k):
             continue
-        if plans.day_locked(owner, k):
+        if m.get("grants_only"):   # open only to owners the admin has granted it to: no plan or event day opens it
+            locks[k] = {"lock": "grant"}
+        elif plans.day_locked(owner, k):
             locks[k] = {"lock": "day", "opens_day": plans.feature_day(k)}
         elif m.get("paid_only") and plans.rank(plans.effective_plan(owner)) >= plans.rank(m["tier"]):
             locks[k] = {"lock": "paid"}

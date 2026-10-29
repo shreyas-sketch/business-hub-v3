@@ -44,6 +44,8 @@ def locked_detail(feature: str) -> dict:
     if not m or not m["on"]:
         label = m["label"] if m else "This part of the hub"
         return {"code": "off", "feature": feature, "label": label, "message": f"{label} is switched off right now."}
+    if m.get("grants_only"):
+        return {"code": "off", "feature": feature, "label": m["label"], "message": f"{m['label']} isn't open on your account."}
     minimum, label = m["tier"], m["label"]
     tier = plans.PLANS[minimum]
     return {"code": "locked", "feature": feature, "label": label, "what": m["what"], "tier": minimum, "tier_name": tier["name"],
