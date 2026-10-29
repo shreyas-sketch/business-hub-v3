@@ -11,7 +11,8 @@ import "./data.css";
 const FIT = { good: ["Good fit", "on"], maybe: ["Check first", "warn"], hard: ["Hard to meet now", "off"] };
 const NEED = { have: ["You have it", "on"], check: ["Check", "warn"], missing: ["Missing", "off"] };
 const READY = { have: "on", missing: "off", unknown: "" };
-const FACTS = [["ends", "Bid ends"], ["opens", "Bid opens"], ["organisation", "Buyer"], ["ministry", "Ministry / State"],
+const FACTS = [["ends", "Ends"], ["opens", "Bid opens"], ["starts", "Auction starts"], ["parent_bid", "Full terms in bid"],
+  ["organisation", "Buyer"], ["ministry", "Ministry / State"],
   ["department", "Department"], ["quantity", "Quantity"], ["estimated_value", "Estimated value (₹)"], ["bid_type", "Type of bid"],
   ["emd_required", "EMD required"], ["emd_amount", "EMD amount (₹)"], ["turnover", "Minimum turnover"], ["experience", "Experience asked"],
   ["past_performance", "Past performance"], ["mse_relaxation", "MSE relaxation"], ["startup_relaxation", "Startup relaxation"],
@@ -98,10 +99,20 @@ function Help({ bidId, row, cost, onBack, onBuilt }) {
   const [err, setErr] = useState("");
   const [state, setState] = useState("loading");   // loading | building | ask
   const started = useRef(false);
+  const done = (x) => { setH(x); refresh(); onBuilt(); };
   const build = () => {
     setErr(""); setState("building");
-    return api(`/tenders/${bidId}/help`, { method: "POST" }).then((x) => { setH(x); refresh(); onBuilt(); })
-      .catch((e) => { setErr(e.message); setState("ask"); });
+    return api(`/tenders/${bidId}/help`, { method: "POST" }).then(done).catch(async (e) => {
+      // The connection dropped, but the hub may still finish and keep the help: look for it for a while before asking again.
+      for (let i = 0; e.network && i < 8; i += 1) {
+        await new Promise((ok) => setTimeout(ok, 5000));
+        const kept = await api(`/tenders/${bidId}/help`).catch(() => null);
+        if (kept) return done(kept);
+      }
+      setErr(e.network ? "The connection dropped before your help came back. Try again: if it was finished, it opens without using another token."
+        : e.message);
+      setState("ask");
+    });
   };
   useEffect(() => {
     if (started.current) return;
