@@ -2,6 +2,7 @@
 
 GeM is a fake transport here (no test reaches the real bidplus.gem.gov.in). Every buyer, bid number, email and phone number
 is invented; the bid document is a small PDF made in the test with the same English labels a GeM bid document uses."""
+import dataclasses
 import io
 import json
 from datetime import timedelta
@@ -274,3 +275,30 @@ def test_search_words_from_the_profile():
     assert tn.fits("Clear aligners", "Dental Clear Aligner Kits") and not tn.fits("Clear aligners", "Pumps for Clear, Cold Water")
     assert tn.fits("housekeeping services", "Facility Management Services - Healthcare; Housekeeping")
     assert not tn.fits("services", "Anything at all")                   # no meaningful word: nothing fits
+
+
+
+async def test_gem_requests_go_through_the_relay_in_india(gem, monkeypatch):
+    """The hub runs outside India and GeM answers only from India: with GEM_RELAY_URL set, every GeM request goes to the relay
+    with its key, the path, form and cookies unchanged, and the bids and their links still say GeM."""
+    seen = []
+
+    def relay(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        assert request.url.host == "gem-relay.example.on.aws" and request.headers["x-relay-key"] == "k" * 32
+        r = gem(httpx.Request(request.method, request.url.copy_with(host="bidplus.gem.gov.in"), headers=request.headers,
+                              content=request.content))
+        if request.url.path == "/all-bids":
+            r.headers["set-cookie"] = "ci_session=abc; Path=/; Domain=bidplus.gem.gov.in"
+        return r
+
+    monkeypatch.setattr(tn, "GEM_TRANSPORT", httpx.MockTransport(relay))
+    monkeypatch.setattr(tn, "settings", dataclasses.replace(tn.settings, gem_relay_url="https://gem-relay.example.on.aws",
+                                                            gem_relay_key="k" * 32))
+    found = await tn.search(["modular kitchen"])
+    assert [b["bid_id"] for b in found] == [5002, 5001]
+    assert all(b["url"].startswith("https://bidplus.gem.gov.in/") for b in found)
+    assert [r.url.path for r in seen] == ["/all-bids", "/all-bids-data"]
+    assert seen[1].headers["cookie"] == "ci_session=abc"      # GeM's session cookie went back with the search
+    assert "Bid End Date/Time" in await tn.bid_text(found[0]["url"])
+    assert seen[-1].url.path == "/showbidDocument/5002"
