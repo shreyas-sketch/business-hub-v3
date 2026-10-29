@@ -16,6 +16,7 @@ from reportlab.pdfgen import canvas
 from app import plans, tenders as tn
 from app.ai import tender_tasks
 from app.ai.provider import Usage
+from app.routers import tenders as tenders_router
 from app.db import IST, db, now
 from tests.test_team import join, owner_on
 from tests.v23_helpers import setup_v23, v23_member
@@ -162,7 +163,8 @@ async def test_tenders_are_found_on_gem_with_words_from_the_business(client, gem
     assert r.status_code == 400 and "search word" in r.text
 
 
-async def test_gem_is_asked_a_few_times_an_hour_at_most(client, gem):
+async def test_gem_is_asked_a_few_times_an_hour_at_most(client, gem, monkeypatch):
+    monkeypatch.setattr(tenders_router, "SEARCHES_PER_HOUR", 6)
     owner = await v23_member("9800910004")
     words = (await owner.get("/api/tenders")).json()["words"]
     for _ in range(6):
@@ -170,6 +172,12 @@ async def test_gem_is_asked_a_few_times_an_hour_at_most(client, gem):
     r = await owner.post("/api/tenders/search", json={"force": True})
     assert r.status_code == 429 and "last results" in r.text
     assert len(gem.searches) == 6 * len(words)
+
+
+async def test_with_no_hourly_limit_gem_can_be_checked_again_and_again(client, gem):
+    owner = await v23_member("9800910014")
+    for _ in range(8):
+        assert (await owner.post("/api/tenders/search", json={"force": True})).status_code == 200
 
 
 async def test_gem_down_keeps_the_last_results_and_says_so(client, gem):

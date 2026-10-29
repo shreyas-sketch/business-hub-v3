@@ -22,7 +22,7 @@ from .hub import profile_of
 router = APIRouter(prefix="/api/tenders")
 can_use = feature("tender_finder", "manager")
 COSTS = {"words": 1, "help": 1}
-SEARCHES_PER_HOUR = 6
+SEARCHES_PER_HOUR = 0          # GeM checks per business per hour; 0 = no limit (off while the GeM relay is being tried out)
 
 
 async def ensure_indexes():
@@ -80,8 +80,9 @@ async def search(body: SearchIn, ctx: Ctx = Depends(can_use)):
     if not words:
         raise HTTPException(400, "Add at least one search word, like “office furniture” or “housekeeping services”.")
     if patch or body.force or tn.stale(s.get("checked_at")):
-        await rate_limit(f"tenders:{ctx.ws}", SEARCHES_PER_HOUR, 3600,
-                         "You've checked GeM a few times this hour. Your last results are below — try again in a little while.")
+        if SEARCHES_PER_HOUR:
+            await rate_limit(f"tenders:{ctx.ws}", SEARCHES_PER_HOUR, 3600,
+                             "You've checked GeM a few times this hour. Your last results are below — try again in a little while.")
         try:
             results = await tn.search(words)
             patch.update(results=results, checked_at=now(), error="")

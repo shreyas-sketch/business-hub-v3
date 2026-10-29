@@ -159,7 +159,8 @@ class Settings:
     google_places_api_base: str = os.getenv("GOOGLE_PLACES_API_BASE", "https://places.googleapis.com/v1").rstrip("/")
     # Tender finder: GeM's bid search answers only from India. When the hub runs outside India, set these to the GeM relay
     # in AWS Mumbai (relay/gem-lambda): its Function URL and the RELAY_KEY set on it. Blank = the hub asks GeM directly.
-    gem_relay_url: str = os.getenv("GEM_RELAY_URL", "").strip().rstrip("/")
+    # Only the scheme and host are kept, and a missing scheme counts as https ("abc.lambda-url.ap-south-1.on.aws" works too).
+    gem_relay_url: str = _origin(os.getenv("GEM_RELAY_URL", "")) if os.getenv("GEM_RELAY_URL", "").strip() else ""
     gem_relay_key: str = os.getenv("GEM_RELAY_KEY", "").strip()
     campaign_daily_cap: int = _int("CAMPAIGN_DAILY_CAP", 200)          # money-campaign messages per owner per day
     ai_replies_per_chat_per_day: int = _int("AI_REPLIES_PER_CHAT_PER_DAY", 20)
