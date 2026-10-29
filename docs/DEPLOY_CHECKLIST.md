@@ -248,6 +248,14 @@ would bounce. This build reads each email from S3 instead.
      when a review listing is connected, a first look (at most 3 a day); then one Place Details a day per connected listing
      (rating, count, reviews); and for each competitor with a Google match, one at the Monday check and one at each Check now
      (at most one a day). Check Google's price for each on its pricing page before you switch it on.
+5. **v2.3 — Tender finder, GeM relay (needed while the hub runs outside India).** GeM's bid search doesn't answer Railway's
+   US West, so the Tender finder says "GeM isn't answering". The relay is one AWS Lambda function in Mumbai (ap-south-1),
+   inside AWS's free tier at our volume:
+   - Lambda → Create function `gem-relay`, Python 3.12, code = `relay/gem-lambda/lambda_function.py`.
+   - Timeout 30 s; environment variable `RELAY_KEY` = `openssl rand -hex 32`; Function URL with auth type NONE.
+   - Check it: `curl -s -o /dev/null -w '%{http_code}' -H "X-Relay-Key: <key>" <function url>/all-bids` → `200`.
+   - `GEM_RELAY_URL` = the Function URL, `GEM_RELAY_KEY` = the same key. Bid documents over about 4 MB can't pass the relay
+     (the owner opens those on GeM).
 
 ## 10. After the deploy (smoke test, about 30 minutes)
 

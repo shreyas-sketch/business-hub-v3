@@ -27,11 +27,13 @@ tender_help     {_id: "{ws}:{bid_id}", ws, bid_id, bid_number, title, facts {...
 import asyncio
 import io
 import json
+import logging
 import re
 from datetime import datetime, timedelta
 
 import httpx
 
+from .config import settings
 from .db import IST, now
 from .knowledge import ENTITIES
 
@@ -48,14 +50,41 @@ MAX_PDF_PAGES = 15
 AI_TEXT_CHARS = 9000         # how much of the tender's English text the AI sees
 GEM_TRANSPORT = None         # tests swap in a fake GeM (httpx.MockTransport)
 UA = "Mozilla/5.0 (compatible; OwnerDesk/1.0; +https://ownerdesk.io)"
+log = logging.getLogger("tenders")
 
 
 class TenderError(Exception):
     """A plain sentence the owner can act on."""
 
 
+class RelayTransport(httpx.AsyncBaseTransport):
+    """GeM answers only from India: its requests go to the relay in AWS Mumbai (relay/gem-lambda), which makes them there.
+    Only the address changes on the way out; the client still sees GeM's own address, so GeM's cookies stay GeM's."""
+
+    def __init__(self, url: str, key: str, inner: httpx.AsyncBaseTransport | None = None):
+        self.base = httpx.URL(url)
+        self.key = key
+        self.inner = inner or httpx.AsyncHTTPTransport()
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        if request.url.host == httpx.URL(GEM).host:
+            headers = [(k, v) for k, v in request.headers.multi_items() if k.lower() != "host"]
+            request = httpx.Request(request.method, request.url.copy_with(scheme=self.base.scheme, host=self.base.host, port=self.base.port),
+                                    headers=[*headers, ("X-Relay-Key", self.key)], stream=request.stream, extensions=request.extensions)
+        return await self.inner.handle_async_request(request)
+
+    async def aclose(self) -> None:
+        await self.inner.aclose()
+
+
+def _transport() -> httpx.AsyncBaseTransport | None:
+    if settings.gem_relay_url:
+        return RelayTransport(settings.gem_relay_url, settings.gem_relay_key, GEM_TRANSPORT)
+    return GEM_TRANSPORT
+
+
 def _client() -> httpx.AsyncClient:
-    return httpx.AsyncClient(transport=GEM_TRANSPORT, timeout=TIMEOUT, follow_redirects=False, headers={"User-Agent": UA})
+    return httpx.AsyncClient(transport=_transport(), timeout=TIMEOUT, follow_redirects=False, headers={"User-Agent": UA})
 
 
 def _line(v, n: int = 200) -> str:
@@ -136,9 +165,11 @@ async def _csrf(client: httpx.AsyncClient) -> str:
     try:
         r = await client.get(f"{GEM}/all-bids")
     except httpx.HTTPError as e:
+        log.warning("GeM search page: %r", e)
         raise TenderError("GeM isn't answering just now. Try again in a few minutes.") from e
     m = CSRF.search(r.text) if r.status_code == 200 else None
     if not m:
+        log.warning("GeM search page: HTTP %s, no search token", r.status_code)
         raise TenderError("GeM's tender search has changed or isn't answering. Try again later.")
     return m.group(1)
 
@@ -202,7 +233,8 @@ async def search(words: list[str]) -> list[dict]:
                 await asyncio.sleep(PAUSE_SECONDS)
             try:
                 found += await search_word(client, token, w)
-            except httpx.HTTPError:
+            except httpx.HTTPError as e:
+                log.warning("GeM search %r: %r", w, e)
                 failed += 1
         if failed == len(words):
             raise TenderError("GeM isn't answering just now. Try again in a few minutes.")
@@ -239,7 +271,8 @@ async def _download(url: str) -> bytes:
                     if len(body) > MAX_PDF_BYTES:
                         raise TenderError("This tender's document is too big to read here. Open it on GeM instead.")
                 return bytes(body)
-        except httpx.HTTPError:
+        except httpx.HTTPError as e:
+            log.warning("GeM bid document %s: %r", url, e)
             return b""
 
 
