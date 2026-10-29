@@ -294,6 +294,7 @@ async def test_gem_requests_go_through_the_relay_in_india(gem, monkeypatch):
     def relay(request: httpx.Request) -> httpx.Response:
         seen.append(request)
         assert request.url.host == "gem-relay.example.on.aws" and request.headers["x-relay-key"] == "k" * 32
+        assert request.headers.get_list("host") == ["gem-relay.example.on.aws"]     # a real connection refuses a request without one
         r = gem(httpx.Request(request.method, request.url.copy_with(host="bidplus.gem.gov.in"), headers=request.headers,
                               content=request.content))
         if request.url.path == "/all-bids":
