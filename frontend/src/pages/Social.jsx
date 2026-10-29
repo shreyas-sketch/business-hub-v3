@@ -106,7 +106,7 @@ function PostCard({ p, d, left, canManage, onData }) {
 }
 
 export default function Social() {
-  const { me, toast } = useHub();
+  const { me, toast, refresh } = useHub();
   const [loaded, , loadErr] = useLoad("/social-media");
   const [d, setD] = useState(null);
   const [err, setErr] = useState("");
@@ -118,6 +118,7 @@ export default function Social() {
   const canManage = canAct(me, "manager");
   const write = async () => {
     const r = await api("/social-media/write", { method: "POST" });
+    refresh();   // the token it used shows in the sidebar straight away
     setD(r);
     toast(r.images_made < r.made ? `${r.made} posts written — ${r.images_made} with images (this month's images ran out)` : `${r.made} new posts ready`);
   };

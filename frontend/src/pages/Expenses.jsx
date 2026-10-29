@@ -97,12 +97,13 @@ function ExpenseForm({ initial, settings, items, onDone, onCancel }) {
   const amount = Number(f.amount) || 0;
   const gst = f.gstOn ? Number(f.gst) || 0 : 0;
   const gstTooBig = f.gstOn && gst > 0 && gst >= amount;
+  const hasGstin = f.vendor_gstin.replace(/\s+/g, "").length > 0;
   const ready = amount > 0 && f.date && f.category && !gstTooBig;
   const rate = (r) => setF({ ...f, gst: Math.round((amount * r * 100) / (100 + r)) / 100 });
 
   const save = async () => {
     const body = {
-      date: f.date, amount, category: f.category, vendor: f.vendor.trim(), paid_by: f.paid_by, gst, gst_claimable: f.gstOn && f.gst_claimable && gst > 0,
+      date: f.date, amount, category: f.category, vendor: f.vendor.trim(), paid_by: f.paid_by, gst, gst_claimable: f.gstOn && f.gst_claimable && gst > 0 && hasGstin,
       vendor_gstin: f.gstOn ? f.vendor_gstin.replace(/\s+/g, "").toUpperCase() : "", project: f.project.trim(), note: f.note.trim(), recurring: f.recurring,
     };
     const saved = await api(initial ? `/expenses/${initial.id}` : "/expenses", { method: initial ? "PATCH" : "POST", body });
@@ -174,8 +175,10 @@ function ExpenseForm({ initial, settings, items, onDone, onCancel }) {
             <Field label="Vendor's GST number (optional)" hint={f.vendor_gstin && f.vendor_gstin.replace(/\s+/g, "").length !== 15 ? "A GST number has 15 characters, like 27ABCDE1234F1Z5." : ""}>
               <input className="input mono" maxLength={20} autoCapitalize="characters" value={f.vendor_gstin} onChange={set("vendor_gstin")} placeholder="27ABCDE1234F1Z5" />
             </Field>
-            <Switch checked={f.gst_claimable} onChange={(v) => setF({ ...f, gst_claimable: v })} label="I can claim this GST back" />
-            <span className="hint">Only if the bill is in your business's name, with your GST number on it. Ask your CA if you're not sure.</span>
+            <Switch checked={f.gst_claimable && hasGstin} disabled={!hasGstin} onChange={(v) => setF({ ...f, gst_claimable: v })} label="I can claim this GST back" />
+            <span className="hint">{hasGstin
+              ? "Only if the bill is in your business's name, with your GST number on it. Ask your CA if you're not sure."
+              : "Add the vendor's GST number from the bill to claim it back. Without it, the GST can't be claimed."}</span>
           </div>
         )}
       </div>

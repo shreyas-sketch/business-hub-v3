@@ -42,7 +42,10 @@ function UploadBox({ onRead, small }) {
       <span className="label">{small ? "Read another statement" : "Upload your bank statement"}</span>
       {!small && <p className="small">Download it from net banking — <b>Excel or CSV works best</b>; a PDF works too. Up to 10 MB; a few months at a time.</p>}
       <Field label="Statement file">
-        <input className="input" type="file" accept=".pdf,.csv,.xls,.xlsx,.htm,.html,.xml,.txt" onChange={(e) => { setFile(e.target.files?.[0] || null); setErr(""); }} />
+        <input className="input" type="file" accept=".pdf,.csv,.xls,.xlsx,.htm,.html,.xml,.txt" onChange={(e) => {
+          // a password asked for an earlier PDF never blocks a different file (the server asks again if this one needs it)
+          setFile(e.target.files?.[0] || null); setErr(""); setNeedsPw(false); setPassword("");
+        }} />
       </Field>
       {needsPw && (
         <Field label="The PDF's password" hint="Banks often use your customer ID or your date of birth. We use it once to open the file and don't keep it.">

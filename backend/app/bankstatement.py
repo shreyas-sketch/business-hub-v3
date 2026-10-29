@@ -510,6 +510,16 @@ def _label(narration: str) -> str:
     return " ".join(s.split()[:6])
 
 
+_LABEL_NOISE = {"CIN", "GSTIN", "MOB", "MICR", "TO", "BY", "DR", "CR", "REF", "NO", "TXN", "TRF", "TRANSFER"}
+
+
+def payee_label(narration: str) -> str:
+    """A short name for a payment with no payee ("Billpay MSEDCL Electricity", "GST Payment"): the narration without
+    numbers, IDs, handles, month names or banking filler words. "" when nothing is left."""
+    words = [w for w in _label(narration).split() if w not in _LABEL_NOISE][:4]
+    return _title(" ".join(words)).replace("Sms ", "SMS ")
+
+
 def _cat_of(t: dict) -> str:
     return t.get("category") or _category(t, [])
 

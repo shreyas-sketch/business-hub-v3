@@ -65,7 +65,7 @@ function Editor({ kind, label, content, contact, canEdit, onData }) {
 }
 
 export default function Brochures() {
-  const { me } = useHub();
+  const { me, refresh } = useHub();
   const [loaded, , loadErr] = useLoad("/brochures");
   const [d, setD] = useState(null);
   const [err, setErr] = useState("");
@@ -83,7 +83,7 @@ export default function Brochures() {
       </div>
     );
   }
-  const write = async (kind) => setD(await api(`/brochures/${kind}/generate`, { method: "POST" }));
+  const write = async (kind) => { setD(await api(`/brochures/${kind}/generate`, { method: "POST" })); refresh(); };
   return (
     <div className="stack">
       {d.kinds.map((k) => (
