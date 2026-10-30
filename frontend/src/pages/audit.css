@@ -76,3 +76,5 @@ details.panel summary { cursor: pointer; font-weight: 700; }
 
 /* phones: the Month / Year switch is big enough for a thumb */
 @media (pointer: coarse), (max-width: 640px) { .au-toggle button, .au-totals .au-toggle button { min-height: 40px; min-width: 64px; } }
+.au-engine .au-item:first-child { border-top: 0; padding-top: 0; }
+.au-num { color: var(--gold); margin-right: 2px; }

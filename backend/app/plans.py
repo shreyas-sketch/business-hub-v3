@@ -233,8 +233,10 @@ FEATURE_EDITABLE = {"tier": str, "group": str, "label": str, "what": str, "order
                     "engine": str, "show": bool, "paid_only": bool, "grants_only": bool, "day": int}
 
 # Hub-wide settings outside the registry (the v2.3 setup turns the engine menu on; the admin edits the account links).
-DEFAULT_UI = {"menu": "groups", "community_link": "", "support_email": "", "pay_monthly_link": "", "pay_yearly_link": "", "v23": None}
-UI_EDITABLE = {"menu": str, "community_link": str, "support_email": str, "pay_monthly_link": str, "pay_yearly_link": str}
+DEFAULT_UI = {"menu": "groups", "community_link": "", "support_email": "", "pay_monthly_link": "", "pay_yearly_link": "", "v23": None,
+              "welcome_full_hub": settings.welcome_full_hub}   # new signups get the whole hub (see welcome_active)
+UI_EDITABLE = {"menu": str, "community_link": str, "support_email": str, "pay_monthly_link": str, "pay_yearly_link": str,
+               "welcome_full_hub": bool}
 
 # Live values (defaults with the admin's changes applied). Mutated in place so imports stay valid.
 PLANS: dict[str, dict] = copy.deepcopy(DEFAULT_PLANS)
@@ -374,7 +376,20 @@ def plan_sources(user: dict, at: datetime | None = None) -> dict:
             best_paid = tier
     if best_paid != "free":
         out["purchase"] = best_paid
+    if welcome_active(user):
+        out["welcome"] = WELCOME_PLAN
     return out
+
+
+# ───────────────────────── full hub for new signups ─────────────────────────
+# Every new account gets the whole hub (Membership, paid-only features included) with no end date. It is not a payment:
+# is_paid stays false, so checkout, payment prompts and the paid extras behave as before. The admin can switch it off for
+# one owner (Admin → owner) or stop giving it to new signups (Admin → Onboarding).
+WELCOME_PLAN = "lite"
+
+
+def welcome_active(user: dict) -> bool:
+    return bool((user.get("welcome") or {}).get("on"))
 
 
 def effective_plan(user: dict, at: datetime | None = None) -> str:
@@ -386,7 +401,7 @@ def plan_source(user: dict, at: datetime | None = None) -> str:
     """Where the plan in use comes from: purchase, subscription, trial or admin (the plan set on the account)."""
     sources = plan_sources(user, at)
     effective = max(sources.values(), key=rank)
-    return next((k for k in ("hub_admin", "purchase", "subscription", "trial", "admin") if sources.get(k) == effective), "admin")
+    return next((k for k in ("hub_admin", "purchase", "subscription", "trial", "welcome", "admin") if sources.get(k) == effective), "admin")
 
 
 # ───────────────────────── features ─────────────────────────
@@ -399,7 +414,7 @@ def has(user: dict, feature: str) -> bool:
     """On for everyone (the admin's switch), and either in the owner's plan or granted to this owner by the admin (only the
     grant counts for a grants_only feature).
     v2.3: a paid-only feature stays closed during a free or event trial, and during a live event a menu feature opens on
-    its engine's day."""
+    its engine's day. The full hub given at signup opens both."""
     m = META.get(feature)
     if not m or not m["on"]:
         return False
@@ -409,7 +424,7 @@ def has(user: dict, feature: str) -> bool:
         return False
     if rank(effective_plan(user)) < rank(m["tier"]):
         return False
-    if m.get("paid_only") and not is_paid(user):
+    if m.get("paid_only") and not (is_paid(user) or welcome_active(user)):
         return False
     return not day_locked(user, feature)
 
@@ -417,7 +432,7 @@ def has(user: dict, feature: str) -> bool:
 def is_paid(user: dict) -> bool:
     """The member pays (or the team has set the plan by hand): a Membership-or-higher plan that isn't only a trial."""
     sources = plan_sources(user)
-    return max((rank(t) for k, t in sources.items() if k != "trial"), default=0) >= rank("lite")
+    return max((rank(t) for k, t in sources.items() if k not in ("trial", "welcome")), default=0) >= rank("lite")
 
 
 def event_trial(user: dict) -> dict | None:
@@ -449,7 +464,7 @@ def day_locked(user: dict, feature: str) -> bool:
     """A menu feature whose engine opens on a later day of the live event. Features that only work behind other pages
     (show off) follow the plan, so a Day-1 page never breaks because a helper belongs to a later engine."""
     m = META.get(feature)
-    if not m or not m.get("show", True):
+    if not m or not m.get("show", True) or welcome_active(user):
         return False
     day = event_day(user)
     return day is not None and feature_day(feature) > day

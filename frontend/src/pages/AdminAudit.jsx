@@ -4,7 +4,7 @@ import { Busy, Field, FormError, Sheet, Stat, Switch, useHub, useLoad } from "..
 import { Loading, Pill } from "../v2.jsx";
 import "./audit.css";
 
-/* Admin → Engine Audit: the statements owners tick, the hints under the two questions, how much of a gap's cost becomes
+/* Admin → Engine Audit: the statements owners tick, the typical hours a week each gap counts (and what they go on), how much of a gap's cost becomes
    "growth unlocked" (and of its hours, "hours back"), the cap, and switching an item off. Every change is logged. */
 
 const pct = (r) => Math.round((r ?? 0) * 100);
@@ -12,13 +12,13 @@ const pct = (r) => Math.round((r ?? 0) * 100);
 function ItemEditor({ it, onSaved }) {
   const { toast } = useHub();
   const [f, setF] = useState({ statement: it.statement, hint_cost: it.hint_cost, hint_hours: it.hint_hours,
-                               rate: pct(it.rate), hours_rate: pct(it.hours_rate) });
+                               est_hours: it.est_hours, rate: pct(it.rate), hours_rate: pct(it.hours_rate) });
   const [err, setErr] = useState("");
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const save = async () => {
     const r = await api(`/admin/audit/items/${it.key}`, { method: "PUT", body: {
       statement: f.statement.trim(), hint_cost: f.hint_cost.trim(), hint_hours: f.hint_hours.trim(),
-      rate: Number(f.rate) / 100, hours_rate: Number(f.hours_rate) / 100 } });
+      est_hours: Number(f.est_hours), rate: Number(f.rate) / 100, hours_rate: Number(f.hours_rate) / 100 } });
     onSaved(r); toast("Saved");
   };
   const toggle = async (on) => { onSaved(await api(`/admin/audit/items/${it.key}`, { method: "PUT", body: { on } })); };
@@ -36,9 +36,12 @@ function ItemEditor({ it, onSaved }) {
       <Field label="Accomplishment statement"><input className="input" value={f.statement} onChange={set("statement")} maxLength={160} /></Field>
       <div className="aa-grid">
         <Field label="Hint under “costing you a month?”"><input className="input" value={f.hint_cost} onChange={set("hint_cost")} maxLength={200} /></Field>
-        <Field label="Hint under “hours a week?”"><input className="input" value={f.hint_hours} onChange={set("hint_hours")} maxLength={200} /></Field>
+        <Field label="What the hours go on (shown on Missing)"><input className="input" value={f.hint_hours} onChange={set("hint_hours")} maxLength={200} /></Field>
       </div>
       <div className="aa-rates">
+        <Field label="Typical hours a week a gap counts" hint={`Default ${it.default.est_hours}`}>
+          <input className="input" inputMode="decimal" value={f.est_hours} onChange={set("est_hours")} />
+        </Field>
         <Field label="Growth unlocked (% of the cost)" hint={`Default ${pct(it.default.rate)}%`}>
           <input className="input" inputMode="numeric" value={f.rate} onChange={set("rate")} />
         </Field>
@@ -91,7 +94,7 @@ export default function AdminAudit() {
         return (
           <div key={e.key} className="panel">
             <h2>{e.label} engine</h2>
-            {items.map((it) => <ItemEditor key={`${it.key}:${it.statement}:${it.rate}:${it.hours_rate}:${it.on}`} it={it} onSaved={(r) => { setView(r); reload(); }} />)}
+            {items.map((it) => <ItemEditor key={`${it.key}:${it.statement}:${it.rate}:${it.hours_rate}:${it.est_hours}:${it.on}`} it={it} onSaved={(r) => { setView(r); reload(); }} />)}
           </div>
         );
       })}

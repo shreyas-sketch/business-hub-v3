@@ -5,9 +5,9 @@ import { Busy, FormError, Sheet, Stat } from "../ui.jsx";
 import { Loading } from "../v2.jsx";
 import "./audit.css";
 
-/* Engine Audit (v2.3): the Day 1 activity. Have it or Missing for each of the 14 processes; for a gap, roughly
-   what it costs a month and the hours it takes a week. Totals add up live, here on the phone (the server does the same sums
-   when the audit is saved). 0 tokens. */
+/* Engine Audit (v2.3): the Day 1 activity. Have it or Missing for each of the 14 processes, one list, nothing to type: a gap
+   counts the hours a week a typical small business loses to it. Totals add up live, here on the phone (the server does the
+   same sums when the audit is saved). 0 tokens. Audits saved before may hold ₹ figures; those show only when there are some. */
 
 const fmt = (n) => "₹" + new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(Math.round(n || 0));
 const hrs = (n) => { const v = Math.round((n || 0) * 10) / 10; return `${v}`; };
@@ -15,6 +15,7 @@ const CHOICES = [["have", "Have it"], ["missing", "Missing"]];
 // an audit or draft saved when there was a "Not sure" answer: read as Missing
 const statusOf = (s) => (s === "unsure" ? "missing" : s);
 const NOTE = "Estimated from your own numbers.";
+const HOURS_NOTE = "Typical hours for a small business.";
 
 function num(v) { const x = Number(v); return Number.isFinite(x) && x > 0 ? x : 0; }
 
@@ -24,7 +25,7 @@ export function compute(items, answers, revenueMonth, capPct) {
     const a = answers[it.key] || {};
     const gap = a.status === "missing";
     const cost = gap ? Math.min(num(a.monthly_cost), 1e9) : 0;
-    const hours = gap ? Math.min(num(a.hours_week), 1000) : 0;
+    const hours = gap ? (a.hours_week != null ? Math.min(num(a.hours_week), 1000) : it.est_hours) : 0;
     return { key: it.key, engine: it.engine, status: a.status || null, cost, hours, growth: cost * it.rate, back: hours * it.hours_rate };
   });
   const growthRaw = rows.reduce((s, r) => s + r.growth, 0);
@@ -51,21 +52,18 @@ function Fix({ fix, small = true }) {
   return <Link className={`${cls} money`} to="/plans">Unlock {fix.label}</Link>;
 }
 
-function Totals({ t, year, setYear, capPct }) {
-  const m = year ? 12 : 1;
+function Totals({ t, year, setYear }) {
   const w = year ? 52 : 1;
   return (
     <div className="au-totals" aria-live="polite">
       <div className="au-tot-grid">
-        <div><span className="label">Cost of gaps / {year ? "year" : "month"}</span><b className="money">{fmt(t.cost * m)}</b></div>
-        <div><span className="label">Growth unlocked / {year ? "year" : "month"}</span><b className="money">{fmt(t.growth * m)}</b></div>
         <div><span className="label">Hours lost / {year ? "year" : "week"}</span><b>{hrs(t.hours * w)}</b></div>
         <div><span className="label">Hours back / {year ? "year" : "week"}</span><b>{hrs(t.back * w)}</b></div>
       </div>
       <div className="au-tot-foot">
-        <span className="small muted">{NOTE}{t.capped ? ` Growth capped at a conservative level (${capPct}% of a month's sales).` : ""}</span>
+        <span className="small muted">{HOURS_NOTE}</span>
         <div className="au-toggle" role="group" aria-label="Show totals for">
-          <button type="button" aria-pressed={!year} onClick={() => setYear(false)}>Month</button>
+          <button type="button" aria-pressed={!year} onClick={() => setYear(false)}>Week</button>
           <button type="button" aria-pressed={year} onClick={() => setYear(true)}>Year</button>
         </div>
       </div>
@@ -73,37 +71,19 @@ function Totals({ t, year, setYear, capPct }) {
   );
 }
 
-function Item({ it, a, onChange }) {
-  const set = (patch) => onChange({ ...a, ...patch });
+function Item({ it, n, a, onChange }) {
   const gap = a.status === "missing";
   return (
     <div className={`au-item ${a.status ? `is-${a.status}` : ""}`}>
-      <p className="au-st" id={`au-${it.key}`}>{it.statement}</p>
+      <p className="au-st" id={`au-${it.key}`}><span className="au-num">{n}.</span> {it.statement}</p>
       <div className="au-choice" role="group" aria-labelledby={`au-${it.key}`}>
         {CHOICES.map(([v, w]) => (
-          <button key={v} type="button" aria-pressed={a.status === v} onClick={() => set({ status: v })}>{w}</button>
+          <button key={v} type="button" aria-pressed={a.status === v} onClick={() => onChange({ status: v })}>{w}</button>
         ))}
       </div>
       {gap && (
         <div className="au-gap">
-          <label className="au-q">
-            <span>Roughly how much is this costing you a month?</span>
-            <div className="au-in">
-              <span className="au-pre">₹</span>
-              <input className="input" inputMode="numeric" placeholder="e.g. 25000" value={a.monthly_cost ?? ""}
-                onChange={(e) => set({ monthly_cost: e.target.value.replace(/[^\d.]/g, "") })} aria-label="Rupees a month" />
-            </div>
-            <small className="muted">{it.hint_cost}</small>
-          </label>
-          <label className="au-q">
-            <span>Roughly how many hours a week does this take from you or your team?</span>
-            <div className="au-in">
-              <input className="input" inputMode="decimal" placeholder="e.g. 5" value={a.hours_week ?? ""}
-                onChange={(e) => set({ hours_week: e.target.value.replace(/[^\d.]/g, "") })} aria-label="Hours a week" />
-              <span className="au-post">hours</span>
-            </div>
-            <small className="muted">{it.hint_hours}</small>
-          </label>
+          <p className="small"><b>About {hrs(it.est_hours)} hours a week</b> <span className="muted">— {it.hint_hours.replace(/^Hours spent /, "spent ")}.</span></p>
           <div className="au-fix"><span className="small muted">Fixed by</span><Fix fix={it.fix} /></div>
         </div>
       )}
@@ -115,18 +95,17 @@ function cleanAnswers(answers) {
   const out = {};
   Object.entries(answers).forEach(([k, a]) => {
     if (!a || !a.status) return;
-    out[k] = { status: statusOf(a.status), monthly_cost: num(a.monthly_cost) || null, hours_week: num(a.hours_week) || null };
+    out[k] = { status: statusOf(a.status) };
   });
   return out;
 }
 
 function Take({ data, initial, onDone, onCancel }) {
   const [answers, setAnswers] = useState(initial.answers || {});
-  const [revenue, setRevenue] = useState(initial.revenue_month ?? data.revenue?.month ?? "");
   const [year, setYear] = useState(false);
   const [err, setErr] = useState("");
   const items = data.items;
-  const live = useMemo(() => compute(items, answers, num(revenue), data.cap_pct), [items, answers, revenue, data.cap_pct]);
+  const live = useMemo(() => compute(items, answers, 0, data.cap_pct), [items, answers, data.cap_pct]);
   const n = live.total.answered;
 
   // Save the answers so far a moment after the last change (one small write), so a refresh or another phone picks up here.
@@ -134,55 +113,30 @@ function Take({ data, initial, onDone, onCancel }) {
   useEffect(() => {
     if (first.current) { first.current = false; return undefined; }
     const t = setTimeout(() => {
-      api("/audit/draft", { method: "PUT", body: { answers: cleanAnswers(answers), revenue_month: num(revenue) || null } }).catch(() => {});
+      api("/audit/draft", { method: "PUT", body: { answers: cleanAnswers(answers) } }).catch(() => {});
     }, 1500);
     return () => clearTimeout(t);
-  }, [answers, revenue]);
+  }, [answers]);
 
   const submit = async () => {
-    onDone(await api("/audit", { method: "POST", body: { answers: cleanAnswers(answers), revenue_month: num(revenue) || null } }));
+    onDone(await api("/audit", { method: "POST", body: { answers: cleanAnswers(answers) } }));
   };
 
   return (
     <div className="au-take">
       <div className="panel">
         <span className="label">How it works</span>
-        <p>Tap <b>Have it</b> or <b>Missing</b> for each line. For a gap, say roughly what it costs you a month and the hours
-          it takes a week — a rough guess is fine. The totals add up as you go. It takes about 5 minutes and uses 0 tokens.</p>
-        <label className="au-q">
-          <span>Your sales in a typical month (optional)</span>
-          <div className="au-in">
-            <span className="au-pre">₹</span>
-            <input className="input" inputMode="numeric" placeholder="e.g. 500000" value={revenue}
-              onChange={(e) => setRevenue(e.target.value.replace(/[^\d.]/g, ""))} aria-label="Sales in a typical month" />
-          </div>
-          <small className="muted">
-            {data.revenue?.month && Number(revenue) === data.revenue.month ? `Filled in from ${data.revenue.source}. ` : ""}
-            It keeps the growth estimate conservative: never more than {data.cap_pct}% of a month's sales.
-          </small>
-        </label>
+        <p>Tap <b>Have it</b> or <b>Missing</b> for each of the {items.length} lines. A gap adds the hours a week a typical small
+          business loses to it, and the totals add up as you go. It takes about 3 minutes and uses 0 tokens.</p>
       </div>
 
-      {data.engines.map((e) => {
-        const its = items.filter((i) => i.engine === e.key);
-        const s = live.engines[e.key];
-        return (
-          <section key={e.key} className="panel au-engine">
-            <div className="au-eh">
-              <div><h2>{e.label} engine</h2><p className="small muted">{e.blurb}</p></div>
-              <div className="au-es">
-                <b>{s.inPlace} of {s.total}</b><span className="small muted">in place</span>
-                {(s.cost > 0 || s.hours > 0) && <span className="small"><span className="money">{fmt(s.cost)}</span>/mo · {hrs(s.hours)} h/wk</span>}
-              </div>
-            </div>
-            {its.map((it) => (
-              <Item key={it.key} it={it} a={answers[it.key] || {}} onChange={(a) => setAnswers({ ...answers, [it.key]: a })} />
-            ))}
-          </section>
-        );
-      })}
+      <section className="panel au-engine">
+        {items.map((it, i) => (
+          <Item key={it.key} it={it} n={i + 1} a={answers[it.key] || {}} onChange={(a) => setAnswers({ ...answers, [it.key]: a })} />
+        ))}
+      </section>
 
-      <Totals t={live.total} year={year} setYear={setYear} capPct={data.cap_pct} />
+      <Totals t={live.total} year={year} setYear={setYear} />
       <FormError msg={err} />
       <div className="row">
         <Busy className="btn primary" disabled={n < items.length} run={submit} onError={setErr}>See my result</Busy>
@@ -192,7 +146,6 @@ function Take({ data, initial, onDone, onCancel }) {
     </div>
   );
 }
-
 async function shareCard(id) {
   const url = `/api/audit/${id}/card.png`;
   try {
@@ -219,27 +172,28 @@ function Result({ data, audit, onRetake }) {
   const w = year ? 52 : 1;
   const per = year ? "year" : "month";
   const perw = year ? "year" : "week";
+  const money = t.cost_month > 0;   // audits from before the page went hours-only may hold ₹ figures
   return (
     <div className="stack au-result">
       <div className="statgrid">
-        <Stat label={`Cost of gaps / ${per}`} value={fmt(t.cost_month * m)} money />
-        <Stat label={`Growth unlocked / ${per}`} value={fmt(t.growth_month * m)} money />
+        {money && <Stat label={`Cost of gaps / ${per}`} value={fmt(t.cost_month * m)} money />}
+        {money && <Stat label={`Growth unlocked / ${per}`} value={fmt(t.growth_month * m)} money />}
         <Stat label={`Hours lost / ${perw}`} value={hrs(t.hours_week * w)} />
         <Stat label={`Hours you get back / ${perw}`} value={hrs(t.hours_back_week * w)} />
       </div>
       <div className="row between au-note">
         <span className="small muted">
-          {NOTE} Not a promise or a guarantee.{t.capped ? ` Growth is capped at a conservative level: ${t.cap_pct}% of a month's sales (${fmt(t.cap_amount)}).` : ""}
+          {money ? NOTE : HOURS_NOTE} Not a promise or a guarantee.{t.capped ? ` Growth is capped at a conservative level: ${t.cap_pct}% of a month's sales (${fmt(t.cap_amount)}).` : ""}
         </span>
         <div className="au-toggle" role="group" aria-label="Show totals for">
-          <button type="button" aria-pressed={!year} onClick={() => setYear(false)}>Month</button>
+          <button type="button" aria-pressed={!year} onClick={() => setYear(false)}>{money ? "Month" : "Week"}</button>
           <button type="button" aria-pressed={year} onClick={() => setYear(true)}>Year</button>
         </div>
       </div>
       {c && (
         <p className="small">
           Since your last audit ({day(c.since)}): {c.in_place > 0 ? `${c.in_place} more in place` : c.in_place < 0 ? `${-c.in_place} fewer in place` : "the same number in place"}
-          {c.cost_month !== 0 ? `, gaps cost ${fmt(Math.abs(c.cost_month))} a month ${c.cost_month < 0 ? "less" : "more"}` : ""}
+          {c.cost_month !== 0 && money ? `, gaps cost ${fmt(Math.abs(c.cost_month))} a month ${c.cost_month < 0 ? "less" : "more"}` : ""}
           {c.hours_week !== 0 ? `, ${hrs(Math.abs(c.hours_week))} hours a week ${c.hours_week < 0 ? "fewer" : "more"} lost` : ""}.
         </p>
       )}
@@ -252,7 +206,7 @@ function Result({ data, audit, onRetake }) {
               <div className="row between"><b>{e.label}</b><span className="small muted">{e.in_place} of {e.total} in place</span></div>
               <div className="meter"><i style={{ width: `${e.total ? (e.in_place / e.total) * 100 : 0}%` }} /></div>
               {(e.cost_month > 0 || e.hours_week > 0) && (
-                <span className="small muted">Gaps: <span className="money">{fmt(e.cost_month)}</span> a month · {hrs(e.hours_week)} hours a week</span>
+                <span className="small muted">Gaps: {e.cost_month > 0 && <><span className="money">{fmt(e.cost_month)}</span> a month · </>}{hrs(e.hours_week)} hours a week</span>
               )}
             </div>
           ))}
@@ -271,7 +225,7 @@ function Result({ data, audit, onRetake }) {
                 <div className="stack" style={{ gap: 6 }}>
                   <b>{r.statement}</b>
                   <span className="small muted">
-                    <span className="money">{fmt(r.monthly_cost)}</span> a month · {hrs(r.hours_week)} hours a week
+                    {r.monthly_cost > 0 && <><span className="money">{fmt(r.monthly_cost)}</span> a month · </>}{hrs(r.hours_week)} hours a week
                   </span>
                   <div><Fix fix={fixes[k]} /></div>
                 </div>
@@ -305,7 +259,7 @@ function Result({ data, audit, onRetake }) {
           {data.history.map((h, i) => (
             <div key={h.id} className="au-hist">
               <span>{i === 0 ? "Latest · " : ""}{day(h.completed_at)}</span>
-              <span className="small muted">{h.in_place} of {h.total} in place · <span className="money">{fmt(h.cost_month)}</span>/mo · {hrs(h.hours_week)} h/wk</span>
+              <span className="small muted">{h.in_place} of {h.total} in place · {h.cost_month > 0 && <><span className="money">{fmt(h.cost_month)}</span>/mo · </>}{hrs(h.hours_week)} h/wk</span>
             </div>
           ))}
         </div>
@@ -335,14 +289,12 @@ export default function Audit() {
     );
   }
   const initial = data.draft && Object.keys(data.draft.answers || {}).length
-    ? { ...data.draft, answers: Object.fromEntries(Object.entries(data.draft.answers).map(([k, a]) => [k, { ...a, status: statusOf(a?.status) }])) }
-    : data.latest ? { answers: Object.fromEntries(data.latest.answers.map((r) => [r.item_key, {
-        status: statusOf(r.status), monthly_cost: r.monthly_cost || "", hours_week: r.hours_week || "" }])),
-        revenue_month: null }
+    ? { answers: Object.fromEntries(Object.entries(data.draft.answers).map(([k, a]) => [k, { status: statusOf(a?.status) }])) }
+    : data.latest ? { answers: Object.fromEntries(data.latest.answers.map((r) => [r.item_key, { status: statusOf(r.status) }])) }
       : { answers: {} };
   return (
-    <Sheet {...head} title={<>Check your business against the <em>6 engines</em>.</>}
-      sub="Every business runs on six engines. See which ones run without you, what each gap costs you in hours and rupees, and what fixing it unlocks.">
+    <Sheet {...head} title={<>Check your business against <em>14 processes</em>.</>}
+      sub="See which parts of your business run without you, the hours each gap costs you a week, and what fixes it.">
       <Take data={data} initial={initial} onCancel={data.latest ? () => setTaking(false) : null}
         onDone={async (res) => { await load(); setShown(res); setTaking(false); window.scrollTo(0, 0); }} />
     </Sheet>

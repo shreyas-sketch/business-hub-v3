@@ -9,7 +9,7 @@ import "./admin.css";
 
 const TIERS = ["free", "lite", "program", "running", "growth", "office"];
 const rank = (t) => Math.max(TIERS.indexOf(t), 0);
-const SOURCE = { purchase: "paid once", subscription: "Membership subscription", trial: "invite trial", admin: "set by the team", hub_admin: "admin number — everything unlocked" };
+const SOURCE = { purchase: "paid once", subscription: "Membership subscription", trial: "invite trial", welcome: "full hub from signup", admin: "set by the team", hub_admin: "admin number — everything unlocked" };
 // WhatsApp tool: the server says which fields each service needs (c.service_fields) and the services' names (c.services).
 const OPTION_NAMES = { twilio: "Twilio", sip: "SIP trunk", demo: "Demo (test setup)" };
 
@@ -34,6 +34,14 @@ function PlanPanel({ o, tierNames, onSaved }) {
         }}>Set plan</Busy>
       </div>
       <p className="small">In use now: <b>{o.plan_name}</b> <span className="muted">({SOURCE[o.plan_source] || o.plan_source})</span></p>
+      <div className="row">
+        <span className="small">Full hub from signup: <b>{o.welcome ? "on" : "off"}</b></span>
+        <Busy className="btn sm" run={async () => {
+          await api(`/admin/users/${o.id}`, { method: "PATCH", body: { welcome: !o.welcome } });
+          toast(o.welcome ? "Full hub switched off. The owner keeps what their plan gives them." : "Full hub switched on for this owner.");
+          onSaved();
+        }}>{o.welcome ? "Switch off" : "Switch on"}</Busy>
+      </div>
       {paid.length > 0 && (
         <div className="stack" style={{ gap: 4 }}>
           {paid.map(([t, until]) => (

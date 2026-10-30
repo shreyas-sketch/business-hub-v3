@@ -59,6 +59,8 @@ class Settings:
     otp_per_ip_per_hour: int = _int("OTP_PER_IP_PER_HOUR", 1500)   # a whole workshop room shares one Wi-Fi address
     inquiries_per_site_per_hour: int = _int("INQUIRIES_PER_SITE_PER_HOUR", 120)
     trusted_proxy_hops: int = _int("TRUSTED_PROXY_HOPS", 1)        # Railway = 1; add 1 for each proxy in front (e.g. Cloudflare = 2)
+    # New signups get the whole hub until the admin switches it off. Only the starting value: Admin → Onboarding changes it
+    welcome_full_hub: bool = os.getenv("WELCOME_FULL_HUB", "true").lower() in ("1", "true", "yes")
 
     # Program identity (footer rail + public pages)
     program_name: str = os.getenv("PROGRAM_NAME", "OwnerDesk")

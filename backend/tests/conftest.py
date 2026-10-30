@@ -7,6 +7,7 @@ os.environ["DB_NAME"] = f"action_hub_test_{uuid.uuid4().hex[:8]}"
 os.environ["AI_PROVIDER"] = "mock"
 os.environ["ADMIN_PHONES"] = "+919999900000"
 os.environ["APP_URL"] = "https://hub.example.in"
+os.environ["WELCOME_FULL_HUB"] = "false"   # the plan tests start owners on Free; test_full_hub_signup.py switches it on
 
 import httpx  # noqa: E402
 import pytest  # noqa: E402

@@ -8,8 +8,25 @@ import "./admin.css";
 /* Admin → Onboarding (v2.3): every member from the event or who paid, with where their access comes from, the setup the hub
    can see for itself, and the team's notes. Members pay outside the hub (Razorpay); "Mark paid" switches Membership on. */
 
-const FILTERS = [["", "Everyone"], ["event", "Event access"], ["paid", "Paid"], ["ended", "Event ended"], ["free", "Free"], ["off", "Switched off"]];
-const PILL = { event: "warn", paid: "on", ended: "off", free: "off", off: "off" };
+const FILTERS = [["", "Everyone"], ["welcome", "Full hub"], ["event", "Event access"], ["paid", "Paid"], ["ended", "Event ended"], ["free", "Free"], ["off", "Switched off"]];
+const PILL = { welcome: "warn", event: "warn", paid: "on", ended: "off", free: "off", off: "off" };
+
+function WelcomeSwitch() {
+  const { toast } = useHub();
+  const [s, reload] = useLoad("/admin/config/ui");
+  if (!s) return null;
+  const on = !!s.welcome_full_hub;
+  return (
+    <div className="panel row" style={{ justifyContent: "space-between" }}>
+      <span><b>New signups get the full hub</b> <span className="small muted">— {on ? "on" : "off"}. Switch it off for one owner on their page.</span></span>
+      <Busy className="btn sm" run={async () => {
+        await api("/admin/config/ui", { method: "PATCH", body: { welcome_full_hub: !on } });
+        toast(on ? "New signups now start on Free. Owners who already have the full hub keep it." : "New signups get the full hub again.");
+        reload();
+      }}>{on ? "Switch off" : "Switch on"}</Busy>
+    </div>
+  );
+}
 
 function Links() {
   const { toast } = useHub();
@@ -134,6 +151,7 @@ export default function AdminOnboarding() {
   return (
     <Sheet kicker="Admin · Onboarding" id="A-10" pillar="Admin" title={<>Every member, <em>set up</em>.</>}
       sub="Who came from the event, who paid, and what's set up in their hub. Mark payments made on Razorpay here.">
+      <WelcomeSwitch />
       <Links />
       <div className="row" style={{ flexWrap: "wrap" }}>
         {FILTERS.map(([k, l]) => (
