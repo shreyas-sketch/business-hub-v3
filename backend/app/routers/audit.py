@@ -11,7 +11,7 @@ Owner (the audit is in the Start section of the menu, owner only):
 
 Admin (Admin → Engine Audit):
     GET  /api/admin/audit                    every item with its settings, the cap, and how many owners have done it
-    PUT  /api/admin/audit/items/{key}        statement, hints, ₹ and hours rates, on/off
+    PUT  /api/admin/audit/items/{key}        statement, hints, typical hours a week, ₹ and hours rates, on/off
     POST /api/admin/audit/items/{key}/reset  back to the default
     PUT  /api/admin/audit/settings           the cap (% of a month's sales)
 """
@@ -77,7 +77,7 @@ async def get_audit(ctx: Ctx = Depends(feature("engine_audit", "owner"))):
             "history": [{"id": h["_id"], "completed_at": h["completed_at"].isoformat(), "in_place": h["totals"]["in_place"],
                          "total": h["totals"]["total"], "cost_month": h["totals"]["cost_month"], "growth_month": h["totals"]["growth_month"],
                          "hours_week": h["totals"]["hours_week"], "hours_back_week": h["totals"]["hours_back_week"]} for h in history],
-            "note": ea.NOTE, "cap_note": ea.CAP_NOTE}
+            "note": ea.NOTE, "hours_note": ea.HOURS_NOTE, "cap_note": ea.CAP_NOTE}
 
 
 @router.put("/draft")
@@ -153,6 +153,7 @@ class ItemPatch(BaseModel):
     statement: str | None = Field(default=None, min_length=5, max_length=160)
     hint_cost: str | None = Field(default=None, min_length=3, max_length=200)
     hint_hours: str | None = Field(default=None, min_length=3, max_length=200)
+    est_hours: float | None = Field(default=None, ge=0, le=100)
     rate: float | None = Field(default=None, ge=0, le=1)
     hours_rate: float | None = Field(default=None, ge=0, le=1)
     on: bool | None = None
@@ -168,10 +169,10 @@ async def _admin_view() -> dict:
     items = []
     for it in sorted(cfg["items"].values(), key=lambda i: (plans.ENGINE_KEYS.index(i["engine"]), i["order"])):
         m = plans.META.get(it["feature"]) or {}
-        items.append({**{k: it[k] for k in ("key", "engine", "statement", "feature", "hint_cost", "hint_hours", "rate", "hours_rate", "on")},
+        items.append({**{k: it[k] for k in ("key", "engine", "statement", "feature", "hint_cost", "hint_hours", "est_hours", "rate", "hours_rate", "on")},
                       "feature_label": m.get("label", it["feature"]), "feature_on": bool(m.get("on")),
                       "changed": it["key"] in cfg["overrides"], "default": {k: d[it["key"]][k] for k in ("statement", "hint_cost",
-                                                                                                           "hint_hours", "rate", "hours_rate")}})
+                                                                                                           "hint_hours", "est_hours", "rate", "hours_rate")}})
     since = now().astimezone(IST).replace(hour=0, minute=0, second=0, microsecond=0)   # today, India time
     return {"items": items, "cap_pct": cfg["cap_pct"], "default_cap_pct": ea.DEFAULT_CAP_PCT,
             "engines": [{"key": e["key"], "label": e["label"]} for e in plans.ENGINES],
