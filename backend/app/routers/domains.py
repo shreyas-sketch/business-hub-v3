@@ -353,7 +353,7 @@ async def own_domain(request: Request, host: str):
     ready = site["domain"].get("status") == "live" and site.get("status") == "live"
     if not ready:
         return pages.not_found()
-    owner = await db().users.find_one({"_id": site["owner_id"]}, {"plan": 1, "trial": 1, "sub": 1, "access": 1, "grants": 1, "phone": 1})
+    owner = await db().users.find_one({"_id": site["owner_id"]}, {"plan": 1, "trial": 1, "sub": 1, "access": 1, "grants": 1, "phone": 1, "welcome": 1})
     if owner and not plans.has(owner, "custom_domain"):  # plan lapsed: keep customers flowing to the free address
         return RedirectResponse(site_url(site["slug"]), status_code=302)
     return site["slug"]

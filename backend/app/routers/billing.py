@@ -44,7 +44,7 @@ def plan_view(user: dict) -> dict:
     """The owner's plan, where it comes from and until when."""
     sources = plans.plan_sources(user)
     effective = plans.effective_plan(user)
-    source = next((k for k in ("purchase", "subscription", "trial", "admin") if sources.get(k) == effective), "admin")
+    source = next((k for k in ("purchase", "subscription", "trial", "welcome", "admin") if sources.get(k) == effective), "admin")
     sub = user.get("sub") or {}
     until = {"purchase": (user.get("access") or {}).get(effective), "subscription": sub.get("paid_until"),
              "trial": (user.get("trial") or {}).get("until")}.get(source)

@@ -47,7 +47,7 @@ async def pulse(days: int = 7):
         upgrade_clicks[t] = upgrade_clicks.get(t, 0) + 1
     plan_mix = {t: 0 for t in plans.TIERS}
     trials = 0
-    async for u in d.users.find(owners, {"plan": 1, "trial": 1, "sub": 1, "access": 1, "phone": 1}):
+    async for u in d.users.find(owners, {"plan": 1, "trial": 1, "sub": 1, "access": 1, "phone": 1, "welcome": 1}):
         plan_mix[plans.effective_plan(u)] += 1
         trials += plans.plan_source(u) == "trial"
     cohorts = []
@@ -125,6 +125,7 @@ async def owner_detail(user_id: str):
             "quotations_open": plans.has(u, "quotations"), "quotations_why": None if plans.has(u, "quotations") else auto_quote.no_feature_reason(u),"id": u["_id"], "phone": u["phone"], "name": u.get("name", ""), "business": b.get("name", ""), "city": b.get("city", ""),
             "industry": b.get("industry", ""), "plan": u.get("plan", "free"), "effective_plan": plans.effective_plan(u),
             "plan_name": plans.PLANS[plans.effective_plan(u)]["name"], "plan_source": plans.plan_source(u), "access": access,
+            "welcome": plans.welcome_active(u),
             "grants": grants, "disabled": bool(u.get("disabled")), "bonus_runs": u.get("bonus_runs", 0), "cohort": u.get("cohort"),
             "site": {"slug": s.get("slug"), "status": s.get("status"), "url": site_url(s["slug"]) if s.get("slug") else None,
                      "domain": (s.get("domain") or {}).get("name")} if s else None,
@@ -136,6 +137,7 @@ class UserPatch(BaseModel):
     plan: str | None = Field(default=None, pattern="^(free|lite|program|running|growth|office)$")
     add_bonus_runs: int | None = Field(default=None, ge=-1000, le=1000)
     disabled: bool | None = None
+    welcome: bool | None = None   # the full hub given at signup: switched off (or back on) for this owner
 
 
 @router.patch("/users/{user_id}")
@@ -151,6 +153,10 @@ async def patch_user(user_id: str, body: UserPatch, admin: dict = Depends(requir
         update.setdefault("$inc", {})["session_version"] = 1
     if body.add_bonus_runs:
         update.setdefault("$inc", {})["bonus_runs"] = body.add_bonus_runs
+    if body.welcome is not None:
+        if user.get("team_of"):
+            raise HTTPException(400, "Team members use the business owner's plan.")
+        update.setdefault("$set", {}).update({"welcome.on": body.welcome, "welcome.changed_at": now(), "welcome.changed_by": admin["_id"]})
     if update:
         await db().users.update_one({"_id": user_id}, update)
         await track("admin_change", user_id, by=admin["_id"], **body.model_dump(exclude_none=True))

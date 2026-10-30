@@ -208,7 +208,7 @@ async def admin_add_call(body: CallIn, admin: dict = Depends(require_admin)):
     starts = body.starts_at if body.starts_at.tzinfo else body.starts_at.replace(tzinfo=IST)
     doc = {"_id": new_id(), **body.model_dump(), "starts_at": starts.astimezone(timezone.utc), "created_by": admin["_id"], "created_at": now()}
     await db().member_calls.insert_one(doc)
-    async for u in db().users.find({"team_of": {"$exists": False}, "disabled": {"$ne": True}}, {"plan": 1, "trial": 1, "sub": 1, "access": 1, "grants": 1, "phone": 1}).limit(20000):
+    async for u in db().users.find({"team_of": {"$exists": False}, "disabled": {"$ne": True}}, {"plan": 1, "trial": 1, "sub": 1, "access": 1, "grants": 1, "phone": 1, "welcome": 1}).limit(20000):
         if plans.has(u, "member_call") and plans.rank(plans.effective_plan(u)) >= plans.rank(body.tier):
             await notify(u["_id"], f"Member call: {body.title} on {starts.astimezone(IST).strftime('%d %b, %I:%M %p')}. Send your questions on Member call.")
     return _call_view(doc)
@@ -233,7 +233,7 @@ async def board(ctx: Ctx = Depends(feature("cohort_board", "owner"))):
     rows = []
     if cohort:
         async for u in db().users.find({"cohort": cohort, "team_of": {"$exists": False}, "disabled": {"$ne": True}, "board_hide": {"$ne": True}},
-                                       {"plan": 1, "trial": 1, "sub": 1, "access": 1, "grants": 1, "phone": 1}).limit(2000):
+                                       {"plan": 1, "trial": 1, "sub": 1, "access": 1, "grants": 1, "phone": 1, "welcome": 1}).limit(2000):
             if not plans.has(u, "week"):
                 continue
             b = await db().businesses.find_one({"owner_id": u["_id"]}, {"name": 1, "city": 1}) or {}

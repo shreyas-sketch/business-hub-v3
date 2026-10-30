@@ -242,6 +242,8 @@ async def _create_user(phone: str, body: VerifyIn) -> tuple[dict, bool]:
             "role": "admin" if phone in settings.admin_phones else "owner", "cohort": cohort, "session_version": 0, "created_at": now()}
     if invite:  # joining someone's team, not starting their own hub
         user.update(team_of=invite["owner_id"], team_role=invite.get("role", "staff"), name=user["name"] or invite.get("name", ""), cohort=None)
+    elif plans.UI.get("welcome_full_hub"):   # a new hub starts with everything open, until the admin switches it off
+        user["welcome"] = {"on": True, "at": now()}
     for _ in range(5):
         user["ref_code"] = new_ref_code()
         try:

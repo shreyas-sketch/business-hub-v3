@@ -207,6 +207,7 @@ class UiPatch(BaseModel):
     support_email: str | None = Field(default=None, max_length=120, pattern=r"^([^@\s]+@[^@\s]+\.[^@\s]+)?$")
     pay_monthly_link: str | None = Field(default=None, max_length=300, pattern=r"^(https://\S+)?$")
     pay_yearly_link: str | None = Field(default=None, max_length=300, pattern=r"^(https://\S+)?$")
+    welcome_full_hub: bool | None = None   # new signups get the whole hub; owners who already have it keep it
 
 
 @router.get("/ui")
