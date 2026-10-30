@@ -210,7 +210,8 @@ function CashInner() {
 
   const buffer = f.safety_buffer || 0;
   const s = f.shortfall;
-  const title = s ? <>Short by <em className="money">{rs(s.short_by)}</em> on {fmt(s.date)}.</> : <>No shortfall in the next <em>30 days</em>.</>;
+  // the date it first goes below zero: the amount that day isn't the worst, so the "Lowest point" tile carries that figure
+  const title = s ? <>Your balance goes below zero on <em>{fmt(s.date)}</em>.</> : <>No shortfall in the next <em>30 days</em>.</>;
   return (
     <Sheet {...head} title={title}
       sub="Your balance each day: dues on the day each customer usually pays, salaries and fixed costs on their day, plus anything you add.">

@@ -58,7 +58,7 @@ function Form() {
   if (!form.valid || !form.open) {
     return (
       <Frame><section className="panel d1-sheet">
-        <span className="kicker">Business AI · event</span>
+        <span className="kicker">OwnerDesk · event</span>
         <h1>{form.valid ? <>This link is <em>closed</em> right now.</> : <>This link isn't <em>valid</em>.</>}</h1>
         <p className="sub">{form.valid ? "It opens when the speaker starts the session. Keep this page and refresh it then." : "Please scan the code shown in the hall again."}</p>
       </section></Frame>
@@ -90,7 +90,7 @@ function Form() {
   return (
     <Frame>
       <section className="panel d1-sheet">
-        <span className="kicker">{form.name || "Business AI"} · your pack</span>
+        <span className="kicker">{form.name || "OwnerDesk"} · your pack</span>
         <h1>Your business, built in about a <em>minute</em>.</h1>
         <p className="sub">Type your website and GST number. The hub builds your compliance calendar, checks your website, picks up your brand colours and starts your Knowledge Hub{form.ai ? " — then writes your brand message, a new website and ways to get more leads" : ""}. No login yet.</p>
 

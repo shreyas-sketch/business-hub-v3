@@ -98,3 +98,4 @@ def test_the_full_hub_skips_the_event_days_and_paid_only_locks():
         assert plans.day_locked({**owner, "welcome": {"on": False}}, later)
     finally:
         plans.EVENTS.pop("EV-1", None)
+

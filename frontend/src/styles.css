@@ -361,7 +361,7 @@ table.t { width: 100%; border-collapse: collapse; }
   .t.cards tr:hover td { background: none; }
   .form-row { grid-template-columns: 1fr !important; }
   .statgrid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
-  .stat .num { font-size: 22px; }
+  .stat .num { font-size: clamp(17px, 5.4vw, 22px); overflow-wrap: normal; }   /* a rupee figure never splits mid-digit */
   .checkin { grid-template-columns: 1fr !important; }
   .tabs { padding-right: 32px; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); }
   .rec-layout { grid-template-columns: 1fr; }

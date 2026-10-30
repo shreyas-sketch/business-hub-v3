@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ago, api, rs } from "../api.js";
-import { Busy, FormError, LoadError, Sheet, Switch, useHub, useLoad } from "../ui.jsx";
+import { beyondMembership, Busy, FormError, LoadError, Sheet, Switch, useHub, useLoad } from "../ui.jsx";
 import { Loading, Pill } from "../v2.jsx";
 import "./dashboard.css";
 
@@ -192,6 +192,7 @@ function Tile({ t }) {
       </article>
     );
   }
+  if (t.state === "teaser" && beyondMembership(me, t.feature)) return null;   // v2.3: no older plans on sale
   if (t.state === "teaser") {
     return (
       <article className={`db-tile teaser ${t.size} t-${t.key}`}>

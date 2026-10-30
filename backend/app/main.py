@@ -52,7 +52,8 @@ async def lifespan(_: FastAPI):
             task.cancel()
 
 
-app = FastAPI(title=settings.program_name, lifespan=lifespan, docs_url=None if settings.production else "/api/docs", redoc_url=None)
+app = FastAPI(title=settings.program_name, lifespan=lifespan, docs_url=None if settings.production else "/api/docs", redoc_url=None,
+              openapi_url=None if settings.production else "/openapi.json")
 
 
 @app.middleware("http")

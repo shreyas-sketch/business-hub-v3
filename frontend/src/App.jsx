@@ -393,8 +393,7 @@ export default function App() {
         <Routes>
           {PAGES.map(([path, Page, feature, role]) => (
             <Route key={path} path={path} element={
-              <Gate feature={feature} role={role} kicker={me.feature_info?.[feature]?.label || "Locked"} what={me.feature_info?.[feature]?.what}
-                title={feature && me.feature_info?.[feature] && !me.feature_info[feature].on ? <>This part of the hub is <em>switched off</em>.</> : undefined}>
+              <Gate feature={feature} role={role} kicker={me.feature_info?.[feature]?.label || "Locked"} what={me.feature_info?.[feature]?.what}>
                 <Page />
               </Gate>} />
           ))}

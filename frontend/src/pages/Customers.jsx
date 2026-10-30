@@ -140,8 +140,8 @@ export default function Customers() {
   const counts = d?.counts || { A: 0, B: 0, C: 0 };
   const a = counts.A;
   const title = !d?.total ? <>Know your best <em>customers</em>.</>
-    : a ? <>{a} {a === 1 ? "customer brings" : "customers bring"} <em>70%</em> of your sales.</>
-    : <>{d.total} customers, sorted by <em>value</em>.</>;
+    : a && a < d.total ? <>{a} {a === 1 ? "customer brings" : "customers bring"} <em>70%</em> of your sales.</>   // with one or two customers it's all of them
+    : <>{d.total} {d.total === 1 ? "customer" : "customers"}, sorted by <em>value</em>.</>;
   const showImport = d?.can_import && (importing || d.total === 0);
   return (
     <Sheet kicker="Systems · Customers" id="RB-01" pillar="Systems" title={title}

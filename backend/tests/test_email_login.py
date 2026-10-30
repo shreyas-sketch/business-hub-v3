@@ -68,3 +68,18 @@ async def test_paused_account_cannot_log_in_by_email(client):
     await client.post("/api/auth/logout")
     await db().users.update_one({"email": "p@example.in"}, {"$set": {"disabled": True}})
     assert (await client.post("/api/auth/login", json={"email": "p@example.in", "password": "longenough1"})).status_code == 403
+
+
+async def test_the_code_wins_over_an_email_signup_that_used_someone_elses_number(client):
+    # someone signs up by email with a number that isn't theirs; the number's real owner then logs in with the code
+    assert (await _register(client, email="squat@example.in", phone="9811100009")).status_code == 200
+    squatter = (await client.get("/api/me")).json()["user"]["id"]
+    await client.post("/api/auth/logout")
+    await login(client, "9811100009")
+    me = (await client.get("/api/me")).json()["user"]
+    assert me["id"] != squatter and me["phone"] == "+919811100009" and not me.get("email")
+    await client.post("/api/auth/logout")
+    # the email sign-up still logs in with its password, but no longer holds the number
+    assert (await client.post("/api/auth/login", json={"email": "squat@example.in", "password": "longenough1"})).status_code == 200
+    assert (await client.get("/api/me")).json()["user"]["id"] == squatter
+    assert (await db().users.find_one({"_id": squatter}))["released_phone"] == "+919811100009"

@@ -13,7 +13,7 @@ export default function Leads() {
   const setStatus = async (id, status) => { await api(`/leads/${id}`, { method: "PATCH", body: { status } }); reload(); };
   const waiting = (leads || []).filter((l) => l.status === "new").length;
   const title = !leads?.length ? <>Your leads will <em>arrive</em> here.</>
-    : waiting ? <>{waiting} {waiting === 1 ? "lead" : "leads"} waiting for a <em>reply</em>.</>
+    : waiting ? <>{waiting} new {waiting === 1 ? "lead" : "leads"} to <em>follow up</em>.</>   // status New: not yet marked contacted
     : <>Every lead has a <em>reply</em>.</>;
   return (
     <Sheet kicker="Systems · Leads" id="SY-02" pillar="Systems" step={3} title={title}

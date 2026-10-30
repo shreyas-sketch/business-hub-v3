@@ -65,7 +65,7 @@ function ProgramList() {
         <div className="empty"><p className="muted">{owner ? "No recordings yet. When your program's calls are recorded, they appear here." : "No recordings have been shared with your team yet."}</p></div>
       ) : (
         <div className="grid2">
-          {list.map((p) => {
+          {list.filter((p) => !(p.locked && me.ui?.menu === "engines" && !["free", "lite"].includes(p.tier))).map((p) => {   // v2.3: no older plans on sale
             const pct = p.recordings ? Math.round((p.watched / p.recordings) * 100) : 0;
             return (
               <div key={p.id} className={`panel ${p.locked ? "flat" : ""}`}>
