@@ -20,7 +20,7 @@ export function Rich({ text }) {
 function Frame({ program, children }) {
   return (
     <div className="public d1">
-      <header><span className="mark"><b>{program || "Business AI"}</b><span>Your report</span></span></header>
+      <header><span className="mark"><b>{program || "OwnerDesk"}</b><span>Your report</span></span></header>
       <section className="panel d1-sheet">{children}</section>
       <p className="small muted d1-foot">No login, nothing to install. Only this report and its save link are ever sent to your WhatsApp.</p>
     </div>
@@ -53,7 +53,7 @@ function Form() {
   if (!form.valid || !form.open) {
     return (
       <Frame program={form.program}>
-        <span className="kicker">{form.program || "Business AI"} · your report</span>
+        <span className="kicker">{form.program || "OwnerDesk"} · your report</span>
         <h1>{form.valid ? <>This report is <em>closed</em>.</> : <>This link isn't <em>valid</em>.</>}</h1>
         <p className="sub">{form.valid ? "The report for this webinar has closed." : "Please use the link shared in the webinar."}</p>
       </Frame>

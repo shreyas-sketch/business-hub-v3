@@ -55,7 +55,7 @@ function OnTarget({ t, mode, onMode }) {
       <div className="statgrid">
         <Stat label="Heading for" value={rs(Math.round(t.projected))} money note="estimated: this month's pace to month-end" />
         <Stat label={t.gap > 0 ? "Short by" : "Ahead by"} value={rs(Math.round(Math.abs(t.gap)))} money note="against the target, at this pace" />
-        <Stat label="Needed each day" value={rs(Math.round(t.required_daily))} money note={t.days_left > 0 ? `for the ${t.days_left} days left` : "today"} />
+        <Stat label="Needed each day" value={rs(Math.round(t.required_daily))} money note={t.days_left > 1 ? `for the ${t.days_left} days left` : t.days_left === 1 ? "for the last day" : "today"} />
       </div>
       {t.activity?.line && <p className="small">{t.activity.line}</p>}
       {t.actions?.length > 0 && (

@@ -111,9 +111,16 @@ export function Copy({ text, label = "Copy", className = "btn sm" }) {
 }
 
 /** A locked feature shows the tier that unlocks it. Never pretends to work. */
+// the plan ladder, lowest first (plans.TIERS on the server)
+const TIER_ORDER = ["free", "lite", "program", "running", "growth", "office"];
+/** v2.3 sells one plan: a feature above Membership isn't offered, so nothing points at the older plans. */
+export const beyondMembership = (me, feature) =>
+  me?.ui?.menu === "engines" && TIER_ORDER.indexOf(me.feature_tiers?.[feature] || "lite") > TIER_ORDER.indexOf("lite");
+const switchedOff = (me, feature) => me?.feature_info?.[feature]?.on === false;
+
 export function Locked({ feature, what }) {
   const { me, upgrade } = useHub();
-  if (!me || me.features?.[feature]) return null;
+  if (!me || me.features?.[feature] || switchedOff(me, feature) || beyondMembership(me, feature)) return null;
   const tier = me.feature_tiers?.[feature] || "lite";
   const t = me.tiers?.[tier] || { name: "Membership" };
   return (
@@ -156,6 +163,10 @@ export function Gate({ feature, role = "staff", children, title, what, kicker = 
   if (!canAct(me, role)) {
     return <Sheet kicker={kicker} id={id} title={<>Ask the owner for <em>access</em>.</>} sub="This part of the hub is for the business owner or a manager." />;
   }
+  if (feature && !me.features?.[feature] && switchedOff(me, feature)) {
+    return <Sheet kicker={kicker} id={id} title={title || <>This part of the hub is <em>switched off</em>.</>}
+      sub="The OwnerDesk team has switched it off for now. Everything else in your hub works as usual." />;
+  }
   const why = feature && !me.features?.[feature] ? me.feature_locks?.[feature] : null;
   if (why?.lock === "grant") {   // open only to the accounts the team has given it to: joining doesn't open it
     return <Sheet kicker={kicker} id={id} title={<>Not open on <em>your account</em>.</>} sub="The OwnerDesk team opens this part of the hub account by account." />;
@@ -166,6 +177,13 @@ export function Gate({ feature, role = "staff", children, title, what, kicker = 
         sub={`At the event, the engines open one day at a time. Day ${why.opens_day} opens the ${ENGINE_OF_DAY[why.opens_day] || "next"} engines.`}>
         {what && <p className="muted">{what}</p>}
         <p className="small muted">Members of OwnerDesk have every engine open from the start.</p>
+      </Sheet>
+    );
+  }
+  if (feature && !me.features?.[feature] && beyondMembership(me, feature)) {   // joining Membership wouldn't open it
+    return (
+      <Sheet kicker={kicker} id={id} title={<>Not part of <em>Membership</em>.</>} sub={what}>
+        <p className="muted">The OwnerDesk team opens this for businesses that need it. Ask on your member call if you'd like it.</p>
       </Sheet>
     );
   }

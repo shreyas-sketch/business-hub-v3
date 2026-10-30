@@ -90,6 +90,11 @@ async def login_with_code(phone: str, body: VerifyIn, request: Request, response
         raise HTTPException(400, "This code has expired. Ask for a new one.")
 
     user = await db().users.find_one({"phone": phone})
+    if user and user.get("phone_verified") is False:
+        # signed up by email with this number but never proved it: the code proves the number is this person's, so that
+        # sign-up lets go of it (it keeps its email login) and this person gets their own account, not the other one
+        await _release_number(user)
+        user = None
     created = False
     if not user:
         user, created = await _create_user(phone, body)
@@ -106,6 +111,12 @@ async def login_with_code(phone: str, body: VerifyIn, request: Request, response
     except Exception:  # noqa: BLE001  logging in must never depend on the Day-1 report
         log.exception("attaching Day-1 reports failed for %s", user["_id"])
     return user, created
+
+
+async def _release_number(user: dict) -> None:
+    await db().users.update_one({"_id": user["_id"]}, {"$set": {"phone": f"released:{user['_id']}", "released_phone": user["phone"],
+                                                                "phone_released_at": now()}})
+    log.warning("number %s released from unverified email sign-up %s", user["phone"][-4:], user["_id"])
 
 
 # ───────────────────────── Email and password ─────────────────────────

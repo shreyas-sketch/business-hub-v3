@@ -26,7 +26,7 @@ function AuditResult({ engine }) {
         {e.hours_week ? <>{e.cost_month ? " and" : " Gaps take"} about <b>{Math.round(e.hours_week)} hours</b> a week</> : null}
         {e.cost_month || e.hours_week ? "." : ""}
       </p>
-      <span className="small muted">Estimated from your own numbers. <Link to="/audit">Open the audit</Link></span>
+      <span className="small muted">{e.cost_month ? "Estimated from your own numbers." : "Typical hours for a small business."} <Link to="/audit">Open the audit</Link></span>
     </div>
   );
 }

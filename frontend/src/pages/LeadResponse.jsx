@@ -116,7 +116,7 @@ function Preview({ d, reload }) {
       <span className="label">The first reply</span>
       <p className="small muted">It goes as your approved WhatsApp template. If your template reads “{p.template_hint}”, the customer gets:</p>
       <div className="prompt">{p.text}</div>
-      <p className="small muted">{"{{3}}"}, the booking line: “{p.wording}”{d.settings.booking === "times" ? " The two times are worked out when each inquiry comes in." : ""}</p>
+      <p className="small muted">The {"{{3}}"} in that template is the booking line: “{p.wording}”{d.settings.booking === "times" ? " The two times are worked out when each inquiry comes in." : ""}</p>
       {owner && !d.settings.on && (
         <div className="stack" style={{ gap: 8 }}>
           <Switch checked={read} onChange={setRead} label="I've read this first reply and I'm happy for it to go out in my business's name" />
