@@ -26,11 +26,39 @@ const bodyOf = (f) => ({
   pledge: String(f.pledge || "").trim(),
 });
 
+/** The same limits as the server's LeversIn, so a number it would refuse is caught here instead of failing quietly. */
+const LIMITS = [
+  ["customers", "Customers a year", 1e9], ["avg_value", "Average sale", 1e10], ["frequency", "Purchases a year", 1000],
+  ["grow_customers", "More customers", 500, "%"], ["grow_value", "Bigger sale", 500, "%"], ["grow_frequency", "More often", 500, "%"],
+];
+const BASE = ["customers", "avg_value", "frequency"];
+
+/** What's wrong with the numbers, in words, or "" when the server will take them. */
+function problem(f) {
+  for (const [k, label, max, unit = ""] of LIMITS) {
+    if (f[k] === "" || f[k] == null) continue;
+    const v = Number(f[k]);
+    if (!Number.isFinite(v) || v < 0) return `${label} can't be below 0.`;
+    if (v > max) return `${label} can be at most ${new Intl.NumberFormat("en-IN").format(max)}${unit}.`;
+  }
+  return "";
+}
+
+/** Rounded to 15 significant digits first, so very large totals don't show floating-point noise in the last digits. */
+const whole = (x) => Math.round(Number(x.toPrecision(15)));
+
 /** The same maths as the server, so the numbers move while you type. */
 function calc(f) {
   const today = n(f.customers) * n(f.avg_value) * n(f.frequency);
   const factor = (1 + n(f.grow_customers) / 100) * (1 + n(f.grow_value) / 100) * (1 + n(f.grow_frequency) / 100);
-  return { revenue: Math.round(today), new_revenue: Math.round(today * factor), growth_pct: Math.round((factor - 1) * 1000) / 10, extra: Math.round(today * factor - today) };
+  return { revenue: whole(today), new_revenue: whole(today * factor), growth_pct: Math.round((factor - 1) * 1000) / 10, extra: whole(today * factor - today) };
+}
+
+/** The line under Growth, from the owner's own three percentages. */
+function growthNote(f, r) {
+  const g = [n(f.grow_customers), n(f.grow_value), n(f.grow_frequency)];
+  if (g[0] === g[1] && g[1] === g[2]) return `${pct(g[0])}% on each lever ≈ ${pct(r.growth_pct)}%`;
+  return `${g.map((x) => `${pct(x)}%`).join(" × ")} ≈ ${pct(r.growth_pct)}%`;
 }
 
 /** Lever by lever, in rupees: each one multiplies what the one before it made. Same maths as the server. */
@@ -185,7 +213,8 @@ export default function Levers() {
     if (!loaded) return;
     setSaved(loaded.levers);
     if (loaded.levers) {
-      const form = Object.fromEntries(KEYS.map((k) => [k, loaded.levers[k] ?? BLANK[k]]));
+      // a cleared number is kept as 0; show it blank again rather than as "0"
+      const form = Object.fromEntries(KEYS.map((k) => [k, BASE.includes(k) && !loaded.levers[k] ? "" : loaded.levers[k] ?? BLANK[k]]));
       setF(form);
       sent.current = JSON.stringify(bodyOf(form));
     } else {
@@ -196,7 +225,7 @@ export default function Levers() {
   useEffect(() => {
     if (!loaded || sent.current === null) return undefined;
     const body = bodyOf(f);
-    if (JSON.stringify(body) === sent.current) return undefined;
+    if (JSON.stringify(body) === sent.current || problem(f)) return undefined;
     const t = setTimeout(async () => {
       setSaving(true);
       try {
@@ -211,13 +240,20 @@ export default function Levers() {
   const sub = "Revenue = customers × average value × how often they buy. Grow each a little and the total grows a lot.";
   if (!loaded) return <Sheet {...head} title={<>Three small levers, one big <em>jump</em>.</>} sub={sub}><Loading /></Sheet>;
 
+  const bad = problem(f);
   const r = calc(f);
   const set = (k) => (v) => setF({ ...f, [k]: v });
   const setStage = (k, v) => setF({ ...f, funnel: { ...f.funnel, [k]: v } });
-  const hasNumbers = r.revenue > 0;
+  const hasNumbers = r.revenue > 0 && !bad;
+  const unsaved = JSON.stringify(bodyOf(f)) !== sent.current;
+  const status = bad ? `Not saved: ${bad}`
+    : err && unsaved ? `Not saved: ${err}`
+    : saving ? "Saving…"
+    : saved?.updated_at ? `Your numbers are saved as you type · last saved ${ago(saved.updated_at)}` : "Your numbers are saved as you type.";
   const pledgeText = () => `I pledge to grow my customers by ${pct(n(f.grow_customers))}%, my average sale by ${pct(n(f.grow_value))}% and how often customers buy by ${pct(n(f.grow_frequency))}%` +
     (hasNumbers ? ` — from ${rs(r.revenue)} to ${rs(r.new_revenue)} a year.` : ` — ${pct(r.growth_pct)}% more revenue.`);
   const save = async () => {
+    if (bad) throw new Error(bad);
     const body = bodyOf(f);
     const d = await api("/levers", { method: "PUT", body });
     sent.current = JSON.stringify(body);
@@ -229,7 +265,7 @@ export default function Levers() {
 
   return (
     <Sheet {...head} sub={sub}
-      title={<>{pct(r.growth_pct)}% more revenue from three small <em>levers</em>.</>}>
+      title={bad ? <>Three small levers, one big <em>jump</em>.</> : <>{pct(r.growth_pct)}% more revenue from three small <em>levers</em>.</>}>
       <div className="pg-formula">
         <Lever title="Customers" label="Customers a year" value={f.customers} onValue={set("customers")}
           grow={f.grow_customers} onGrow={set("grow_customers")} growLabel="More customers" step="1" />
@@ -244,11 +280,11 @@ export default function Levers() {
       <div className="pg-stats" aria-live="polite">
         <Stat label="Revenue today" value={hasNumbers ? rs(r.revenue) : "—"} money note="a year" />
         <Stat label="New revenue" value={hasNumbers ? rs(r.new_revenue) : "—"} money note="a year, with the growth above" />
-        <div className="stat"><span className="label">Growth</span><span className="num aqua">{pct(r.growth_pct)}%</span><span className="small muted">10% on each lever ≈ 33.1%</span></div>
+        <div className="stat"><span className="label">Growth</span><span className="num aqua">{bad ? "—" : `${pct(r.growth_pct)}%`}</span><span className="small muted">{bad ? "Fix the number above" : growthNote(f, r)}</span></div>
         <Stat label="Extra a year" value={hasNumbers ? `+${rs(r.extra)}` : "—"} money />
       </div>
-      <p className="small muted" aria-live="polite">{saving ? "Saving…" : saved?.updated_at ? `Your numbers are saved as you type · last saved ${ago(saved.updated_at)}` : "Your numbers are saved as you type."}</p>
-      {!hasNumbers && <p className="small muted">Fill in the three numbers for last year to see your revenue in rupees.</p>}
+      {bad || (err && unsaved) ? <FormError msg={status} /> : <p className="small muted" aria-live="polite">{status}</p>}
+      {!hasNumbers && !bad && <p className="small muted">Fill in the three numbers for last year to see your revenue in rupees.</p>}
       {history.length > 0 && (
         <details className="panel lv-history">
           <summary><span className="label">Your earlier numbers</span><span className="small muted"> · {history.length} saved</span></summary>
@@ -308,7 +344,7 @@ export default function Levers() {
         {!f.pledge.trim() && <div><button className="btn sm ghost" onClick={() => setF({ ...f, pledge: pledgeText() })}>Start from my numbers</button></div>}
       </div>
 
-      <FormError msg={err} />
+      <FormError msg={bad || err} />
       <div className="row">
         <Busy className="btn primary" onError={setErr} run={save}>Save my levers</Busy>
         {saved?.updated_at && <span className="small muted">Saved {ago(saved.updated_at)}</span>}

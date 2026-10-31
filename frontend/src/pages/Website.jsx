@@ -58,7 +58,7 @@ function PromptEditor({ dirty, onApplied }) {
           {!pv.changed.length && (
             <p className="small">{pv.new_facts?.length ? "Nothing changed yet: your request needs a fact your Knowledge Hub doesn't have — see below."
               : pv.invented_left_out ? "Nothing changed: the only change the AI suggested used a number that isn't in your Knowledge Hub, so we left it out."
-              : "Nothing on the page needs to change for this."}</p>
+              : "Nothing on the page needs to change for this."}{pv.refunded ? " No AI token was used." : ""}</p>
           )}
           {pv.changed.map((k) => (
             <div key={k} className="wp-change">

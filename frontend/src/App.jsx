@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { api, rupees, setLimitHandler, setLockedHandler, localPhone, tokenSpan } from "./api.js";
+import { api, rupees, setChangedHandler, setLimitHandler, setLockedHandler, localPhone, tokenSpan } from "./api.js";
 import { Copy, Gate, HubCtx, Logo, Modal } from "./ui.jsx";
 import { Finder, Icon, allPages, findPage, rememberPage } from "./shell.jsx";
 import Landing from "./pages/Landing.jsx";
@@ -352,6 +352,15 @@ export default function App() {
   const refresh = useCallback(() => api("/me").then(setMe).catch(() => setMe(null)), []);
   useEffect(() => { refresh(); }, [refresh, loc.pathname]);
   useEffect(() => { setLimitHandler((d) => setLimit(d)); setLockedHandler((d) => setLocked(d)); }, []);
+  // AI tokens left: re-read shortly after anything that may have spent one (or got one back), without re-rendering the
+  // whole hub when the count didn't move
+  const refreshRuns = useCallback(() => api("/me").then((m) => setMe((cur) => (
+    cur && m && JSON.stringify(cur.runs) !== JSON.stringify(m.runs) ? { ...cur, runs: m.runs } : cur))).catch(() => {}), []);
+  useEffect(() => {
+    let t;
+    setChangedHandler(() => { clearTimeout(t); t = setTimeout(refreshRuns, 800); });
+    return () => { clearTimeout(t); setChangedHandler(() => {}); };
+  }, [refreshRuns]);
   const toast = useCallback((msg, kind = "ok") => { setToast({ msg, kind }); setTimeout(() => setToast(null), 4200); }, []);
   // Every upgrade button leads to Plans & billing, where the owner pays in-app (or asks us to call when payments aren't set up).
   const upgrade = useCallback((tier, feature) => {

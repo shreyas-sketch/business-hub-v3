@@ -39,7 +39,7 @@ from ..ai.tasks import profile_text
 from ..config import settings
 from ..context import Ctx, feature
 from ..db import db, now, public
-from ..services import new_id, run_ai, track
+from ..services import new_id, refund_latest, run_ai, track
 from ..sites import base_for, site_url
 from .hub import SiteContent, profile_of, site_view
 
@@ -74,6 +74,8 @@ def _owner_facts(instruction: str, ai_facts: list[str], brain: str) -> list[str]
     out: list[str] = []
 
     def add(f: str) -> None:
+        # the fact only, not the AI's note about it ("3 national awards: not in the profile yet. Confirm…")
+        f = re.split(r"[:;—–(]|\.\s", f, maxsplit=1)[0]
         f = re.sub(r"\s+", " ", f).strip(" ,.")
         if f and f.lower() not in brain_l and f.lower() not in (x.lower() for x in out):
             out.append(f)
@@ -139,7 +141,7 @@ def _preview_view(site: dict) -> dict | None:
     left = pv.get("left_out") or []
     return {"instruction": pv["instruction"], "changed": pv["changed"], "before": {k: site["content"].get(k) for k in pv["changed"]},
             "after": pv["patch"], "new_facts": pv.get("new_facts") or [], "notes": pv.get("notes") or [], "at": pv["at"].isoformat(),
-            "left_out": left, "invented_left_out": any(x["reason"] == "invented" for x in left)}
+            "left_out": left, "invented_left_out": any(x["reason"] == "invented" for x in left), "refunded": bool(pv.get("refunded"))}
 
 
 @router.post("/api/site/prompt")
@@ -153,8 +155,10 @@ async def site_prompt(body: PromptIn, ctx: Ctx = Depends(feature("website", "own
     patch, facts, left_out = _guard(r["patch"], content, profile_text(p), r["new_facts"], body.instruction.strip())
     changed = [k for k, v in patch.items() if v != content.get(k)]
     patch = {k: patch[k] for k in changed}
+    # nothing to apply (a fact the Hub doesn't have, or a made-up number left out): the owner isn't charged for it
+    refunded = not changed and await refund_latest(ctx.owner, "site_prompt")
     pv = {"instruction": body.instruction.strip(), "patch": patch, "changed": changed, "new_facts": facts, "notes": r["notes"],
-          "left_out": left_out, "at": now(), "base_updated_at": site.get("updated_at")}
+          "left_out": left_out, "at": now(), "base_updated_at": site.get("updated_at"), "refunded": refunded}
     await db().sites.update_one({"_id": site["_id"]}, {"$set": {"prompt_preview": pv}})
     await track("site_prompt", ctx.ws, changed=len(changed))
     return _preview_view({**site, "prompt_preview": pv})

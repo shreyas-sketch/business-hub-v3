@@ -21,7 +21,7 @@ SECTIONS = {
 STOP = r"(?:and|&|then|also|but|make|put|add|change|please|so|plus|or|move|show|use)\b"
 FACT = re.compile(r"\b\d[\d,.]*\s*\+?\s*(?:years?|yrs?|projects?|customers?|clients?|families|homes|kitchens|jobs|orders|"
                   r"branches|stores|outlets|staff|people|cities|awards?|%|percent|lakh|crore|k\b)"
-                  rf"(?:\s+(?!{STOP})[A-Za-z'’-]+){{0,4}}", re.I)
+                  rf"(?:\s+(?!{STOP})[A-Za-z'’-]+){{0,6}}", re.I)
 
 
 def facts_in(text: str) -> list[str]:

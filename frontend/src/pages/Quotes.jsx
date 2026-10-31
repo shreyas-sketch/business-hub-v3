@@ -8,7 +8,10 @@ import QuoteStatus from "../components/QuoteStatus.jsx";
 import "./running.css";
 import "./invoicing.css";
 
-const GST_RATES = [0, 5, 12, 18, 28];
+// GST 2.0 slabs (from 22 Sep 2025). 12% and 28% are kept on lines that already have them, never offered for new ones
+const GST_RATES = [0, 5, 18, 40];
+const OLD_RATES = [12, 28];
+const ratesFor = (g) => (OLD_RATES.includes(g) ? [...GST_RATES, g].sort((a, b) => a - b) : GST_RATES);
 const MODES = [["intra", "Same state — CGST + SGST"], ["inter", "Another state — IGST"], ["none", "No GST"]];
 const Q_STATUS = { draft: ["Draft", "off"], sent: ["Sent", "on"], accepted: ["Accepted", "on"], lost: ["Lost", "off"] };
 const todayIso = () => new Date().toLocaleDateString("en-CA");
@@ -141,7 +144,7 @@ function Editor({ quote, prefill, onClose, onSaved }) {
             <label className="rb-cell"><span>Rate ₹</span><input className="input rate" type="number" min="0" step="any" inputMode="decimal" value={it.rate} onChange={setI(i, "rate")} aria-label={`Line ${i + 1}: rate in rupees`} placeholder={it.name.trim() ? "Add rate" : ""} /></label>
             <label className="rb-cell"><span>GST</span>
               <select className="select" value={it.gst} disabled={f.gst_mode === "none"} onChange={(e) => setF({ ...f, items: f.items.map((x, j) => (j === i ? { ...x, gst: Number(e.target.value) } : x)) })} aria-label={`Line ${i + 1}: GST rate`}>
-                {GST_RATES.map((g) => <option key={g} value={g}>{g}%</option>)}
+                {ratesFor(it.gst).map((g) => <option key={g} value={g}>{g}%</option>)}
               </select>
             </label>
             <span className="amt money small">{rs(t.amounts[i])}</span>
@@ -360,7 +363,7 @@ function InvoiceEditor({ onClose, onSaved }) {
             <label className="rb-cell"><span>Rate ₹</span><input className="input rate" type="number" min="0" step="any" inputMode="decimal" value={it.rate} onChange={setI(i, "rate")} aria-label={`Line ${i + 1}: rate in rupees`} placeholder={it.name.trim() ? "Add rate" : ""} /></label>
             <label className="rb-cell"><span>GST</span>
               <select className="select" value={it.gst} disabled={f.gst_mode === "none"} onChange={(e) => setF({ ...f, items: f.items.map((x, j) => (j === i ? { ...x, gst: Number(e.target.value) } : x)) })} aria-label={`Line ${i + 1}: GST rate`}>
-                {GST_RATES.map((g) => <option key={g} value={g}>{g}%</option>)}
+                {ratesFor(it.gst).map((g) => <option key={g} value={g}>{g}%</option>)}
               </select>
             </label>
             <span className="amt money small">{rs(t.amounts[i])}</span>

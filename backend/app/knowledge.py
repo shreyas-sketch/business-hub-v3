@@ -86,7 +86,8 @@ def completeness(b: dict | None, voice: dict | None = None, target: float | None
                          "unlocks": {"feature": feat, "label": feat_label, "path": path}})
     percent = round(done_n / total * 100)
     nxt = next((x for x in sections if not x["done"]), None)
-    hint = f"{percent}% complete — add your {nxt['missing'][0].lower()} to switch on {nxt['unlocks']['label']}." if nxt else "100% complete."
+    # the pages work without it (the website builds from what's there); the missing answer makes that page better
+    hint = f"{percent}% complete — add your {nxt['missing'][0].lower()} for {nxt['unlocks']['label']}." if nxt else "100% complete."
     return {"percent": percent, "sections": sections, "next": nxt["key"] if nxt else None, "hint": hint}
 
 

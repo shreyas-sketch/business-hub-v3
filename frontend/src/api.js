@@ -1,7 +1,10 @@
 let onLimit = () => {};
 let onLocked = () => {};
+let onChanged = () => {};
 export const setLimitHandler = (fn) => { onLimit = fn; };
 export const setLockedHandler = (fn) => { onLocked = fn; };
+/** Called after anything that changes data, so the shell can re-read what it shows (the AI tokens left). */
+export const setChangedHandler = (fn) => { onChanged = fn; };
 
 const FIELD_NAMES = { value: "The number", recorded_on: "Recorded on", duration_min: "Length", due_date: "Due date", amount: "Amount", target: "Target" };
 
@@ -52,6 +55,7 @@ export async function api(path, { method = "GET", body } = {}) {
     const msg = typeof d === "string" ? d : Array.isArray(d) ? fieldError(d[0]) : d?.message ? d.message : "Something went wrong. Please try again.";
     const e = new Error(tokenWords(msg)); e.status = res.status; throw e;
   }
+  if (method !== "GET") onChanged();
   return data;
 }
 

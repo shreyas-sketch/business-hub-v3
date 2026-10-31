@@ -21,7 +21,7 @@ import logging
 import re
 from datetime import timedelta
 
-from . import plans
+from . import gst as gst_slabs, plans
 from .agents import catalog, jobs
 from .agents.catalog import Skip
 from .db import IST, db, now
@@ -194,7 +194,7 @@ async def make_draft(owner: dict, lead: dict, manual: bool = False):
                 rate = 0.0                     # not from the owner's own prices: the owner fills it in
             gst = num(i.get("gst"), 18)
             items.append({"name": str(i["name"])[:160], "qty": min(num(i.get("qty"), 1) or 1, 100000), "unit": str(i.get("unit") or "nos")[:20],
-                          "rate": rate, "gst": gst if gst in (0, 0.25, 3, 5, 12, 18, 28) else 18})
+                          "rate": rate, "gst": gst if gst in gst_slabs.ACCEPTED else 18})
         if not items:
             raise ValueError("no items")
         return {"items": items, "notes": str(r.get("notes") or "")[:300]}

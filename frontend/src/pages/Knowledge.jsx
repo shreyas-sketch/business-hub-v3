@@ -23,7 +23,7 @@ function SectionHead({ s, children }) {
           <Pill kind={s.done ? "on" : "warn"}>{s.done ? "Done" : `${s.missing.length} to add`}</Pill>
         </div>
         {!s.done && <span className="small muted">Missing: {s.missing.join(", ")}</span>}
-        {s.unlocks?.path && <span className="small muted">Switches on <Link to={s.unlocks.path}>{s.unlocks.label}</Link></span>}
+        {s.unlocks?.path && <span className="small muted">Used by <Link to={s.unlocks.path}>{s.unlocks.label}</Link></span>}
       </div>
       {children}
     </div>
@@ -210,7 +210,8 @@ function MoneyBasics({ d, opts, onSaved }) {
         </Field>
         <Field label="Usual GST rate">
           <select className="select" value={f.gst_rate} onChange={(e) => set("gst_rate")(Number(e.target.value))}>
-            {opts.gst_rates.map((r) => <option key={r} value={r}>{r}%</option>)}
+            {(opts.gst_rates.includes(f.gst_rate) || f.gst_rate === "" || f.gst_rate == null ? opts.gst_rates : [...opts.gst_rates, f.gst_rate].sort((a, b) => a - b))
+              .map((r) => <option key={r} value={r}>{r}%</option>)}
           </select>
         </Field>
         <Field label="Safety buffer (₹) — optional" hint="The cash flow warns you when the balance would drop below this.">

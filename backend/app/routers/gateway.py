@@ -38,7 +38,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field, field_validator
 from pymongo.errors import DuplicateKeyError
 
-from .. import connections, dashboard_cache, invoice_pdf, mailer, plans, razorpay_invoices as rzp
+from .. import connections, dashboard_cache, gst as gst_slabs, invoice_pdf, mailer, plans, razorpay_invoices as rzp
 from ..agents.jobs import claim
 from ..ai.provider import complete
 from ..ai.tasks import RULES, profile_text
@@ -52,7 +52,7 @@ from .hub import profile_of
 
 router = APIRouter(prefix="/api")
 log = logging.getLogger("gateway")
-GST_RATES = (0, 0.25, 3, 5, 12, 18, 28)
+GST_RATES = gst_slabs.ACCEPTED
 # the first two digits of a GSTIN are the state
 GST_STATE_CODES = {"01": "Jammu and Kashmir", "02": "Himachal Pradesh", "03": "Punjab", "04": "Chandigarh", "05": "Uttarakhand", "06": "Haryana",
                    "07": "Delhi", "08": "Rajasthan", "09": "Uttar Pradesh", "10": "Bihar", "11": "Sikkim", "12": "Arunachal Pradesh", "13": "Nagaland",

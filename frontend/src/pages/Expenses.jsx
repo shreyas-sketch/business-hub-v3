@@ -23,7 +23,7 @@ const money = (n) => "₹" + new Intl.NumberFormat("en-IN", { minimumFractionDig
 /** Headline numbers in whole rupees, so they fit on a phone (the list shows the paise). */
 const whole = (n) => "₹" + new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(Math.round(Number(n || 0)));
 const count = (n) => new Intl.NumberFormat("en-IN").format(Number(n || 0));
-const RATES = [5, 12, 18, 28];
+const RATES = [5, 18, 40];   // GST 2.0 slabs
 const PAID_BY = [["upi", "UPI"], ["bank", "Bank"], ["cash", "Cash"], ["card", "Card"], ["cheque", "Cheque"]];
 const PAID_LABEL = { upi: "UPI", bank: "Bank transfer", cash: "Cash", card: "Card", cheque: "Cheque" };
 

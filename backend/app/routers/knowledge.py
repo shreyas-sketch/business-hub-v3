@@ -8,7 +8,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
 
-from .. import knowledge
+from .. import gst, knowledge
 from ..agents import rhythm
 from ..context import Ctx, get_ctx, owner_ctx
 from ..db import db, now
@@ -16,7 +16,6 @@ from ..services import track
 
 router = APIRouter(prefix="/api/knowledge")
 GSTIN = re.compile(r"^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$")
-GST_RATES = (0, 0.25, 3, 5, 12, 18, 28)
 
 
 class IdentityIn(BaseModel):
@@ -92,8 +91,8 @@ class MoneyIn(BaseModel):
     @field_validator("gst_rate")
     @classmethod
     def valid_rate(cls, v):
-        if v not in GST_RATES:
-            raise ValueError("GST rate is one of 0, 0.25, 3, 5, 12, 18 or 28%")
+        if v not in gst.ACCEPTED:
+            raise ValueError("GST rate is one of 0, 0.25, 3, 5, 18 or 40%")
         return v
 
 
@@ -111,7 +110,7 @@ async def _business(ws: str) -> dict:
 def options() -> dict:
     return {"entities": [{"value": a, "label": b} for a, b in knowledge.ENTITIES], "states": knowledge.STATES,
             "registrations": [{"value": a, "label": b} for a, b in knowledge.REGISTRATIONS],
-            "cost_kinds": [{"value": a, "label": b} for a, b in knowledge.COST_KINDS], "gst_rates": list(GST_RATES)}
+            "cost_kinds": [{"value": a, "label": b} for a, b in knowledge.COST_KINDS], "gst_rates": gst.offered()}
 
 
 @router.get("")
