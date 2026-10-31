@@ -201,6 +201,10 @@ DEFAULT_FEATURES: dict[str, dict] = {
     "key_person":      F("lite", "Structure", "Key-person knowledge", "What your key employee knows, written down as an AI agent skill, a role card and SOPs — so the business doesn't depend on one person", "/key-person", "owner"),
     "tender_finder":   F("lite", "Grow", "Tender finder", "Open government tenders on GeM that fit your business, with a link to apply and help to apply for each one", "/tenders", "manager"),
 }
+# The L0 starter set: what the free 2-day webinar shows. When new signups get only these (Admin → Onboarding), every other
+# menu page stays locked until they join. The admin can add or take out any feature (Admin → Features & plans → Edit).
+STARTER = ("home", "business_brain", "engine_audit", "smart_dashboard", "website", "revenue_levers", "inquiry_desk", "sop_library",
+           "social_media", "plans_billing")
 V23_NEW = ("engine_audit", "lead_ideas", "crm", "social_media", "brochures", "key_person")
 # Each feature's engine. Anything not listed here sits under "More" (only seen when the admin switches it on).
 DEFAULT_ENGINE = {
@@ -221,7 +225,7 @@ DEFAULT_ENGINE = {
 }
 for _i, (_k, _f) in enumerate(DEFAULT_FEATURES.items()):
     _f.update(key=_k, order=_i * 10, on=_k not in V23_NEW, teaser=True, sub="", engine=DEFAULT_ENGINE.get(_k, "more"), show=True,
-              paid_only=False, grants_only=False, day=-1)   # day -1: the engine's own day
+              paid_only=False, grants_only=False, day=-1, starter=_k in STARTER)   # day -1: the engine's own day
 DEFAULT_FEATURES["business_brain"]["sub"] = "Business Brain"
 # The tender finder is being tried out with one account: open only where the admin grants it (Admin → grants).
 DEFAULT_FEATURES["tender_finder"]["grants_only"] = True
@@ -230,13 +234,14 @@ DEFAULT_FEATURES["tender_finder"]["grants_only"] = True
 DEFAULT_FEATURES["control_room"]["path"] = None
 
 FEATURE_EDITABLE = {"tier": str, "group": str, "label": str, "what": str, "order": int, "on": bool, "teaser": bool,
-                    "engine": str, "show": bool, "paid_only": bool, "grants_only": bool, "day": int}
+                    "engine": str, "show": bool, "paid_only": bool, "grants_only": bool, "day": int, "starter": bool}
 
 # Hub-wide settings outside the registry (the v2.3 setup turns the engine menu on; the admin edits the account links).
 DEFAULT_UI = {"menu": "groups", "community_link": "", "support_email": "", "pay_monthly_link": "", "pay_yearly_link": "", "v23": None,
-              "welcome_full_hub": settings.welcome_full_hub}   # new signups get the whole hub (see welcome_active)
+              "welcome_full_hub": settings.welcome_full_hub,   # new signups get the whole hub (see welcome_active)
+              "welcome_starter": False}   # ...or only the L0 starter set (see starter_only); wins over the full hub
 UI_EDITABLE = {"menu": str, "community_link": str, "support_email": str, "pay_monthly_link": str, "pay_yearly_link": str,
-               "welcome_full_hub": bool}
+               "welcome_full_hub": bool, "welcome_starter": bool}
 
 # Live values (defaults with the admin's changes applied). Mutated in place so imports stay valid.
 PLANS: dict[str, dict] = copy.deepcopy(DEFAULT_PLANS)
@@ -392,6 +397,18 @@ def welcome_active(user: dict) -> bool:
     return bool((user.get("welcome") or {}).get("on"))
 
 
+# The L0 starter: the same signup access, but only the starter set's menu pages open (whatever plan or event access the owner
+# has) until they pay. Pages that only work behind other pages (show off) follow the plan, so an L0 page never breaks.
+def starter_only(user: dict) -> bool:
+    w = user.get("welcome") or {}
+    return bool(w.get("on")) and w.get("only") == "starter" and not is_paid(user)
+
+
+def starter_locked(user: dict, feature: str) -> bool:
+    m = META.get(feature)
+    return bool(m) and m.get("show", True) and not m.get("starter") and starter_only(user)
+
+
 def effective_plan(user: dict, at: datetime | None = None) -> str:
     """The highest valid plan from any source. A trial or purchase never lowers a plan."""
     return max(plan_sources(user, at).values(), key=rank)
@@ -414,13 +431,13 @@ def has(user: dict, feature: str) -> bool:
     """On for everyone (the admin's switch), and either in the owner's plan or granted to this owner by the admin (only the
     grant counts for a grants_only feature).
     v2.3: a paid-only feature stays closed during a free or event trial, and during a live event a menu feature opens on
-    its engine's day. The full hub given at signup opens both."""
+    its engine's day. The full hub given at signup opens both. The L0 starter given at signup opens only its own pages."""
     m = META.get(feature)
     if not m or not m["on"]:
         return False
     if granted(user, feature):
         return True
-    if m.get("grants_only"):
+    if m.get("grants_only") or starter_locked(user, feature):
         return False
     if rank(effective_plan(user)) < rank(m["tier"]):
         return False
@@ -514,7 +531,7 @@ def feature_view(key: str) -> dict:
     return {"key": key, "label": m["label"], "sub": m.get("sub", ""), "what": m["what"], "tier": m["tier"], "group": m["group"], "path": m["path"],
             "role": m["role"], "order": m["order"], "on": m["on"], "teaser": m["teaser"], "core": m["core"],
             "engine": m.get("engine", "more"), "show": m.get("show", True), "paid_only": m.get("paid_only", False),
-            "grants_only": m.get("grants_only", False), "day": m.get("day", -1)}
+            "grants_only": m.get("grants_only", False), "day": m.get("day", -1), "starter": m.get("starter", False)}
 
 
 def ladder() -> list[dict]:
@@ -560,7 +577,7 @@ def engine_menu(owner: dict, role: str) -> list[dict]:
             continue
         sections[m.get("engine") if m.get("engine") in sections else "more"].append({
             "key": key, "path": m["path"], "label": m["label"], "sub": m.get("sub", ""), "locked": not unlocked,
-            "lock": "day" if by_day else ("plan" if not unlocked else None), "opens_day": feature_day(key) if by_day else None,
+            "lock": None if unlocked else "day" if by_day else "starter" if starter_locked(owner, key) else "plan", "opens_day": feature_day(key) if by_day else None,
             "tier": m["tier"], "tier_name": PLANS[m["tier"]]["name"], "tier_short": PLANS[m["tier"]]["short"], "order": m["order"]})
     return [{"group": SECTION_LABEL[s], "section": s, "engine": s in ENGINE_DAY, "day": ENGINE_DAY.get(s),
              "items": sorted(items, key=lambda i: i["order"])} for s, items in sections.items() if items]

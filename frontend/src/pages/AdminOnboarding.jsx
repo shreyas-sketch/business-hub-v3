@@ -8,22 +8,33 @@ import "./admin.css";
 /* Admin → Onboarding (v2.3): every member from the event or who paid, with where their access comes from, the setup the hub
    can see for itself, and the team's notes. Members pay outside the hub (Razorpay); "Mark paid" switches Membership on. */
 
-const FILTERS = [["", "Everyone"], ["welcome", "Full hub"], ["event", "Event access"], ["paid", "Paid"], ["ended", "Event ended"], ["free", "Free"], ["off", "Switched off"]];
-const PILL = { welcome: "warn", event: "warn", paid: "on", ended: "off", free: "off", off: "off" };
+const FILTERS = [["", "Everyone"], ["starter", "L0 starter"], ["welcome", "Full hub"], ["event", "Event access"], ["paid", "Paid"], ["ended", "Event ended"], ["free", "Free"], ["off", "Switched off"]];
+const PILL = { starter: "warn", welcome: "warn", event: "warn", paid: "on", ended: "off", free: "off", off: "off" };
+
+// What a new signup gets: only the L0 starter pages (the webinar's), the whole hub, or their plan (Free, or the event's access)
+const SIGNUP = [
+  ["starter", "L0 only", { welcome_starter: true }, "New signups now get only the L0 pages; the rest stays locked until they join. Owners who signed up before keep what they have."],
+  ["full", "Full hub", { welcome_starter: false, welcome_full_hub: true }, "New signups get the full hub again."],
+  ["plan", "Their plan", { welcome_starter: false, welcome_full_hub: false }, "New signups now start on Free (or the event's access). Owners who already have the full hub keep it."],
+];
 
 function WelcomeSwitch() {
   const { toast } = useHub();
   const [s, reload] = useLoad("/admin/config/ui");
   if (!s) return null;
-  const on = !!s.welcome_full_hub;
+  const now = s.welcome_starter ? "starter" : s.welcome_full_hub ? "full" : "plan";
   return (
-    <div className="panel row" style={{ justifyContent: "space-between" }}>
-      <span><b>New signups get the full hub</b> <span className="small muted">— {on ? "on" : "off"}. Switch it off for one owner on their page.</span></span>
-      <Busy className="btn sm" run={async () => {
-        await api("/admin/config/ui", { method: "PATCH", body: { welcome_full_hub: !on } });
-        toast(on ? "New signups now start on Free. Owners who already have the full hub keep it." : "New signups get the full hub again.");
-        reload();
-      }}>{on ? "Switch off" : "Switch on"}</Busy>
+    <div className="panel row" style={{ justifyContent: "space-between", flexWrap: "wrap" }}>
+      <span><b>New signups get</b> <span className="small muted">— L0 only: the pages marked L0 in Features &amp; plans. Change it for one owner on their page.</span></span>
+      <div className="row">
+        {SIGNUP.map(([k, label, body, msg]) => (
+          <Busy key={k} className={`btn sm ${now === k ? "primary" : "ghost"}`} disabled={now === k} run={async () => {
+            await api("/admin/config/ui", { method: "PATCH", body });
+            toast(msg);
+            reload();
+          }}>{label}</Busy>
+        ))}
+      </div>
     </div>
   );
 }

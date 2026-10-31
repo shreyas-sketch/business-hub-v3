@@ -46,6 +46,8 @@ def _access(u: dict) -> dict:
         status, label = "off", "Switched off"
     elif plans.is_paid(u):
         status, label = "paid", "Paid"
+    elif plans.starter_only(u):
+        status, label = "starter", "L0 starter"
     elif plans.welcome_active(u):
         status, label = "welcome", "Full hub"
     elif plans.event_trial(u):
@@ -124,7 +126,7 @@ async def members(q: str = "", status: str = "", cohort: str = ""):
         if needle and needle not in " ".join(str(row[k]) for k in ("name", "phone", "email", "business", "city")).lower():
             continue
         rows.append(row)
-    counts = {s: sum(1 for r in rows if r["access"]["status"] == s) for s in ("welcome", "event", "paid", "ended", "free", "off")}
+    counts = {s: sum(1 for r in rows if r["access"]["status"] == s) for s in ("starter", "welcome", "event", "paid", "ended", "free", "off")}
     return {"members": rows, "counts": counts, "checks": [{"key": k, "label": label} for k, label in CHECKS],
             "stages": [{"key": s, "label": STAGE_LABEL[s]} for s in STAGES],
             "prices": {"month": plans.PLANS["lite"]["price_minor"], "year": plans.PLANS["lite"].get("price_year_minor", 0)}}

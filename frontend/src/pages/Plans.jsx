@@ -23,6 +23,7 @@ function whereFrom(b) {
     return `Membership · renews every month${sub.paid_until ? `, next on ${day(sub.paid_until)}` : ""}`;
   }
   if (b.source === "trial") return b.until ? `Free from your invite · until ${day(b.until)}` : "Event access · open until the event's access is closed";
+  if (b.starter) return "The starter pages from the webinar, open for you since you joined · the rest opens when you join";
   if (b.source === "welcome") return "The full hub, open for you since you joined";
   return b.plan === "free" ? "Given free at the Business AI workshop" : "Set up for you by the Business AI team";
 }

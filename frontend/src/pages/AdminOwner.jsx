@@ -35,12 +35,19 @@ function PlanPanel({ o, tierNames, onSaved }) {
       </div>
       <p className="small">In use now: <b>{o.plan_name}</b> <span className="muted">({SOURCE[o.plan_source] || o.plan_source})</span></p>
       <div className="row">
-        <span className="small">Full hub from signup: <b>{o.welcome ? "on" : "off"}</b></span>
+        <span className="small">{o.starter ? "L0 starter" : "Full hub"} from signup: <b>{o.welcome ? "on" : "off"}</b></span>
         <Busy className="btn sm" run={async () => {
           await api(`/admin/users/${o.id}`, { method: "PATCH", body: { welcome: !o.welcome } });
-          toast(o.welcome ? "Full hub switched off. The owner keeps what their plan gives them." : "Full hub switched on for this owner.");
+          toast(o.welcome ? "Signup access switched off. The owner keeps what their plan gives them." : "Signup access switched on for this owner.");
           onSaved();
         }}>{o.welcome ? "Switch off" : "Switch on"}</Busy>
+        {o.welcome && (
+          <Busy className="btn sm ghost" run={async () => {
+            await api(`/admin/users/${o.id}`, { method: "PATCH", body: { starter: !o.starter } });
+            toast(o.starter ? "The full hub is open for this owner." : "This owner now has only the L0 pages; the rest is locked until they join.");
+            onSaved();
+          }}>{o.starter ? "Open the full hub" : "L0 only"}</Busy>
+        )}
       </div>
       {paid.length > 0 && (
         <div className="stack" style={{ gap: 4 }}>
