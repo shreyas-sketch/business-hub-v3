@@ -49,7 +49,7 @@ def plan_view(user: dict) -> dict:
     until = {"purchase": (user.get("access") or {}).get(effective), "subscription": sub.get("paid_until"),
              "trial": (user.get("trial") or {}).get("until")}.get(source)
     return {"plan": effective, "plan_name": plans.PLANS[effective]["name"], "source": source, "until": None if plans.open_ended(until) else core.iso(until),
-            "sources": sources}
+            "sources": sources, "starter": plans.starter_only(user)}
 
 
 async def _fresh(user_id: str) -> dict:

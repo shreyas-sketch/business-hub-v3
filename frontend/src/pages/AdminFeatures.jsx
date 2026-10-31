@@ -8,7 +8,7 @@ import "./admin-widgets.css";
 
 const ROLE_NAMES = { staff: "everyone in the team", manager: "managers and the owner", owner: "only the owner" };
 const FIELD_NAMES = { tier: "plan", label: "name", what: "description", on: "on/off", teaser: "show when locked", group: "menu group", order: "menu position",
-  engine: "engine", show: "in the menu", paid_only: "members only", day: "event day" };
+  engine: "engine", show: "in the menu", paid_only: "members only", day: "event day", starter: "L0 starter" };
 
 /* v2.3: the OwnerDesk setup — the engine menu, only the agreed features, Membership at ₹1,999 / ₹19,999. */
 function V23Setup({ changed }) {
@@ -121,7 +121,7 @@ function FeatureCard({ f, tiers, dragging, onDrag, onPatch, onMove, onEdit }) {
         {f.core ? <LockIcon /> : <span className="fcard-grip" aria-hidden="true">⠿</span>}
         <b>{f.label}</b>
       </div>
-      <span className="fcard-meta">{f.engine && f.engine !== "more" ? `${f.engine} · ` : ""}{f.group} · {f.path ? f.path : "inside a page"}{f.role !== "staff" ? ` · ${f.role}` : ""}{f.paid_only ? " · members only" : ""}</span>
+      <span className="fcard-meta">{f.engine && f.engine !== "more" ? `${f.engine} · ` : ""}{f.group} · {f.path ? f.path : "inside a page"}{f.role !== "staff" ? ` · ${f.role}` : ""}{f.paid_only ? " · members only" : ""}{f.starter ? " · L0" : ""}</span>
       {f.core && <span className="fcard-meta">In every plan. Can't be moved or switched off.</span>}
       {diff.length > 0 && <span className="fcard-changed">Changed: {diff.map((k) => FIELD_NAMES[k] || k).join(", ")}</span>}
       <div className="fcard-switches">
@@ -150,7 +150,7 @@ function FeatureCard({ f, tiers, dragging, onDrag, onPatch, onMove, onEdit }) {
 
 function EditFeature({ f, cfg, names, onClose, changed }) {
   const { toast } = useHub();
-  const [v, setV] = useState({ label: f.label, what: f.what, group: f.group, tier: f.tier, engine: f.engine || "more", paid_only: !!f.paid_only, day: f.day ?? -1 });
+  const [v, setV] = useState({ label: f.label, what: f.what, group: f.group, tier: f.tier, engine: f.engine || "more", paid_only: !!f.paid_only, starter: !!f.starter, day: f.day ?? -1 });
   const [err, setErr] = useState("");
   const body = {};
   if (v.label.trim() !== f.label) body.label = v.label.trim();
@@ -159,6 +159,7 @@ function EditFeature({ f, cfg, names, onClose, changed }) {
   if (v.tier !== f.tier) body.tier = v.tier;
   if (v.engine !== (f.engine || "more")) body.engine = v.engine;
   if (v.paid_only !== !!f.paid_only) body.paid_only = v.paid_only;
+  if (v.starter !== !!f.starter) body.starter = v.starter;
   if (Number(v.day) !== (f.day ?? -1)) body.day = Number(v.day);
   return (
     <Modal onClose={onClose}>
@@ -198,6 +199,7 @@ function EditFeature({ f, cfg, names, onClose, changed }) {
         </div>
       )}
       <Switch checked={v.paid_only} label="Members only (closed during a free or event trial)" onChange={(paid_only) => setV({ ...v, paid_only })} />
+      <Switch checked={v.starter} label="In the L0 starter (open to new signups when they get only the starter)" onChange={(starter) => setV({ ...v, starter })} />
       <p className="small muted">
         Who can open it: {ROLE_NAMES[f.role] || f.role}. {f.path ? <>Page address: <span className="mono">{f.path}</span>.</> : "It works inside another page, so it has no menu item."}
       </p>

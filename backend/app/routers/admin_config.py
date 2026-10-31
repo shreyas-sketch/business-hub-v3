@@ -34,6 +34,7 @@ class FeaturePatch(BaseModel):
     show: bool | None = None
     paid_only: bool | None = None
     day: int | None = Field(default=None, ge=-1, le=3)
+    starter: bool | None = None   # in the L0 starter set new signups get (Admin → Onboarding)
 
 
 class MenuIn(BaseModel):
@@ -208,6 +209,7 @@ class UiPatch(BaseModel):
     pay_monthly_link: str | None = Field(default=None, max_length=300, pattern=r"^(https://\S+)?$")
     pay_yearly_link: str | None = Field(default=None, max_length=300, pattern=r"^(https://\S+)?$")
     welcome_full_hub: bool | None = None   # new signups get the whole hub; owners who already have it keep it
+    welcome_starter: bool | None = None    # new signups get only the L0 starter set (wins over the full hub)
 
 
 @router.get("/ui")
