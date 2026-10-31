@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ago, api } from "../api.js";
 import { Busy, Copy, Field, FormError, LoadError, Sheet, Switch, canAct, useHub, useLoad } from "../ui.jsx";
@@ -50,7 +50,7 @@ function Setup({ s, reload }) {
 }
 
 /** A WhatsApp inquiry pasted or shared into the hub. */
-function Paste({ prefill, onDone }) {
+function Paste({ prefill, onDone, autoQuote }) {
   const pick = (t) => (String(t || "").match(/(?:\+?91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}/) || [""])[0];
   const [f, setF] = useState({ name: "", phone: pick(prefill), message: prefill || "" });
   const [err, setErr] = useState("");
@@ -83,7 +83,7 @@ function Paste({ prefill, onDone }) {
           setF({ name: "", phone: "", message: "" });
           onDone();
         }}>Add inquiry</Busy>
-        <span className="small muted">Uses 1 AI token.</span>
+        <span className="small muted">{autoQuote ? "Uses 2 AI tokens: 1 for the proposal, 1 for a draft quotation." : "Uses 1 AI token."}</span>
       </div>
     </div>
   );
@@ -110,6 +110,7 @@ function Proposal({ it, reload }) {
     return <div className="stack inq-prop">{sentTemplate}{open && <div className="prompt">{tr.text}</div>}{template && <div className="row">{template}</div>}</div>;
   }
   if (!p && it.status !== "new") return null;   // already being handled in the pipeline
+  if (!p && it.proposal_writing) return <div className="row small muted" aria-live="polite">Writing the proposal… it shows here in a few seconds.</div>;
   const writeOne = manager && <Busy className="btn sm ghost ai" run={async () => { await api(`/inquiries/${it.id}/proposal`, { method: "POST" }); reload(); }}>Write one</Busy>;
   if (!p) return <div className="row small muted">No proposal for this one. {writeOne}{template}</div>;
   if (p.status === "skipped") return <div className="row small muted">No automatic reply: {p.why} {writeOne}{template}</div>;
@@ -187,7 +188,7 @@ function FollowUp({ it, reload }) {
 }
 
 export default function Inquiries() {
-  const { me } = useHub();
+  const { me, refresh } = useHub();
   const loc = useLocation();
   const nav = useNavigate();
   const shared = useMemo(() => {
@@ -200,8 +201,15 @@ export default function Inquiries() {
   const [s, reloadS] = useLoad(canAct(me, "manager") ? "/inquiries/settings" : "/inquiries");
   const [paste, setPaste] = useState(!!shared);
   useEffect(() => { if (shared) setPaste(true); }, [shared]);
-  // proposals are written in the background: look again shortly after anything new
-  useEffect(() => { const t = setInterval(() => { if (document.visibilityState === "visible") reload(); }, 15000); return () => clearInterval(t); }, [reload]);
+  // proposals and draft quotations are written in the background: look again every few seconds while one is being written
+  const writing = (data?.items || []).some((i) => i.proposal_writing || i.quote?.state === "drafting");
+  useEffect(() => {
+    const t = setInterval(() => { if (document.visibilityState === "visible") reload(); }, writing ? 3000 : 15000);
+    return () => clearInterval(t);
+  }, [reload, writing]);
+  // the proposal and quotation spend their tokens in the background: show the new count once they're written
+  const wasWriting = useRef(false);
+  useEffect(() => { if (wasWriting.current && !writing) refresh(); wasWriting.current = writing; }, [writing, refresh]);
   const items = (data?.items || []).filter((i) => tab === "all" || i.status === tab);
   const c = data?.counts || {};
   return (
@@ -210,7 +218,7 @@ export default function Inquiries() {
       sub="Website, lead magnet, email and WhatsApp inquiries in one place, each with a proposal written from your Knowledge Hub."
       actions={<button className={`btn${IOS && !paste ? " primary" : ""}`} onClick={() => { setPaste(!paste); if (shared) nav("/inquiries", { replace: true }); }}>
         {paste ? "Close" : IOS ? "Paste a WhatsApp inquiry" : "New WhatsApp inquiry"}</button>}>
-      {paste && <Paste prefill={shared || ""} onDone={() => { setPaste(false); if (shared) nav("/inquiries", { replace: true }); reload(); }} />}
+      {paste && <Paste prefill={shared || ""} autoQuote={!!s?.auto_quote} onDone={() => { setPaste(false); if (shared) nav("/inquiries", { replace: true }); reload(); }} />}
       {canAct(me, "manager") && s && s.address !== undefined && <Setup s={s} reload={reloadS} />}
       <Tabs value={tab} onChange={setTab} tabs={[["all", "All"], ["new", `New${c.new ? ` · ${c.new}` : ""}`], ["proposal_sent", "Proposal sent"], ["in_pipeline", "In pipeline"]]} />
       {!data ? (err ? <LoadError err={err} /> : <Loading />) : !items.length ? (

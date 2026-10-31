@@ -208,6 +208,20 @@ async def knowledge_tile(ws: str, owner: dict, t: date) -> dict:
     return {"empty": False, "percent": c["percent"], "next": nxt["label"] if nxt else None, "next_key": c.get("next"), "hint": c.get("hint")}
 
 
+async def audit_tile(ws: str, owner: dict, t: date) -> dict:
+    """The owner's latest Engine Audit: what's in place, what the gaps cost, and the biggest one to fix first."""
+    doc = await db().engine_audits.find_one({"owner_id": ws}, {"totals": 1, "answers": 1, "top_gaps": 1, "completed_at": 1},
+                                            sort=[("completed_at", -1)])
+    if not doc:
+        return {"empty": True}
+    rows = {r["item_key"]: r for r in doc.get("answers") or []}
+    top = next((rows[k] for k in doc.get("top_gaps") or [] if k in rows), None)
+    tot = doc["totals"]
+    return {"empty": False, "in_place": tot["in_place"], "total": tot["total"], "cost_month": tot["cost_month"],
+            "hours_week": tot["hours_week"], "completed_at": doc["completed_at"].isoformat(),
+            "top_gap": {"statement": top["statement"], "monthly_cost": top["monthly_cost"]} if top else None}
+
+
 async def growth_tile(ws: str, owner: dict, t: date) -> dict:
     from .agents.growth import results_data
     week = sales.ist_midnight(t - timedelta(days=t.weekday()))
@@ -223,6 +237,9 @@ async def growth_tile(ws: str, owner: dict, t: date) -> dict:
 REGISTRY: dict[str, Widget] = {w.key: w for w in [
     Widget("today", "Today", (), "l", today_tile, {"text": "Nothing needs you right now.", "action": "See your leads", "path": "/leads"}, "/leads", 0,
            "What needs you today"),
+    Widget("audit", "Engine Audit", ("engine_audit",), "m", audit_tile,
+           {"text": "Take the Engine Audit to see what your gaps cost each month.", "action": "Take the audit", "path": "/audit"}, "/audit", 5,
+           "What's in place across your engines and what the gaps cost"),
     Widget("leads", "Leads", ("leads",), "m", leads_tile, {"text": "No inquiries yet.", "action": "Share your website", "path": "/website"}, "/leads", 10,
            "New inquiries and where they came from"),
     Widget("pipeline", "Pipeline", ("pipeline",), "m", pipeline_tile, {"text": "No open deals.", "action": "Open your pipeline", "path": "/pipeline"},

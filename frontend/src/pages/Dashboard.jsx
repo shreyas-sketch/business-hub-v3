@@ -162,6 +162,13 @@ const RENDER = {
         : <span className="small muted">Map your processes to see which need an SOP.</span>}
     </>
   ),
+  audit: (d) => (
+    <>
+      <div className="db-pair"><span className="db-big">{d.in_place} of {d.total}</span><span className="small muted">in place</span></div>
+      <KV rows={[["Gaps cost", <><Money v={d.cost_month} /> a month</>], ["Hours lost", `${num(d.hours_week)} a week`]]} />
+      {d.top_gap && <span className="small muted">Fix first: {d.top_gap.statement}</span>}
+    </>
+  ),
   knowledge: (d) => (
     <>
       <div className="db-pair"><span className="db-big">{d.percent}%</span><span className="small muted">complete</span></div>

@@ -44,6 +44,15 @@ def state_of(owner: dict, w: Widget) -> str | None:
     return "teaser" if m and m["on"] and m["teaser"] else None
 
 
+def link_for(owner: dict, w: Widget) -> str:
+    """Where the tile opens. A tile shown for any of several features opens the page of one the owner has — not a page
+    that's locked or switched off (AI team: AI results when it's on, else WhatsApp chats)."""
+    paths = [(f, (plans.META.get(f) or {}).get("path")) for f in w.features]
+    if not any(p == w.link for _f, p in paths) or any(p == w.link and plans.has(owner, f) for f, p in paths):
+        return w.link
+    return next((p for f, p in paths if p and plans.has(owner, f)), w.link)
+
+
 async def _compute(w: Widget, ws: str, owner: dict, t) -> dict:
     try:
         return await w.compute(ws, owner, t)
@@ -87,7 +96,7 @@ async def get_dashboard(ctx: Ctx = Depends(feature("smart_dashboard", "manager")
     data, cached, ms = await compute(ctx.owner, [w.key for w, st in shown if st == "on"])   # hidden tiles aren't computed
     out = []
     for w, st in shown:
-        tile = {"key": w.key, "title": w.title, "size": w.size, "link": w.link, "what": w.what, "state": st}
+        tile = {"key": w.key, "title": w.title, "size": w.size, "link": link_for(ctx.owner, w) if st == "on" else w.link, "what": w.what, "state": st}
         if st == "on":
             d = data.get(w.key) or {}
             tile.update(data=d, empty=bool(d.get("empty")), empty_state=w.empty)

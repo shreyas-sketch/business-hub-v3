@@ -46,6 +46,7 @@ log = logging.getLogger("inquiries")
 CHANNELS = {"website": "Website", "guide": "Lead magnet", "lead_magnet": "Lead magnet", "email": "Email", "whatsapp": "WhatsApp",
             "card": "Card / QR", "manual": "Added by hand", "import": "Imported"}
 _tasks: set = set()
+WRITING_FOR = timedelta(minutes=5)   # how long an inquiry shows "Writing the proposal…" before the card gives up waiting
 
 
 # ───────────────────────── the inquiry address ─────────────────────────
@@ -150,7 +151,7 @@ async def on_new_inquiry(owner: dict, business: dict, lead: dict) -> dict:
     verified = bool(lead.get("sender_verified"))
     if from_email and email and await _auto_replied_recently(ws, email):
         prop = {"status": "skipped", "why": "This customer got an automatic reply in the last 24 hours.", "at": now()}
-        await db().leads.update_one({"_id": lead["_id"]}, {"$set": {"proposal": prop}})
+        await db().leads.update_one({"_id": lead["_id"]}, {"$set": {"proposal": prop}, "$unset": {"proposal_writing": ""}})
         return prop
     use_ai = True
     if from_email:   # strangers can email the address: AI only for authenticated senders, and only so many a day
@@ -183,7 +184,7 @@ async def on_new_inquiry(owner: dict, business: dict, lead: dict) -> dict:
                                   allow_act=False, lead_id=lead["_id"])
         prop["approval_id"] = a["_id"]
         prop["channel"] = prop["channel"] or "whatsapp"
-    await db().leads.update_one({"_id": lead["_id"]}, {"$set": {"proposal": prop}})
+    await db().leads.update_one({"_id": lead["_id"]}, {"$set": {"proposal": prop}, "$unset": {"proposal_writing": ""}})
     await track("proposal", ws, by=prop["written_by"], channel=prop["channel"], status=prop["status"])
     return prop
 
@@ -265,6 +266,8 @@ async def list_inquiries(channel: str = "", status: str = "", ctx: Ctx = Depends
         items.append({"id": x["_id"], "name": x.get("name", ""), "phone": x.get("phone", ""), "email": x.get("email", ""), "channel": x.get("source", "website"),
                       "channel_label": CHANNELS.get(x.get("source", "website"), (x.get("source") or "").title()), "message": x.get("message", ""),
                       "created_at": x["created_at"].isoformat(), "status": st, "stage": x.get("stage", "identification"), "proposal": p or None,
+                      # a proposal that failed never clears the flag: after a few minutes the card offers "Write one" again
+                      "proposal_writing": bool(x.get("proposal_writing")) and not p and now() - x["created_at"] < WRITING_FOR,
                       "replies": [{"at": r["at"].isoformat(), "from": r.get("from", ""), "text": r.get("text", "")} for r in (x.get("replies") or [])[-3:]],
                       "verified": x.get("sender_verified"), "attachments": x.get("attachments") or [], "followups": follow.get(x["_id"]),
                       "quote": auto_quote.status_view(x, numbers) if ctx.has("quotations") or x.get("auto_quote") else None,
@@ -320,6 +323,8 @@ async def get_settings(ctx: Ctx = Depends(feature("inquiry_desk", "manager"))):
     return {"address": address(handle), "handle": handle, "inbound_ready": bool(settings.inbound_email_domain),
             "auto_email": bool(st.get("auto_email")), "auto_web": bool(st.get("auto_web")), "email_ready": mailer.configured() or settings.local_dev, "reply_to": b.get("email") or None,
             "daily_limit": settings.proposals_per_owner_per_day, "sent_today": await _sent_today(ctx.ws),
+            # a pasted inquiry also gets a draft quotation (1 more AI token) when this is on, so the form can say so
+            "auto_quote": ctx.has("quotations") and await jobs.is_on(ctx.ws, "auto_quote"),
             "followups": {"available": ctx.has("follow_up_agent"), "on": await jobs.is_on_for(ctx.owner, "followup"),
                           "opt_in": jobs.needs_opt_in(ctx.owner, "followup"),
                           "days": list(settings.followup_days), "send_list": ctx.has("approvals")}}

@@ -21,7 +21,7 @@ from starlette.datastructures import UploadFile
 
 import secrets
 
-from .. import connections, plans
+from .. import connections, gst as gst_slabs, plans
 from ..config import settings
 from ..agents.desk import crm_sync
 from ..ai import desk_tasks
@@ -272,7 +272,7 @@ class Line(BaseModel):
     qty: float = Field(gt=0, le=1e7)
     unit: str = Field(default="nos", max_length=20)
     rate: float = Field(ge=0, le=1e10)
-    gst: float = Field(default=18, ge=0, le=28)
+    gst: float = Field(default=18, ge=0, le=gst_slabs.MAX)
     sac: str = Field(default="", max_length=10, pattern=r"^[0-9 ]*$")    # SAC (services) or HSN (goods) code, printed per line
     description: str = Field(default="", max_length=600)                 # a line or two under the item on the invoice
 
@@ -517,7 +517,7 @@ async def draft_quote(body: DraftIn, ctx: Ctx = Depends(feature("quotations", "m
                 except (TypeError, ValueError):
                     return d
             items.append({"name": str(i["name"])[:160], "qty": num(i.get("qty"), 1) or 1, "unit": str(i.get("unit") or "nos")[:20],
-                          "rate": num(i.get("rate")), "gst": min(num(i.get("gst"), 18), 28)})
+                          "rate": num(i.get("rate")), "gst": min(num(i.get("gst"), 18), gst_slabs.MAX)})
         if not items:
             raise ValueError("no items")
         cust = r.get("customer") if isinstance(r.get("customer"), dict) else {}

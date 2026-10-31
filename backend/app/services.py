@@ -86,6 +86,15 @@ async def refund_run(run: dict) -> None:
     await db().runs.update_one({"_id": run["_id"]}, {"$set": {"status": "refunded"}})
 
 
+async def refund_latest(user: dict, kind: str) -> bool:
+    """Gives back the owner's most recent finished run of this kind — for a result that turned out to change nothing."""
+    run = await db().runs.find_one({"user_id": user["_id"], "kind": kind, "status": "done"}, sort=[("created_at", -1)])
+    if not run:
+        return False
+    await refund_run(run)
+    return True
+
+
 async def note_ai_failure(kind: str, error: Exception) -> None:
     """Keep the latest engine failure, so the admin's AI check can say what went wrong for an owner. Never breaks the caller."""
     try:

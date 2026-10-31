@@ -15,6 +15,7 @@ but it is still only read for its layout and wording.
 import io
 import re
 
+from . import gst as gst_slabs
 from .ai.provider import complete
 from .ai.tasks import RULES
 
@@ -136,13 +137,13 @@ def shape(r: dict) -> dict:
     items = []
     for i in (r.get("items") or [])[:12]:
         if isinstance(i, dict) and str(i.get("name") or "").strip():
-            rate, gst = _num(i.get("rate")), _num(i.get("gst"), 0, 28)
+            rate, gst = _num(i.get("rate")), _num(i.get("gst"), 0, gst_slabs.MAX)
             items.append({"name": str(i["name"]).strip()[:160], "unit": str(i.get("unit") or "").strip()[:20], "rate": rate, "gst": gst})
     out = {"summary": s("summary"), "item_naming": s("item_naming"), "numbering": s("numbering", 60), "notes": s("notes", 1000),
            "terms": s("terms", 1500), "payment": s("payment"), "shows_hsn": bool(r.get("shows_hsn")),
            "gst_mode": r.get("gst_mode") if r.get("gst_mode") in ("intra", "inter", "none") else "",
            "units": [str(u).strip()[:20] for u in (r.get("units") or []) if str(u).strip()][:8],
-           "gst_rates": sorted({int(g) for g in (_num(x, 0, 28) for x in (r.get("gst_rates") or [])) if g is not None}),
+           "gst_rates": sorted({int(g) for g in (_num(x, 0, gst_slabs.MAX) for x in (r.get("gst_rates") or [])) if g is not None}),
            "valid_days": int(_num(r.get("valid_days"), 1, 365) or 0) or None, "due_days": int(_num(r.get("due_days"), 0, 365) or 0) or None,
            "items": items}
     if not (out["summary"] or out["item_naming"] or items or out["terms"]):

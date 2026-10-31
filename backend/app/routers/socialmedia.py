@@ -145,7 +145,8 @@ def starter_posts(p: dict, msgs: dict, site_content: dict, today: date) -> list[
         if template == "social_square" and len(fields.get("headline") or "") > 45:
             fields["body"] = fit(fields.get("body", ""), 110)      # a 3-line headline leaves room for less text
         clean = {k: str(v or "").strip() for k, v in fields.items()}
-        same = any(x["template"] == template and x["fields"] == clean for x in out)
+        cap = re.sub(r"\s+", " ", caption).strip().lower()
+        same = any((x["template"] == template and x["fields"] == clean) or re.sub(r"\s+", " ", x["caption"]).strip().lower() == cap for x in out)
         if any(clean.values()) and not same:      # never the same post twice
             out.append({"template": template, "fields": clean, "caption": caption.strip()})
 
@@ -189,7 +190,7 @@ def starter_posts(p: dict, msgs: dict, site_content: dict, today: date) -> list[
     # A short profile: who they are, said plainly, a few different ways. Fewer than 7 posts beats the same post repeated.
     industry = p.get("industry", "")
     for headline, body, caption in ((name, fit(industry, 150), f"{name} — {industry}{', ' + city if city else ''}"),
-                                    (f"{name} in {city}" if city else "", fit(industry, 150), f"{name} — {industry}, {city}"),
+                                    (f"{name} in {city}" if city else "", fit(industry, 150), f"Based in {city}, {name} is here for you.\n\n{industry}"),
                                     (cta, short_pitch, f"{cta}\n\n{pitch}\n\n{name}")):
         if len(out) >= STARTER:
             break
@@ -200,7 +201,9 @@ def starter_posts(p: dict, msgs: dict, site_content: dict, today: date) -> list[
 
 async def _insert(ws: str, posts: list[dict], source: str, actor: str) -> list[dict]:
     month = month_now()
-    start = await db().sm_posts.count_documents({"owner_id": ws})
+    # after the highest number, not the count: a deleted post would otherwise hand its number out twice
+    last = await db().sm_posts.find_one({"owner_id": ws}, {"n": 1}, sort=[("n", -1)])
+    start = (last or {}).get("n") or 0
     docs = []
     for i, x in enumerate(posts):
         docs.append({"_id": new_id(), "owner_id": ws, "month": month, "n": start + i + 1, "source": source, "template": x["template"],

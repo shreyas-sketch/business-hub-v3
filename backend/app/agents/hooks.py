@@ -65,6 +65,8 @@ async def on_new_lead(owner: dict, business: dict, site: dict | None, lead: dict
         if plans.has(owner, "inquiry_desk"):
             from ..routers import inquiries
             if await inquiries.wants_proposal(owner["_id"], lead):
+                # set before the task starts (not in the returned patch), so a proposal that finishes first can clear it
+                await db().leads.update_one({"_id": lead["_id"]}, {"$set": {"proposal_writing": True}})
                 inquiries.after_lead(owner, business, lead)
     except Exception:
         log.exception("could not start the proposal for lead %s", lead.get("_id"))
