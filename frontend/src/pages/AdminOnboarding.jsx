@@ -159,6 +159,7 @@ export default function AdminOnboarding() {
   const [status, setStatus] = useState("");
   const [q, setQ] = useState("");
   const [d, reload] = useLoad(`/admin/onboarding?status=${status}&q=${encodeURIComponent(q)}`, [status, q]);
+  const shown = FILTERS.find(([k]) => k === status)[1];
   return (
     <Sheet kicker="Admin · Onboarding" id="A-10" pillar="Admin" title={<>Every member, <em>set up</em>.</>}
       sub="Who came from the event, who paid, and what's set up in their hub. Mark payments made on Razorpay here.">
@@ -174,6 +175,10 @@ export default function AdminOnboarding() {
       </div>
       {!d ? <Loading /> : !d.members.length ? <Empty>No members here yet.</Empty> : (
         <div className="stack">
+          <div className="row between" style={{ flexWrap: "wrap", gap: 8 }}>
+            <span className="small muted">Name, email, business, access and the agents they have used{q.trim() ? ", for this search" : ""}.</span>
+            <a className="btn sm" href={`/api/admin/onboarding/export.csv?status=${status}&q=${encodeURIComponent(q)}`} download>Download CSV · {shown}</a>
+          </div>
           {d.members.map((m) => <Member key={m.id + (m.payments?.length || 0) + m.access.status} m={m} checks={d.checks} stages={d.stages} prices={d.prices} reload={reload} />)}
         </div>
       )}
