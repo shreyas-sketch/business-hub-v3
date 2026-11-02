@@ -8,20 +8,27 @@ Admin → Onboarding (v2.3): the team's desk for every member who came from the 
 - Mark paid: members pay outside the hub (Razorpay). The team records the payment here — a month (₹1,999) or a year
   (₹19,999) of OwnerDesk Membership — and the member's plan opens at once.
 - Extra AI tokens (the event bonus), and switching an account off or on (nothing is deleted).
+- Download the members as a CSV to share: name, email, business, access and the agents they have used, for one access level or all.
 Every change is logged (events + config_changes) with who made it.
 
 onboarding {_id: owner id, stage, call_at, handler, notes, payments [{period, ref, amount_minor, until, at, by}], updated_at, by}
 """
+import csv
+import io
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
-from .. import knowledge, plans
+from .. import kits, knowledge, plans, tools
+from ..agents import catalog
+from ..agents.office import STAFF
 from ..connections import ready as connection_ready
 from ..db import IST, db, now
 from ..security import require_admin
 from ..services import new_id, notify, track
+from .crm import _cell
 
 router = APIRouter(prefix="/api/admin/onboarding", dependencies=[Depends(require_admin)])
 
@@ -32,6 +39,27 @@ CHECKS = [("knowledge", "Knowledge Hub filled"), ("audit", "Engine Audit taken")
           ("whatsapp", "WhatsApp tool connected"), ("inquiry", "First inquiry")]
 LIST_LIMIT = 500
 PERIOD_DAYS = {"month": 31, "year": 366}     # a month or a year from today (or from the current paid date, if later)
+ACCESS_STATUSES = ("starter", "welcome", "event", "paid", "ended", "free", "off")
+OWNERS = {"team_of": {"$in": [None, ""]}, "role": {"$ne": "admin"}}     # not team logins or admins
+EXPORT_FILE = {"": "everyone", "starter": "l0-starter", "welcome": "full-hub", "off": "switched-off"}
+EXPORT_CHUNK = 1000
+# The agents' names for each kind of AI run, where the tools, kits and agent catalogue don't already name it.
+AGENT_NAMES = {
+    "answer": "Business Q&A", "brain_answer": "Company Brain", "brand": "Brand message", "brand_kit": "Brand kit", "brochure": "Brochures",
+    "calendar": "Content calendar", "call_review": "AI Telecaller", "campaign": "Money campaigns", "compliance_explain": "Compliance calendar",
+    "competitor_read": "Competitor Watch", "competitor_summary": "Competitor Watch", "expenses:advice": "Expense tracker",
+    "expenses:suggest": "Expense tracker", "goal_coach": "End goals", "gym": "Sales Training Gym", "gym_score": "Sales Training Gym",
+    "invoice_entry": "Invoices", "invoice_style": "Invoices", "key_person:owner_questions": "Key-person knowledge",
+    "key_person:questionnaire": "Key-person knowledge", "key_person:skill": "Key-person knowledge", "kit:sop_scripts": "SOP writer",
+    "lead_ideas": "Ways to get more leads", "lead_magnet": "Lead magnet", "leaks": "Funnel leak finder", "magnet_build": "Lead magnet",
+    "magnet_ideas": "Lead magnet", "multiplier_ideas": "Revenue levers", "offer_ladder": "Offer ladder", "office_plan": "AI office: Chief of Staff",
+    "pipeline": "Pipeline builder", "polish": "AI Writer", "posts": "Social posts", "proposal": "Automatic proposal",
+    "quote": "Quotation drafts", "read_website": "Business Brain", "read_words": "Business Brain", "report": "AI office: Chief of Staff",
+    "reply": "Reply writer", "reputation_reply": "Reviews & reputation", "research_companies": "Company research",
+    "research_content": "Content research", "site": "Website builder", "site_prompt": "Website editor", "social_week": "Social media",
+    "sop_map": "SOP writer", "standup": "Morning standup", "tenders:help": "Tender finder", "tenders:words": "Tender finder",
+    "voice_note": "Voice notes", "wa_reply": "WhatsApp replies", "week": "Your week",
+}
 
 
 def _iso(v) -> str | None:
@@ -104,7 +132,7 @@ def _record_view(r: dict | None) -> dict:
 async def members(q: str = "", status: str = "", cohort: str = ""):
     """Every owner (not team logins or admins), newest first, with access, checklist and the team's notes."""
     d = db()
-    query: dict = {"team_of": {"$in": [None, ""]}, "role": {"$ne": "admin"}}
+    query: dict = dict(OWNERS)
     if cohort:
         query["$or"] = [{"cohort": cohort.strip().upper()[:40]}, {"trial.cohort": cohort.strip().upper()[:40]}]
     users = [u async for u in d.users.find(query).sort("created_at", -1).limit(LIST_LIMIT)]
@@ -126,10 +154,87 @@ async def members(q: str = "", status: str = "", cohort: str = ""):
         if needle and needle not in " ".join(str(row[k]) for k in ("name", "phone", "email", "business", "city")).lower():
             continue
         rows.append(row)
-    counts = {s: sum(1 for r in rows if r["access"]["status"] == s) for s in ("starter", "welcome", "event", "paid", "ended", "free", "off")}
+    counts = {s: sum(1 for r in rows if r["access"]["status"] == s) for s in ACCESS_STATUSES}
     return {"members": rows, "counts": counts, "checks": [{"key": k, "label": label} for k, label in CHECKS],
             "stages": [{"key": s, "label": STAGE_LABEL[s]} for s in STAGES],
             "prices": {"month": plans.PLANS["lite"]["price_minor"], "year": plans.PLANS["lite"].get("price_year_minor", 0)}}
+
+
+def _agent_name(key: str) -> str:
+    """What the team calls an agent, from a kind of AI run or an agent's key."""
+    head, _, rest = key.partition(":")
+    if head == "tool" and rest in tools.TOOLS:
+        return tools.TOOLS[rest].name
+    if head == "kit" and rest in kits.KINDS:
+        return kits.KINDS[rest].label
+    if key in AGENT_NAMES:
+        return AGENT_NAMES[key]
+    if key.startswith("office_") and key[len("office_"):] in STAFF:
+        return f"AI office: {STAFF[key[len('office_'):]]['title']}"
+    spec = catalog.get(key)
+    return spec.name if spec else key.replace(":", " ").replace("_", " ").capitalize()
+
+
+def _runs_for_everyone(key: str) -> bool:
+    """A scheduled check that only messages the owner runs by itself for every account, so it doesn't show they used it."""
+    spec = catalog.get(key)
+    return bool(spec) and spec.trigger == "schedule" and not spec.customer_facing
+
+
+async def _agents_used(ids: list[str]) -> dict[str, set[str]]:
+    """Each owner's agents: AI work that finished (failed and refunded runs don't count) and actions agents carried out."""
+    d = db()
+    used: dict[str, set[str]] = {i: set() for i in ids}
+    for start in range(0, len(ids), EXPORT_CHUNK):
+        part = ids[start:start + EXPORT_CHUNK]
+        async for r in d.runs.aggregate([{"$match": {"user_id": {"$in": part}, "status": "done"}},
+                                         {"$group": {"_id": {"owner": "$user_id", "kind": "$kind"}}}]):
+            used[r["_id"]["owner"]].add(_agent_name(r["_id"]["kind"]))
+        async for r in d.agent_log.aggregate([{"$match": {"ws": {"$in": part}, "status": "done"}},
+                                              {"$group": {"_id": {"owner": "$ws", "agent": "$agent"}}}]):
+            if not _runs_for_everyone(r["_id"]["agent"]):
+                used[r["_id"]["owner"]].add(_agent_name(r["_id"]["agent"]))
+    return used
+
+
+@router.get("/export.csv")
+async def export_csv(status: str = "", q: str = "", admin: dict = Depends(require_admin)):
+    """The members as a CSV to share, for one access level or all. Unlike the list on screen, this is never cut off at
+    LIST_LIMIT. An owner who signed up by phone has no login email, so their business's contact email is used; the mobile
+    login doesn't ask for a name either, so the business is what identifies them in the file."""
+    if status and status not in ACCESS_STATUSES:
+        raise HTTPException(400, "Pick an access level from the list.")
+    d = db()
+    users = [u async for u in d.users.find(OWNERS).sort("created_at", -1)]
+    businesses = {}
+    for start in range(0, len(users), EXPORT_CHUNK):
+        part = [u["_id"] for u in users[start:start + EXPORT_CHUNK]]
+        async for b in d.businesses.find({"owner_id": {"$in": part}}, {"owner_id": 1, "name": 1, "city": 1, "email": 1}):
+            businesses[b["owner_id"]] = b
+    needle = q.strip().lower()
+    rows = []
+    for u in users:
+        b = businesses.get(u["_id"]) or {}
+        access = _access(u)
+        email = u.get("email") or b.get("email") or ""
+        if status and access["status"] != status:
+            continue
+        if needle and needle not in " ".join(str(v) for v in (u.get("name", ""), u.get("phone", ""), email, b.get("name", ""), b.get("city", ""))).lower():
+            continue
+        rows.append((u, email, b.get("name", ""), access["label"]))
+    used = await _agents_used([r[0]["_id"] for r in rows])
+    out = io.StringIO()
+    w = csv.writer(out)
+    w.writerow(["Name", "Email", "Business", "Access", "Agents used"])
+    for u, email, business, label in rows:
+        # what owners typed goes into a file others will open: strip it first, so a space can't hide a formula from _cell
+        w.writerow([_cell(str(u.get("name") or "").strip()), _cell(str(email).strip()), _cell(str(business or "").strip()), label,
+                    "; ".join(sorted(used[u["_id"]]))])
+    await track("onboarding_export", None, by=admin["_id"], status=status, q=bool(needle), members=len(rows))
+    stamp = now().astimezone(IST).strftime("%Y-%m-%d")
+    name = f"ownerdesk-members-{EXPORT_FILE.get(status, status)}-{stamp}.csv"
+    return Response("\ufeff" + out.getvalue(), media_type="text/csv; charset=utf-8",      # the mark tells Excel it's UTF-8
+                    headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "no-store"})
 
 
 async def _owner(uid: str) -> dict:
