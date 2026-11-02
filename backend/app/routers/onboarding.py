@@ -43,6 +43,12 @@ ACCESS_STATUSES = ("starter", "welcome", "event", "paid", "ended", "free", "off"
 OWNERS = {"team_of": {"$in": [None, ""]}, "role": {"$ne": "admin"}}     # not team logins or admins
 EXPORT_FILE = {"": "everyone", "starter": "l0-starter", "welcome": "full-hub", "off": "switched-off"}
 EXPORT_CHUNK = 1000
+# Saved work that shows an agent was used: the records the setup checklist reads, so a tick on a member's card is always in
+# the file, however the record got there. (collection, field holding the owner, what counts, feature)
+SAVED_WORK = (("engine_audits", "owner_id", {}, "engine_audit"), ("sites", "owner_id", {"status": "live"}, "website"),
+              ("leads", "owner_id", {}, "inquiry_desk"), ("magnet_files", "owner_id", {"published": True}, "lead_magnet"),
+              ("lead_magnets", "_id", {"published": True}, "lead_magnet"), ("pipelines", "_id", {"stages.0": {"$exists": True}}, "pipeline"),
+              ("levers", "_id", {}, "revenue_levers"))
 # What each kind of AI run (runs.kind) or activity (events.type) counts as: a feature key, shown under its menu name as the
 # admin has it now, or plain words where no menu item fits. Only what a member did, or an agent did for them: opening a page
 # records nothing, and signups, logins and billing don't appear here.
@@ -208,8 +214,8 @@ def _runs_for_everyone(key: str) -> bool:
 
 
 async def _agents_used(ids: list[str]) -> dict[str, set[str]]:
-    """Each owner's agents, from three records: AI work that finished (failed and refunded runs don't count), actions agents
-    carried out, and what the owner did in the hub. Most of the L0 pages (Engine Audit, Inquiries, Social media...) can be used
+    """Each owner's agents, from four records: AI work that finished (failed and refunded runs don't count), actions agents
+    carried out, what the owner did in the hub, and the work saved there. Most of the L0 pages (Engine Audit, Inquiries, Social media...) can be used
     without any AI run, so runs alone would leave those members looking as if they had used nothing."""
     d = db()
     used: dict[str, set[str]] = {i: set() for i in ids}
@@ -225,8 +231,9 @@ async def _agents_used(ids: list[str]) -> dict[str, set[str]]:
         async for r in d.events.aggregate([{"$match": {"user_id": {"$in": part}, "type": {"$in": list(AGENT_NAMES)}}},
                                            {"$group": {"_id": {"owner": "$user_id", "type": "$type"}}}]):
             used[r["_id"]["owner"]].add(_agent_name(r["_id"]["type"]))
-        async for r in d.levers.find({"_id": {"$in": part}}, {"_id": 1}):      # saving these leaves no event
-            used[r["_id"]].add(plans.label_of("revenue_levers"))
+        for collection, owner_field, match, feature in SAVED_WORK:
+            for owner in await d[collection].distinct(owner_field, {owner_field: {"$in": part}, **match}):
+                used[owner].add(plans.label_of(feature))
     return used
 
 

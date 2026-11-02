@@ -13,6 +13,8 @@ from app.routers.onboarding import ACCESS_STATUSES, AGENT_NAMES, _agent_name
 from app.services import new_id, track
 
 from tests.conftest import login
+from tests.test_v23_audit import all_have
+from tests.v23_helpers import owner_id, v23_member
 
 ADMIN = "+919999900000"
 URL = "/api/admin/onboarding/export.csv"
@@ -162,6 +164,35 @@ async def test_pages_that_use_no_ai_still_count(client):
     row = rows_of(await client.get(URL))[0]
     assert row["Agents used"].split("; ") == sorted(["Engine Audit", "Event pack", plans.label_of("business_brain"), plans.label_of("inquiry_desk"),
                                                      plans.label_of("revenue_levers"), plans.label_of("social_media")])
+
+
+async def test_a_real_engine_audit_by_an_l0_member_is_in_the_l0_file(client):
+    m = await v23_member("9811000044", paid=False)
+    uid = await owner_id(m)
+    await db().users.update_one({"_id": uid}, {"$set": L0})
+    assert (await m.post("/api/audit", json={"answers": all_have()})).status_code == 200
+    await login(client, ADMIN)
+    rows = rows_of(await client.get(URL, params={"status": "starter"}))
+    assert len(rows) == 1 and "Engine Audit" in rows[0]["Agents used"].split("; ")
+    await m.aclose()
+
+
+async def test_saved_work_counts_even_with_no_activity_logged(client):
+    """The same records the checklist on a member's card reads: a tick there is always in the file."""
+    a = await member("Tara Iyer")
+    await db().engine_audits.insert_one({"_id": new_id(), "owner_id": a, "completed_at": now()})
+    await db().sites.insert_one({"_id": new_id(), "owner_id": a, "slug": "tara", "status": "live"})
+    await db().leads.insert_one({"_id": new_id(), "owner_id": a, "created_at": now()})
+    await db().pipelines.insert_one({"_id": a, "stages": [{"key": "new"}]})
+    await db().magnet_files.insert_one({"_id": new_id(), "owner_id": a, "published": True})
+    b = await member("Dev Malhotra")                       # started but not finished: no ticks, so nothing in the file
+    await db().sites.insert_one({"_id": new_id(), "owner_id": b, "slug": "dev", "status": "draft"})
+    await db().pipelines.insert_one({"_id": b, "stages": []})
+    await db().magnet_files.insert_one({"_id": new_id(), "owner_id": b, "published": False})
+    await login(client, ADMIN)
+    rows = {x["Name"]: x["Agents used"] for x in rows_of(await client.get(URL))}
+    assert rows["Tara Iyer"] == "; ".join(sorted(plans.label_of(f) for f in ("engine_audit", "website", "inquiry_desk", "pipeline", "lead_magnet")))
+    assert rows["Dev Malhotra"] == ""
 
 
 async def test_things_that_are_not_using_an_agent_stay_out(client):
