@@ -8,7 +8,7 @@ Admin → Onboarding (v2.3): the team's desk for every member who came from the 
 - Mark paid: members pay outside the hub (Razorpay). The team records the payment here — a month (₹1,999) or a year
   (₹19,999) of OwnerDesk Membership — and the member's plan opens at once.
 - Extra AI tokens (the event bonus), and switching an account off or on (nothing is deleted).
-- Download the members as a CSV to share: name, email, business, access and the agents they have used, for one access level or all.
+- Download the members as a CSV to share: name, mobile, email, business, access and the agents they have used, for one access level or all.
 Every change is logged (events + config_changes) with who made it.
 
 onboarding {_id: owner id, stage, call_at, handler, notes, payments [{period, ref, amount_minor, until, at, by}], updated_at, by}
@@ -237,6 +237,18 @@ async def _agents_used(ids: list[str]) -> dict[str, set[str]]:
     return used
 
 
+def _mobile(u: dict) -> str:
+    """The member's mobile, the way the hub shows it (98200 12345), which Excel keeps as text instead of 9.19E+11. A number
+    given up to the person who proved it (auth._release_number) isn't this member's any more, so it's left out."""
+    phone = str(u.get("phone") or "").strip()
+    if phone.startswith("released:"):
+        return ""
+    digits = phone.removeprefix("+")
+    if digits.isdigit() and len(digits) == 12 and digits.startswith("91"):
+        return f"{digits[2:7]} {digits[7:]}"
+    return _cell(phone)
+
+
 @router.get("/export.csv")
 async def export_csv(status: str = "", q: str = "", admin: dict = Depends(require_admin)):
     """The members as a CSV to share, for one access level or all. Unlike the list on screen, this is never cut off at
@@ -265,10 +277,10 @@ async def export_csv(status: str = "", q: str = "", admin: dict = Depends(requir
     used = await _agents_used([r[0]["_id"] for r in rows])
     out = io.StringIO()
     w = csv.writer(out)
-    w.writerow(["Name", "Email", "Business", "Access", "Agents used"])
+    w.writerow(["Name", "Mobile", "Email", "Business", "Access", "Agents used"])
     for u, email, business, label in rows:
         # what owners typed goes into a file others will open: strip it first, so a space can't hide a formula from _cell
-        w.writerow([_cell(str(u.get("name") or "").strip()), _cell(str(email).strip()), _cell(str(business or "").strip()), label,
+        w.writerow([_cell(str(u.get("name") or "").strip()), _mobile(u), _cell(str(email).strip()), _cell(str(business or "").strip()), label,
                     "; ".join(sorted(used[u["_id"]]))])
     await track("onboarding_export", None, by=admin["_id"], status=status, q=bool(needle), members=len(rows))
     stamp = now().astimezone(IST).strftime("%Y-%m-%d")
