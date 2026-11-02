@@ -1,4 +1,4 @@
-"""Admin → Onboarding → Download CSV: name, email, business, access and the agents each member has used, for one access level or all.
+"""Admin → Onboarding → Download CSV: name, mobile, email, business, access and the agents each member has used, for one access level or all.
 Every business, person and number here is invented."""
 import csv
 import io
@@ -12,7 +12,7 @@ from app.db import db, now
 from app.routers.onboarding import ACCESS_STATUSES, AGENT_NAMES, _agent_name
 from app.services import new_id, track
 
-from tests.conftest import login
+from tests.conftest import login, new_owner
 from tests.test_v23_audit import all_have
 from tests.v23_helpers import owner_id, v23_member
 
@@ -56,7 +56,7 @@ async def test_the_file_has_name_email_access_and_agents(client):
     await login(client, ADMIN)
     r = await client.get(URL)
     rows = rows_of(r)
-    assert list(rows[0]) == ["Name", "Email", "Business", "Access", "Agents used"]
+    assert list(rows[0]) == ["Name", "Mobile", "Email", "Business", "Access", "Agents used"]
     row = next(x for x in rows if x["Name"] == "Asha Rao")
     assert row["Email"] == "asha@example.in" and row["Access"] == "L0 starter"
     assert row["Agents used"] == "; ".join(sorted(["AI office: Sales", "Content Agent", "Lead Response", plans.label_of("sop_library"), plans.label_of("website")]))
@@ -107,7 +107,6 @@ async def test_team_logins_and_admins_are_left_out_and_owners_cannot_download(cl
     await member("Admin Anil", role="admin")
     await login(client, ADMIN)
     assert [x["Name"] for x in rows_of(await client.get(URL)) if x["Name"] in ("Owner Oza", "Team Tara", "Admin Anil")] == ["Owner Oza"]
-    from tests.conftest import new_owner
     owner = await new_owner("9834055555")
     assert (await owner.get(URL)).status_code in (401, 403)
     await owner.aclose()
@@ -129,10 +128,35 @@ async def test_a_phone_signup_with_no_name_or_email_is_still_identified_by_the_b
     a = await member("")
     await db().businesses.insert_one({"_id": new_id(), "owner_id": a, "name": "=Mehta Works", "email": ""})
     await login(client, ADMIN)
-    r = await client.get(URL)
-    row = rows_of(r)[0]
+    row = rows_of(await client.get(URL))[0]
     assert (row["Name"], row["Email"], row["Business"]) == ("", "", "'=Mehta Works")
-    assert a[:8] not in r.text                               # the phone number stays out of a file meant for sharing
+
+
+async def test_the_mobile_is_the_login_number_as_the_hub_shows_it(client):
+    await member("Pack Owner", phone="+919833022222")
+    await member("Gave It Up", phone="released:abc123", released_phone="+919833033333")
+    await member("Odd Number", phone="=1+1")
+    await login(client, ADMIN)
+    r = await client.get(URL)
+    rows = {x["Name"]: x["Mobile"] for x in rows_of(r)}
+    assert rows["Pack Owner"] == "98330 22222"                # text in Excel, not 9.19E+11
+    assert rows["Gave It Up"] == "" and "9833033333" not in r.text.replace(" ", "")   # now someone else's number
+    assert rows["Odd Number"] == "'=1+1"
+    assert [x["Name"] for x in rows_of(await client.get(URL, params={"q": "9833022222"}))] == ["Pack Owner"]
+
+
+async def test_the_number_proved_when_saving_an_event_pack_is_in_the_file_and_logs_in_to_the_hub(client):
+    from tests.test_event import form, make, open_event
+    admin = await open_event()
+    made = await make(client, form(None, business_name="Riya Tiffins", about="Home-cooked lunch tiffins delivered to offices", city="Pune"))
+    url = f"/api/event/runs/{made['token']}"
+    code = (await client.post(f"{url}/code", json={"phone": "98330 44444"})).json()["dev_code"]
+    saved = await client.post(f"{url}/verify", json={"phone": "9833044444", "code": code, "email": "riya@example.in", "name": "Riya"})
+    assert saved.status_code == 200, saved.text
+    assert (await client.get("/api/me")).json()["user"]["phone"] == "+919833044444"     # that same number is the hub login
+    row = next(x for x in rows_of(await admin.get(URL)) if x["Name"] == "Riya")
+    assert row["Mobile"] == "98330 44444" and row["Email"] == "riya@example.in" and "Event pack" in row["Agents used"].split("; ")
+    await admin.aclose()
 
 
 async def test_a_name_cannot_smuggle_a_formula_into_the_file(client):
