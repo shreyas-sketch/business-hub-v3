@@ -43,22 +43,46 @@ ACCESS_STATUSES = ("starter", "welcome", "event", "paid", "ended", "free", "off"
 OWNERS = {"team_of": {"$in": [None, ""]}, "role": {"$ne": "admin"}}     # not team logins or admins
 EXPORT_FILE = {"": "everyone", "starter": "l0-starter", "welcome": "full-hub", "off": "switched-off"}
 EXPORT_CHUNK = 1000
-# The agents' names for each kind of AI run, where the tools, kits and agent catalogue don't already name it.
+# What each kind of AI run (runs.kind) or activity (events.type) counts as: a feature key, shown under its menu name as the
+# admin has it now, or plain words where no menu item fits. Only what a member did, or an agent did for them: opening a page
+# records nothing, and signups, logins and billing don't appear here.
 AGENT_NAMES = {
-    "answer": "Business Q&A", "brain_answer": "Company Brain", "brand": "Brand message", "brand_kit": "Brand kit", "brochure": "Brochures",
-    "calendar": "Content calendar", "call_review": "AI Telecaller", "campaign": "Money campaigns", "compliance_explain": "Compliance calendar",
-    "competitor_read": "Competitor Watch", "competitor_summary": "Competitor Watch", "expenses:advice": "Expense tracker",
-    "expenses:suggest": "Expense tracker", "goal_coach": "End goals", "gym": "Sales Training Gym", "gym_score": "Sales Training Gym",
-    "invoice_entry": "Invoices", "invoice_style": "Invoices", "key_person:owner_questions": "Key-person knowledge",
-    "key_person:questionnaire": "Key-person knowledge", "key_person:skill": "Key-person knowledge", "kit:sop_scripts": "SOP writer",
-    "lead_ideas": "Ways to get more leads", "lead_magnet": "Lead magnet", "leaks": "Funnel leak finder", "magnet_build": "Lead magnet",
-    "magnet_ideas": "Lead magnet", "multiplier_ideas": "Revenue levers", "offer_ladder": "Offer ladder", "office_plan": "AI office: Chief of Staff",
-    "pipeline": "Pipeline builder", "polish": "AI Writer", "posts": "Social posts", "proposal": "Automatic proposal",
-    "quote": "Quotation drafts", "read_website": "Business Brain", "read_words": "Business Brain", "report": "AI office: Chief of Staff",
-    "reply": "Reply writer", "reputation_reply": "Reviews & reputation", "research_companies": "Company research",
-    "research_content": "Content research", "site": "Website builder", "site_prompt": "Website editor", "social_week": "Social media",
-    "sop_map": "SOP writer", "standup": "Morning standup", "tenders:help": "Tender finder", "tenders:words": "Tender finder",
-    "voice_note": "Voice notes", "wa_reply": "WhatsApp replies", "week": "Your week",
+    # Start
+    "engine_audit": "engine_audit", "knowledge_saved": "business_brain", "knowledge_update": "business_brain", "knowledge_fact": "business_brain",
+    "knowledge_refresh": "business_brain", "knowledge_keep": "business_brain", "read_website": "business_brain", "read_words": "business_brain",
+    "website_read": "business_brain", "voice_onboarding": "business_brain", "score_taken": "business_score",
+    "event_saved": "Event pack", "day1_saved": "Day-1 report",
+    # Lead
+    "site": "website", "site_prompt": "website", "site_prompt_applied": "website", "site_built": "website", "site_live": "website", "inputs_saved": "website",
+    "lead_magnet": "lead_magnet", "magnet_build": "lead_magnet", "magnet_built": "lead_magnet", "magnet_ideas": "lead_magnet",
+    "lead_magnet_live": "lead_magnet", "lead_magnet_uploaded": "lead_magnet",
+    # Sales
+    "multiplier_ideas": "revenue_levers", "lead_ideas": "lead_ideas", "offer_ladder": "offer_ladder", "quote": "quotations", "invoice_entry": "quotations",
+    "invoice_style": "quotations", "invoice": "gateway_invoicing",
+    # Conversion
+    "lead": "inquiry_desk", "inquiry_settings": "inquiry_desk", "inquiry_template_sent": "inquiry_desk", "proposal": "Automatic proposal",
+    "lead_won": "crm", "crm_imported": "crm", "pipeline": "pipeline", "pipeline_built": "pipeline", "leaks": "funnel_leaks", "wa_reply": "whatsapp_ai",
+    "customers_imported": "customers", "call_review": "voice_agent", "campaign": "campaigns", "gym": "training_gym", "gym_score": "training_gym", "gym_scored": "training_gym",
+    # Operations
+    "sop_map": "sop_library", "sop_set_written": "sop_library", "kit:sop_scripts": "sop_library", "compliance_explain": "compliance_calendar",
+    "compliance_setup": "compliance_calendar", "compliance_item": "compliance_calendar", "compliance_done": "compliance_calendar", "due_added": "money_owed",
+    "due_paid": "money_owed", "due_part_paid": "money_owed", "cash_item": "cash_flow", "magic_number": "magic_number", "gaps_scan": "gaps_scan",
+    "week": "week", "week_planned": "week", "week_checkin": "week", "daily_done": "week", "goal_coach": "goals", "goal_created": "goals",
+    "meeting_created": "meetings", "standup": "Morning standup", "office_plan": "AI office: Chief of Staff", "office_run": "AI office: Chief of Staff",
+    "report": "AI office: Chief of Staff", "voice_note": "Voice notes", "role_hired": "workforce",
+    # Brand
+    "brand": "brand_message", "brand_chosen": "brand_message", "brand_kit": "brand_kit", "design": "brand_kit", "brand_design": "brand_kit",
+    "social_week": "social_media", "social_starter": "social_media", "social_image": "social_media", "social_posted": "social_media",
+    "calendar": "content_calendar", "brochure": "brochures", "research_content": "market_research", "research_companies": "market_research",
+    "competitor_read": "competitor_watch", "competitor_summary": "competitor_watch", "competitor_added": "competitor_watch", "competitor_check": "competitor_watch",
+    "reputation_reply": "reputation", "reputation_search": "reputation", "review_asked": "reputation", "review_pasted": "reputation", "review_replied": "reputation",
+    # Data
+    "key_person:owner_questions": "key_person", "key_person:questionnaire": "key_person", "key_person:skill": "key_person", "key_person_added": "key_person",
+    "key_person_answered": "key_person", "key_person_skill": "key_person", "expenses:advice": "expenses", "expenses:suggest": "expenses", "expense_added": "expenses",
+    "expense_approved": "expenses", "expense_advice": "expenses", "expenses_from_bank": "expenses", "bank_statement_read": "expenses", "sales_upload": "getting_paid",
+    "tenders:help": "tender_finder", "tenders:words": "tender_finder", "tender_help": "tender_finder", "tenders_searched": "tender_finder",
+    # AI Writer
+    "answer": "ai_writer", "polish": "ai_writer", "posts": "ai_writer", "reply": "ai_writer", "brain_answer": "company_brain",
 }
 
 
@@ -161,14 +185,16 @@ async def members(q: str = "", status: str = "", cohort: str = ""):
 
 
 def _agent_name(key: str) -> str:
-    """What the team calls an agent, from a kind of AI run or an agent's key."""
+    """What a member knows an agent as, from a kind of AI run, an activity or an agent's key. The menu's name wins, so the same
+    agent never shows twice under two names."""
+    if key in AGENT_NAMES:
+        name = AGENT_NAMES[key]
+        return plans.label_of(name) if name in plans.META else name
     head, _, rest = key.partition(":")
     if head == "tool" and rest in tools.TOOLS:
         return tools.TOOLS[rest].name
     if head == "kit" and rest in kits.KINDS:
-        return kits.KINDS[rest].label
-    if key in AGENT_NAMES:
-        return AGENT_NAMES[key]
+        return plans.label_of(kits.KINDS[rest].feature)
     if key.startswith("office_") and key[len("office_"):] in STAFF:
         return f"AI office: {STAFF[key[len('office_'):]]['title']}"
     spec = catalog.get(key)
@@ -182,7 +208,9 @@ def _runs_for_everyone(key: str) -> bool:
 
 
 async def _agents_used(ids: list[str]) -> dict[str, set[str]]:
-    """Each owner's agents: AI work that finished (failed and refunded runs don't count) and actions agents carried out."""
+    """Each owner's agents, from three records: AI work that finished (failed and refunded runs don't count), actions agents
+    carried out, and what the owner did in the hub. Most of the L0 pages (Engine Audit, Inquiries, Social media...) can be used
+    without any AI run, so runs alone would leave those members looking as if they had used nothing."""
     d = db()
     used: dict[str, set[str]] = {i: set() for i in ids}
     for start in range(0, len(ids), EXPORT_CHUNK):
@@ -194,6 +222,11 @@ async def _agents_used(ids: list[str]) -> dict[str, set[str]]:
                                               {"$group": {"_id": {"owner": "$ws", "agent": "$agent"}}}]):
             if not _runs_for_everyone(r["_id"]["agent"]):
                 used[r["_id"]["owner"]].add(_agent_name(r["_id"]["agent"]))
+        async for r in d.events.aggregate([{"$match": {"user_id": {"$in": part}, "type": {"$in": list(AGENT_NAMES)}}},
+                                           {"$group": {"_id": {"owner": "$user_id", "type": "$type"}}}]):
+            used[r["_id"]["owner"]].add(_agent_name(r["_id"]["type"]))
+        async for r in d.levers.find({"_id": {"$in": part}}, {"_id": 1}):      # saving these leaves no event
+            used[r["_id"]].add(plans.label_of("revenue_levers"))
     return used
 
 
@@ -327,3 +360,4 @@ async def add_tokens(uid: str, body: TokensIn, admin: dict = Depends(require_adm
 
 async def ensure_indexes() -> None:
     await db().onboarding.create_index("stage")
+    await db().events.create_index([("user_id", 1), ("type", 1)])     # one member's activity, for the CSV

@@ -4,9 +4,13 @@ import csv
 import io
 from datetime import timedelta
 
+import re
+from pathlib import Path
+
+from app import plans
 from app.db import db, now
 from app.routers.onboarding import ACCESS_STATUSES, AGENT_NAMES, _agent_name
-from app.services import new_id
+from app.services import new_id, track
 
 from tests.conftest import login
 
@@ -53,7 +57,7 @@ async def test_the_file_has_name_email_access_and_agents(client):
     assert list(rows[0]) == ["Name", "Email", "Business", "Access", "Agents used"]
     row = next(x for x in rows if x["Name"] == "Asha Rao")
     assert row["Email"] == "asha@example.in" and row["Access"] == "L0 starter"
-    assert row["Agents used"] == "AI office: Sales; Content Agent; Lead Response; SOP; Website builder"
+    assert row["Agents used"] == "; ".join(sorted(["AI office: Sales", "Content Agent", "Lead Response", plans.label_of("sop_library"), plans.label_of("website")]))
     assert "attachment" in r.headers["content-disposition"] and "everyone" in r.headers["content-disposition"]
     assert r.headers["cache-control"] == "no-store"
 
@@ -145,6 +149,56 @@ async def test_the_file_is_not_cut_off_at_the_screens_limit_and_is_logged(client
     assert logged["meta"]["members"] == 620 and logged["meta"]["by"]
 
 
+async def test_pages_that_use_no_ai_still_count(client):
+    """An L0 member can take the Engine Audit or save the Revenue Multiplier without an AI run: they did use them."""
+    a = await member("Nisha Kulkarni", **L0)
+    await track("engine_audit", a, score=40)
+    await track("knowledge_saved", a)
+    await track("lead", a)
+    await track("social_starter", a, posts=7)
+    await track("event_saved", a, cohort="AIA-NOV-01")
+    await db().levers.insert_one({"_id": a, "pledge": "x"})
+    await login(client, ADMIN)
+    row = rows_of(await client.get(URL))[0]
+    assert row["Agents used"].split("; ") == sorted(["Engine Audit", "Event pack", plans.label_of("business_brain"), plans.label_of("inquiry_desk"),
+                                                     plans.label_of("revenue_levers"), plans.label_of("social_media")])
+
+
+async def test_things_that_are_not_using_an_agent_stay_out(client):
+    a = await member("Vikram Sethi", **L0)
+    for event in ("signup", "upgrade_click", "checkout_start", "onboarding_note", "invite_visit", "limit_hit", "run"):
+        await track(event, a)
+    await login(client, ADMIN)
+    assert rows_of(await client.get(URL))[0]["Agents used"] == ""
+
+
+async def test_one_agent_never_shows_under_two_names(client):
+    a = await member("Farah Khan")
+    for kind in ("kit:sop", "sop_map", "kit:sop_scripts"):
+        await run(a, kind)
+    await track("sop_set_written", a)
+    await run(a, "site")
+    await track("site_built", a)
+    await track("site_live", a)
+    await login(client, ADMIN)
+    assert rows_of(await client.get(URL))[0]["Agents used"] == "; ".join(sorted([plans.label_of("sop_library"), plans.label_of("website")]))
+
+
+async def test_the_menu_name_the_admin_set_is_the_name_in_the_file(client, monkeypatch):
+    a = await member("Isha Bose")
+    await run(a, "sop_map")
+    monkeypatch.setitem(plans.META["sop_library"], "label", "SOP Writer")
+    await login(client, ADMIN)
+    assert rows_of(await client.get(URL))[0]["Agents used"] == "SOP Writer"
+
+
+def test_the_names_point_at_real_features_and_real_activity():
+    plain = {"Event pack", "Day-1 report", "Automatic proposal", "Morning standup", "AI office: Chief of Staff", "Voice notes"}
+    assert not {v for v in AGENT_NAMES.values() if v not in plans.META} - plain     # a mistyped feature key would print as words
+    code = "\n".join(f.read_text(encoding="utf-8") for f in Path("app").rglob("*.py") if f.name != "onboarding.py")
+    written = set(re.findall(r'(?:run_ai|spend_run)\([\w.]+, *f?"([^"]+)"', code)) | set(re.findall(r'track\("(\w+)"', code))
+    assert not set(AGENT_NAMES) - written                                           # a mistyped key would never match anything
+
+
 def test_an_unknown_kind_of_run_still_reads_as_words():
     assert _agent_name("new_thing:deep_dive") == "New thing deep dive"
-    assert all(_agent_name(k) == v for k, v in AGENT_NAMES.items())
