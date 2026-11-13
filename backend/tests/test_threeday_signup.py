@@ -13,7 +13,7 @@ from tests.v23_helpers import mark_paid, setup_v23
 
 ADMIN = "+919999900000"
 CODE3 = "ABB-3DAY-01"
-THREEDAY = {"home", "business_brain", "website", "sop_library", "brand_kit", "social_media", "revenue_levers", "crm", "pipeline",
+THREEDAY = {"home", "business_brain", "engine_audit", "website", "sop_library", "brand_kit", "social_media", "revenue_levers", "crm", "pipeline",
             "money_owed", "quotations", "inquiry_desk", "smart_dashboard", "expenses", "plans_billing"}
 L0 = {"home", "business_brain", "engine_audit", "smart_dashboard", "website", "revenue_levers", "inquiry_desk", "sop_library",
       "social_media", "plans_billing"}
@@ -48,13 +48,14 @@ async def test_a_signup_from_the_3day_link_gets_only_the_3day_pages(client):
     opened = {k for k in menu_pages() if me["features"][k]}
     assert opened == THREEDAY & menu_pages()
     assert me["threeday"] is True and me["starter"] is False and me["paid"] is False
-    assert me["feature_locks"]["engine_audit"] == {"lock": "threeday"} and me["feature_locks"]["lead_magnet"] == {"lock": "threeday"}
+    assert me["feature_locks"]["key_person"] == {"lock": "threeday"} and me["feature_locks"]["lead_magnet"] == {"lock": "threeday"}
     locked = {i["key"]: i for s in me["menu"] for i in s["items"] if i["locked"]}
     assert locked and all(i["lock"] == "threeday" for i in locked.values()) and not THREEDAY & set(locked)
     assert me["features"]["leads"] and me["features"]["auto_reminders"]      # behind Website and Payment follow-up: follow the plan
     assert (await owner.get("/api/billing")).json()["threeday"] is True
     assert (await owner.get("/api/crm/contacts")).status_code == 200          # a 3-Day page works on the server
-    assert (await owner.get("/api/audit")).status_code in (402, 403)          # a page outside it is closed on the server too
+    assert (await owner.get("/api/audit")).status_code == 200                 # Engine Audit is in the 3-Day set
+    assert (await owner.get("/api/lead-magnet")).status_code in (402, 403)    # a page outside it is closed on the server too
 
     uid = me["user"]["id"]
     user = await db().users.find_one({"_id": uid})
@@ -65,7 +66,7 @@ async def test_a_signup_from_the_3day_link_gets_only_the_3day_pages(client):
 
     await mark_paid(uid)                                                      # once they pay, the whole Membership opens
     me = (await owner.get("/api/me")).json()
-    assert me["threeday"] is False and me["features"]["engine_audit"] and me["features"]["lead_magnet"]
+    assert me["threeday"] is False and me["features"]["key_person"] and me["features"]["lead_magnet"]
     await owner.aclose()
 
 
@@ -124,9 +125,9 @@ async def test_the_admin_moves_features_and_owners_between_sets(client):
     await threeday_cohort(client)
     owner = await new_owner("9834177777", cohort=CODE3)
     uid = (await owner.get("/api/me")).json()["user"]["id"]
-    r = await client.patch("/api/admin/config/features/engine_audit", json={"threeday": True})
-    assert r.status_code == 200 and r.json()["threeday"] is True and r.json()["starter"] is True
-    assert (await owner.get("/api/me")).json()["features"]["engine_audit"]
+    r = await client.patch("/api/admin/config/features/lead_magnet", json={"threeday": True})
+    assert r.status_code == 200 and r.json()["threeday"] is True and r.json()["starter"] is False
+    assert (await owner.get("/api/me")).json()["features"]["lead_magnet"]
 
     assert (await client.patch(f"/api/admin/users/{uid}", json={"only": "starter"})).status_code == 200
     me = (await owner.get("/api/me")).json()
