@@ -161,3 +161,26 @@ async def test_only_admins_change_it(client):
     assert (await owner.post(f"/api/admin/event/{CODE3}/threeday", json={"until": last_day()})).status_code == 403
     assert (await owner.patch("/api/admin/users/x", json={"only": "threeday"})).status_code == 403
     await owner.aclose()
+
+
+async def test_new_signups_get_3day_only_hub_wide_and_switching_back_keeps_them(client):
+    if not plans.engines_on():
+        await setup_v23()
+    await login(client, ADMIN)
+    r = await client.patch("/api/admin/config/ui", json={"welcome_threeday": True, "welcome_starter": False})
+    assert r.status_code == 200 and r.json()["welcome_threeday"] is True
+    anyone = await new_owner("9834200001")                                    # no link, no cohort
+    me = (await anyone.get("/api/me")).json()
+    assert me["threeday"] is True and me["starter"] is False
+    assert {k for k in menu_pages() if me["features"][k]} == THREEDAY & menu_pages()
+    rows = (await client.get("/api/admin/onboarding?status=threeday")).json()
+    assert me["user"]["id"] in {m["id"] for m in rows["members"]}
+
+    r = await client.patch("/api/admin/config/ui", json={"welcome_threeday": False, "welcome_starter": True})   # back to L0
+    assert r.json()["welcome_threeday"] is False and r.json()["welcome_starter"] is True
+    after = await new_owner("9834200002")
+    assert (await after.get("/api/me")).json()["starter"] is True
+    assert (await anyone.get("/api/me")).json()["threeday"] is True           # earlier 3-Day signups keep the 3-Day pages
+    assert (await (await new_owner("9834200003")).patch("/api/admin/config/ui", json={"welcome_threeday": True})).status_code == 403
+    await anyone.aclose()
+    await after.aclose()

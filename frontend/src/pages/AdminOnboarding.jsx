@@ -13,19 +13,20 @@ const PILL = { starter: "warn", threeday: "warn", welcome: "warn", event: "warn"
 
 // What a new signup gets: only the L0 starter pages (the webinar's), the whole hub, or their plan (Free, or the event's access)
 const SIGNUP = [
-  ["starter", "L0 only", { welcome_starter: true }, "New signups now get only the L0 pages; the rest stays locked until they join. Owners who signed up before keep what they have."],
-  ["full", "Full hub", { welcome_starter: false, welcome_full_hub: true }, "New signups get the full hub again."],
-  ["plan", "Their plan", { welcome_starter: false, welcome_full_hub: false }, "New signups now start on Free (or the event's access). Owners who already have the full hub keep it."],
+  ["threeday", "3-Day only", { welcome_threeday: true, welcome_starter: false }, "New signups now get only the 3-Day pages; the rest stays locked until they join. Owners who signed up before keep what they have."],
+  ["starter", "L0 only", { welcome_threeday: false, welcome_starter: true }, "New signups now get only the L0 pages; the rest stays locked until they join. Owners who signed up before keep what they have."],
+  ["full", "Full hub", { welcome_threeday: false, welcome_starter: false, welcome_full_hub: true }, "New signups get the full hub again."],
+  ["plan", "Their plan", { welcome_threeday: false, welcome_starter: false, welcome_full_hub: false }, "New signups now start on Free (or the event's access). Owners who already have the full hub keep it."],
 ];
 
 function WelcomeSwitch() {
   const { toast } = useHub();
   const [s, reload] = useLoad("/admin/config/ui");
   if (!s) return null;
-  const now = s.welcome_starter ? "starter" : s.welcome_full_hub ? "full" : "plan";
+  const now = s.welcome_threeday ? "threeday" : s.welcome_starter ? "starter" : s.welcome_full_hub ? "full" : "plan";
   return (
     <div className="panel row" style={{ justifyContent: "space-between", flexWrap: "wrap" }}>
-      <span><b>New signups get</b> <span className="small muted">— L0 only: the pages marked L0 in Features &amp; plans. Change it for one owner on their page.</span></span>
+      <span><b>New signups get</b> <span className="small muted">— 3-Day only / L0 only: the pages marked 3-Day / L0 in Features &amp; plans. Change it for one owner on their page.</span></span>
       <div className="row">
         {SIGNUP.map(([k, label, body, msg]) => (
           <Busy key={k} className={`btn sm ${now === k ? "primary" : "ghost"}`} disabled={now === k} run={async () => {
