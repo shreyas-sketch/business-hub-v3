@@ -258,6 +258,8 @@ async def _create_user(phone: str, body: VerifyIn) -> tuple[dict, bool]:
         # signed up from a cohort link set to give the 3-Day pages (Admin → Live event): only those open until they join.
         # It wins over the hub-wide "New signups get" choice, so the L0 signups elsewhere carry on as they are.
         user["welcome"] = {"on": True, "only": "threeday", "at": now(), "cohort": cohort}
+    elif plans.UI.get("welcome_threeday"):   # every new hub starts with only the 3-Day pages open, the rest locked until they join
+        user["welcome"] = {"on": True, "only": "threeday", "at": now(), "cohort": cohort}
     elif plans.UI.get("welcome_starter"):   # a new hub starts with only the L0 starter pages open, the rest locked until they join
         user["welcome"] = {"on": True, "only": "starter", "at": now()}
     elif plans.UI.get("welcome_full_hub"):   # a new hub starts with everything open, until the admin switches it off

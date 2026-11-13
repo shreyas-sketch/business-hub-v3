@@ -211,6 +211,7 @@ class UiPatch(BaseModel):
     pay_yearly_link: str | None = Field(default=None, max_length=300, pattern=r"^(https://\S+)?$")
     welcome_full_hub: bool | None = None   # new signups get the whole hub; owners who already have it keep it
     welcome_starter: bool | None = None    # new signups get only the L0 starter set (wins over the full hub)
+    welcome_threeday: bool | None = None   # new signups get only the 3-Day set (wins over the L0 starter and the full hub)
 
 
 @router.get("/ui")
