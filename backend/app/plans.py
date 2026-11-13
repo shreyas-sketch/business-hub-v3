@@ -208,7 +208,7 @@ STARTER = ("home", "business_brain", "engine_audit", "smart_dashboard", "website
 # The 3-Day set: the pages the 3-day event's demos and activities use (AI Business Breakthrough 2027 prep sheet), kept apart
 # from the L0 starter. Owners who sign up from a cohort link set to give the 3-Day pages get only these until they pay.
 # The admin can add or take out any feature (Admin → Features & plans → Edit).
-THREEDAY = ("home", "business_brain", "website", "sop_library", "brand_kit", "social_media", "revenue_levers", "crm", "pipeline",
+THREEDAY = ("home", "business_brain", "engine_audit", "website", "sop_library", "brand_kit", "social_media", "revenue_levers", "crm", "pipeline",
             "money_owed", "quotations", "inquiry_desk", "smart_dashboard", "expenses", "plans_billing")
 # What an owner's signup access can be limited to (user.welcome.only), and the feature flag that says a page is in that set
 SIGNUP_SETS = {"starter": "starter", "threeday": "threeday"}
