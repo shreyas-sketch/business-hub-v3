@@ -247,9 +247,10 @@ FEATURE_EDITABLE = {"tier": str, "group": str, "label": str, "what": str, "order
 DEFAULT_UI = {"menu": "groups", "community_link": "", "support_email": "", "pay_monthly_link": "", "pay_yearly_link": "", "v23": None,
               "welcome_full_hub": settings.welcome_full_hub,   # new signups get the whole hub (see welcome_active)
               "welcome_starter": False,   # ...or only the L0 starter set (see starter_only); wins over the full hub
-              "welcome_threeday": False}  # ...or only the 3-Day set (see threeday_only); wins over both
+              "welcome_threeday": False,  # ...or only the 3-Day set (see threeday_only); wins over both
+              "sop_set_write": False}     # SOP Writer → Whole business: write the ticked SOPs in one batch (off: the list only)
 UI_EDITABLE = {"menu": str, "community_link": str, "support_email": str, "pay_monthly_link": str, "pay_yearly_link": str,
-               "welcome_full_hub": bool, "welcome_starter": bool, "welcome_threeday": bool}
+               "welcome_full_hub": bool, "welcome_starter": bool, "welcome_threeday": bool, "sop_set_write": bool}
 
 # Live values (defaults with the admin's changes applied). Mutated in place so imports stay valid.
 PLANS: dict[str, dict] = copy.deepcopy(DEFAULT_PLANS)

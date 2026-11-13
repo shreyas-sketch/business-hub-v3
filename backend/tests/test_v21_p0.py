@@ -382,6 +382,7 @@ async def test_process_map_differs_for_a_trading_business_and_a_clinic(client):
 
 
 async def test_a_batch_of_ten_sops_uses_twenty_runs_and_refunds_failures(client, monkeypatch):
+    monkeypatch.setitem(plans.UI, "sop_set_write", True)            # the admin has switched batch writing on
     c, uid, _ = await owner_on("9851000062", "lite", live=False)
     procs = (await c.post("/api/sop-set/map")).json()["processes"]
     keys = [p["key"] for p in procs[:10]]
@@ -744,7 +745,8 @@ async def test_an_extension_moves_the_filing_instead_of_duplicating_it(client):
     assert (await c.post("/api/compliance/items/nope/undo")).status_code == 404
 
 
-async def test_a_stale_sop_batch_doesnt_lock_the_owner_out(client):
+async def test_a_stale_sop_batch_doesnt_lock_the_owner_out(client, monkeypatch):
+    monkeypatch.setitem(plans.UI, "sop_set_write", True)
     c, uid, _ = await owner_on("9851000205", "lite", live=False)
     procs = (await c.post("/api/sop-set/map")).json()["processes"]
     await db().sop_maps.update_one({"_id": uid}, {"$set": {"batch": {"running": True, "started_at": now() - timedelta(minutes=5)}}})
@@ -778,3 +780,25 @@ async def test_links_in_automatic_reminders_are_parsed_strictly():
     assert only_payment_links("Pay at https://rzp.io/l/abc") and only_payment_links("Pay by UPI to shop@okaxis")
     for bad in ("https://evil.example?r=a.rzp.io", "see evil.example", "pay.evil.example/x", "https://user@rzp.io.evil.com/x"):
         assert not only_payment_links(bad), bad
+
+
+async def test_writing_the_whole_set_at_once_is_off_until_the_admin_switches_it_on(client):
+    """The Whole business tab shows every SOP the hub can write; the batch button stays off until the admin switches it on."""
+    c, uid, _ = await owner_on("9851000206", "lite", live=False)
+    procs = (await c.post("/api/sop-set/map")).json()["processes"]
+    got = (await c.get("/api/sop-set")).json()
+    assert got["write_on"] is False and got["exists"] and len(got["processes"]) == len(procs) and got["without_sop"] == len(procs)
+    start = await used_runs(uid)
+    r = await c.post("/api/sop-set/write", json={"keys": [procs[0]["key"]]})
+    assert r.status_code == 403 and "Library" in r.json()["detail"]
+    assert await used_runs(uid) == start                            # nothing written, no tokens used
+    assert (await c.post("/api/kits/sop", json={"inputs": {"process": procs[0]["title"]}})).status_code == 200   # one at a time still works
+
+    admin = await new_owner("9999900000")
+    assert (await admin.patch("/api/admin/config/ui", json={"sop_set_write": True})).json()["sop_set_write"] is True
+    assert (await c.get("/api/sop-set")).json()["write_on"] is True
+    assert (await c.post("/api/sop-set/write", json={"keys": [procs[1]["key"]]})).status_code == 200
+    await sopset.settle()
+    assert (await c.patch("/api/admin/config/ui", json={"sop_set_write": False})).status_code == 403   # admins only
+    await admin.patch("/api/admin/config/ui", json={"sop_set_write": False})
+    await admin.aclose()

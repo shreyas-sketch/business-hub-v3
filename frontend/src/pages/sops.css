@@ -5,6 +5,7 @@
 .sop-fn { gap: 10px; }
 .sop-proc { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 10px 0; border-top: 1px solid var(--ink-line); }
 .sop-fn .row + .sop-proc { border-top: 0; }
+.sop-proc.list-only { grid-template-columns: minmax(0, 1fr) auto; }   /* batch writing off: no tick box */
 .sop-proc input[type="checkbox"] { width: 18px; height: 18px; margin: 3px 0 0; accent-color: var(--aqua); }
 .sop-proc-main { display: grid; gap: 4px; min-width: 0; }
 .sop-proc-title { overflow-wrap: anywhere; }
@@ -20,5 +21,7 @@
   .sop-tabs button { flex: 1 1 auto; white-space: normal; line-height: 1.35; text-align: left; }
   .sop-proc { grid-template-columns: 22px minmax(0, 1fr); }
   .sop-proc-tags { grid-column: 2; justify-content: flex-start; }
+  .sop-proc.list-only { grid-template-columns: minmax(0, 1fr); }
+  .sop-proc.list-only .sop-proc-tags { grid-column: 1; }
   .sop-add { grid-template-columns: 1fr; }
 }

@@ -40,6 +40,23 @@ function WelcomeSwitch() {
   );
 }
 
+function SopSetSwitch() {
+  const { toast } = useHub();
+  const [s, reload] = useLoad("/admin/config/ui");
+  if (!s) return null;
+  const on = !!s.sop_set_write;
+  return (
+    <div className="panel row" style={{ justifyContent: "space-between", flexWrap: "wrap" }}>
+      <span><b>SOP Writer: write the whole business at once</b> <span className="small muted">— off: members see every SOP the hub can write on the Whole business tab, with the Write SOPs button disabled; they write SOPs one at a time in the Library.</span></span>
+      <Busy className={`btn sm ${on ? "ghost" : "primary"}`} run={async () => {
+        await api("/admin/config/ui", { method: "PATCH", body: { sop_set_write: !on } });
+        toast(on ? "Writing the whole set at once is now off." : "Members can now write the whole set at once.");
+        reload();
+      }}>{on ? "Switch off" : "Switch on"}</Busy>
+    </div>
+  );
+}
+
 function Links() {
   const { toast } = useHub();
   const [s, reload] = useLoad("/admin/config/ui");
@@ -165,6 +182,7 @@ export default function AdminOnboarding() {
     <Sheet kicker="Admin · Onboarding" id="A-10" pillar="Admin" title={<>Every member, <em>set up</em>.</>}
       sub="Who came from the event, who paid, and what's set up in their hub. Mark payments made on Razorpay here.">
       <WelcomeSwitch />
+      <SopSetSwitch />
       <Links />
       <div className="row" style={{ flexWrap: "wrap" }}>
         {FILTERS.map(([k, l]) => (
