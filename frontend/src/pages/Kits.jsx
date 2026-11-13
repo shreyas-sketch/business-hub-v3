@@ -22,7 +22,7 @@ const SOP_FIELDS = [
   { key: "checklist", label: "Checklist", type: "list" }, { key: "mistakes", label: "Mistakes to avoid", type: "list" },
 ];
 const SOP_HEAD = { kicker: "Scale · SOP library", id: "SC-04", pillar: "Scale", title: <>Write it once. Done the same <em>way</em>.</> };
-const SOP_ABOUT = "Describe a process or a situation in a line, or talk it through in a voice note. The AI turns it into steps anyone on your team can follow. Or map your whole business and write every SOP in one go.";
+const SOP_ABOUT = "Describe a process or a situation in a line, or talk it through in a voice note. The AI turns it into steps anyone on your team can follow. Or map your whole business to see every SOP it needs.";
 
 /** "This is a situation, not a process": a scenario SOP (what starts it, the steps, the words to use, done, escalation). */
 function ScenarioToggle({ set }) {
@@ -133,7 +133,8 @@ function SopActions({ doc, onRestored }) {
 
 const clean = (procs) => procs.map(({ key, function: fn, title, selected }) => ({ key: key || null, function: fn, title: title.trim(), selected: !!selected }));
 
-/** The whole business, mapped: every process by function, ticked, then written in a batch (2 AI tokens each). */
+/** The whole business, mapped: every process by function, ticked, then written in a batch (2 AI tokens each). While the
+    admin keeps batch writing off (write_on false), the page shows every SOP the hub can write and the button stays disabled. */
 function SopSet({ onWritten }) {
   const { me, refresh, toast } = useHub();
   const [d, setD] = useState(null);
@@ -142,7 +143,7 @@ function SopSet({ onWritten }) {
   const [editing, setEditing] = useState(false);
   const [add, setAdd] = useState({ function: SOP_FUNCTIONS[0], title: "" });
   const [err, setErr] = useState("");
-  const canWrite = canAct(me, "manager");
+  const canEdit = canAct(me, "manager");
   const load = useCallback(() => api("/sop-set").then((x) => { setD(x); return x; }).catch((e) => setErr(e.message)), []);
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (d && !dirty) setProcs(d.processes || []); }, [d]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -163,6 +164,8 @@ function SopSet({ onWritten }) {
   }, [d]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!d) return err ? <FormError msg={err} /> : <Loading />;
+  const writeOn = !!d.write_on;
+  const canWrite = canEdit && writeOn;
   const change = (next) => { setProcs(next); setDirty(true); };
   const toWrite = procs.filter((p) => p.selected && !p.sop_id);
   const runs = toWrite.length * (d.runs_per_sop || 2);
@@ -193,9 +196,9 @@ function SopSet({ onWritten }) {
     return (
       <div className="panel active">
         <h3>Map every process in your business</h3>
-        <p className="muted">One AI token reads your Knowledge Hub and lists the processes a business like yours runs — sales, marketing, delivery, accounts, HR and customer care. You tick the ones that apply, then the hub writes an SOP for each.</p>
+        <p className="muted">One AI token reads your Knowledge Hub and lists the processes a business like yours runs — sales, marketing, delivery, accounts, HR and customer care. {writeOn ? "You tick the ones that apply, then the hub writes an SOP for each." : "You see every SOP the hub can write for your business, and write each one in the Library."}</p>
         <FormError msg={err} />
-        {canWrite ? <div className="row"><Busy className="btn primary ai" run={map} onError={setErr}>Map my processes</Busy><span className="small muted">Uses one AI token.</span></div>
+        {canEdit ? <div className="row"><Busy className="btn primary ai" run={map} onError={setErr}>Map my processes</Busy><span className="small muted">Uses one AI token.</span></div>
           : <p className="small muted">Ask the business owner or a manager to map your processes.</p>}
       </div>
     );
@@ -205,7 +208,7 @@ function SopSet({ onWritten }) {
     <div className="stack">
       <div className="row between sop-set-bar">
         <span className="small muted">{d.without_sop} of {d.processes.length} processes don't have an SOP yet.</span>
-        {canWrite && !running && (
+        {canEdit && !running && (
           <span className="row" style={{ gap: 8 }}>
             <button className="btn sm ghost" onClick={() => setEditing(!editing)}>{editing ? "Done editing" : "Edit the list"}</button>
             <Busy className="btn sm ghost ai" run={map}>Map again</Busy>
@@ -239,9 +242,11 @@ function SopSet({ onWritten }) {
           <div key={fn} className="panel sop-fn">
             <div className="row between"><h3>{fn}</h3><span className="small muted">{rows.filter(([p]) => p.sop_id).length} of {rows.length} written</span></div>
             {rows.map(([p, i]) => (
-              <div key={p.key || `new-${i}`} className={`sop-proc ${p.sop_id ? "done" : ""}`}>
-                <input type="checkbox" aria-label={`Write an SOP for ${p.title}`} checked={!!p.selected || !!p.sop_id} disabled={!canWrite || !!p.sop_id || running}
-                  onChange={(e) => change(procs.map((x, j) => (j === i ? { ...x, selected: e.target.checked } : x)))} />
+              <div key={p.key || `new-${i}`} className={`sop-proc ${p.sop_id ? "done" : ""} ${writeOn ? "" : "list-only"}`}>
+                {writeOn && (
+                  <input type="checkbox" aria-label={`Write an SOP for ${p.title}`} checked={!!p.selected || !!p.sop_id} disabled={!canWrite || !!p.sop_id || running}
+                    onChange={(e) => change(procs.map((x, j) => (j === i ? { ...x, selected: e.target.checked } : x)))} />
+                )}
                 <div className="sop-proc-main">
                   {editing && !p.sop_id ? (
                     <input className="input" maxLength={120} value={p.title} aria-label="Process name"
@@ -278,6 +283,14 @@ function SopSet({ onWritten }) {
         <div className="row" style={{ gap: 8 }}>
           <button className="btn sm ghost" onClick={() => change(procs.map((p) => (p.sop_id ? p : { ...p, selected: true })))}>Tick all</button>
           <button className="btn sm ghost" onClick={() => change(procs.map((p) => (p.sop_id ? p : { ...p, selected: false })))}>Untick all</button>
+        </div>
+      )}
+      {canEdit && !writeOn && (
+        <div className="panel active sop-write">
+          {dirty && <div className="row"><Busy className="btn sm" run={saveMap} onError={setErr}>Save the list</Busy><span className="small muted">You have changes that aren't saved.</span></div>}
+          <b>{d.without_sop} SOP{d.without_sop === 1 ? "" : "s"} the hub can write for your business</b>
+          <span className="small muted">Writing them all at once isn't available. Write each one in the Library: type the process name and press Write the SOP.</span>
+          <div className="row"><button className="btn primary ai" disabled>Write SOPs</button></div>
         </div>
       )}
       {canWrite && (

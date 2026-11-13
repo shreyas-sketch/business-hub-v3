@@ -5,6 +5,9 @@ history, assigning an SOP to a role or a team member (Growth Mentorship and up) 
 The whole-business set: the Knowledge Hub → a process map by function (one AI run), the owner ticks the processes that
 apply, and the hub writes them in batches — 2 AI runs per SOP (the steps, then the words to use, what done looks like and
 when to escalate), with the cost shown before it starts. A run that fails is refunded, as everywhere in the hub.
+Writing the batch is off unless the admin switches it on (Admin → Onboarding → "SOP Writer: write the whole business at
+once", ui.sop_set_write): until then the page shows every SOP the hub can write, and SOPs are written one at a time in the
+Library.
 
 sop_maps {_id: ws, processes [{key, function, title, why, selected, sop_id, status}], edited, generated_at,
           batch {total, done, failed, running, started_at, finished_at}}
@@ -83,6 +86,7 @@ def _view(m: dict) -> dict:
 async def get_set(ctx: Ctx = Depends(feature("sop_library"))):
     v = _view(await _map(ctx.ws))
     v["runs_left"] = (await runs_status(ctx.owner))["left"]
+    v["write_on"] = bool(plans.UI.get("sop_set_write"))
     return v
 
 
@@ -177,6 +181,8 @@ async def run_batch(owner: dict, ws: str, actor: str, procs: list[dict]) -> dict
 @router.post("/sop-set/write")
 async def write(body: WriteIn, ctx: Ctx = Depends(feature("sop_library", "manager"))):
     """Writes the chosen processes' SOPs in the background: 2 AI runs each, shown before it starts."""
+    if not plans.UI.get("sop_set_write"):
+        raise HTTPException(403, "Writing the whole set at once is switched off. Write each SOP in the Library.")
     m = await _map(ctx.ws)
     stale = now() - timedelta(minutes=30)     # a batch cut short by a restart doesn't lock the owner out
     b = m.get("batch") or {}
