@@ -205,7 +205,14 @@ DEFAULT_FEATURES: dict[str, dict] = {
 # menu page stays locked until they join. The admin can add or take out any feature (Admin → Features & plans → Edit).
 STARTER = ("home", "business_brain", "engine_audit", "smart_dashboard", "website", "revenue_levers", "inquiry_desk", "sop_library",
            "social_media", "plans_billing")
-V23_NEW = ("engine_audit", "lead_ideas", "crm", "social_media", "brochures", "key_person")
+# The 3-Day set: the pages the 3-day event's demos and activities use (AI Business Breakthrough 2027 prep sheet), kept apart
+# from the L0 starter. Owners who sign up from a cohort link set to give the 3-Day pages get only these until they pay.
+# The admin can add or take out any feature (Admin → Features & plans → Edit).
+THREEDAY = ("home", "business_brain", "website", "sop_library", "brand_kit", "social_media", "revenue_levers", "crm", "pipeline",
+            "money_owed", "quotations", "inquiry_desk", "smart_dashboard", "expenses", "plans_billing")
+# What an owner's signup access can be limited to (user.welcome.only), and the feature flag that says a page is in that set
+SIGNUP_SETS = {"starter": "starter", "threeday": "threeday"}
+V23_NEW =("engine_audit", "lead_ideas", "crm", "social_media", "brochures", "key_person")
 # Each feature's engine. Anything not listed here sits under "More" (only seen when the admin switches it on).
 DEFAULT_ENGINE = {
     "home": "start", "business_brain": "start", "engine_audit": "start",
@@ -225,7 +232,7 @@ DEFAULT_ENGINE = {
 }
 for _i, (_k, _f) in enumerate(DEFAULT_FEATURES.items()):
     _f.update(key=_k, order=_i * 10, on=_k not in V23_NEW, teaser=True, sub="", engine=DEFAULT_ENGINE.get(_k, "more"), show=True,
-              paid_only=False, grants_only=False, day=-1, starter=_k in STARTER)   # day -1: the engine's own day
+              paid_only=False, grants_only=False, day=-1, starter=_k in STARTER, threeday=_k in THREEDAY)   # day -1: the engine's own day
 DEFAULT_FEATURES["business_brain"]["sub"] = "Business Brain"
 # The tender finder is being tried out with one account: open only where the admin grants it (Admin → grants).
 DEFAULT_FEATURES["tender_finder"]["grants_only"] = True
@@ -234,7 +241,7 @@ DEFAULT_FEATURES["tender_finder"]["grants_only"] = True
 DEFAULT_FEATURES["control_room"]["path"] = None
 
 FEATURE_EDITABLE = {"tier": str, "group": str, "label": str, "what": str, "order": int, "on": bool, "teaser": bool,
-                    "engine": str, "show": bool, "paid_only": bool, "grants_only": bool, "day": int, "starter": bool}
+                    "engine": str, "show": bool, "paid_only": bool, "grants_only": bool, "day": int, "starter": bool, "threeday": bool}
 
 # Hub-wide settings outside the registry (the v2.3 setup turns the engine menu on; the admin edits the account links).
 DEFAULT_UI = {"menu": "groups", "community_link": "", "support_email": "", "pay_monthly_link": "", "pay_yearly_link": "", "v23": None,
@@ -399,14 +406,27 @@ def welcome_active(user: dict) -> bool:
 
 # The L0 starter: the same signup access, but only the starter set's menu pages open (whatever plan or event access the owner
 # has) until they pay. Pages that only work behind other pages (show off) follow the plan, so an L0 page never breaks.
-def starter_only(user: dict) -> bool:
+# The 3-Day set works the same way with its own pages (signups from a cohort link set to give the 3-Day pages).
+def signup_set(user: dict) -> str | None:
+    """'starter' or 'threeday' while the owner's signup access is limited to that set (until they pay), else None."""
     w = user.get("welcome") or {}
-    return bool(w.get("on")) and w.get("only") == "starter" and not is_paid(user)
+    only = w.get("only")
+    return only if bool(w.get("on")) and only in SIGNUP_SETS and not is_paid(user) else None
+
+
+def starter_only(user: dict) -> bool:
+    return signup_set(user) == "starter"
+
+
+def threeday_only(user: dict) -> bool:
+    return signup_set(user) == "threeday"
 
 
 def starter_locked(user: dict, feature: str) -> bool:
+    """Outside the set the owner's signup access is limited to (the L0 starter or the 3-Day set)."""
     m = META.get(feature)
-    return bool(m) and m.get("show", True) and not m.get("starter") and starter_only(user)
+    s = signup_set(user) if m and m.get("show", True) else None
+    return bool(s) and not m.get(SIGNUP_SETS[s])
 
 
 def effective_plan(user: dict, at: datetime | None = None) -> str:
@@ -531,7 +551,8 @@ def feature_view(key: str) -> dict:
     return {"key": key, "label": m["label"], "sub": m.get("sub", ""), "what": m["what"], "tier": m["tier"], "group": m["group"], "path": m["path"],
             "role": m["role"], "order": m["order"], "on": m["on"], "teaser": m["teaser"], "core": m["core"],
             "engine": m.get("engine", "more"), "show": m.get("show", True), "paid_only": m.get("paid_only", False),
-            "grants_only": m.get("grants_only", False), "day": m.get("day", -1), "starter": m.get("starter", False)}
+            "grants_only": m.get("grants_only", False), "day": m.get("day", -1), "starter": m.get("starter", False),
+            "threeday": m.get("threeday", False)}
 
 
 def ladder() -> list[dict]:
@@ -577,7 +598,7 @@ def engine_menu(owner: dict, role: str) -> list[dict]:
             continue
         sections[m.get("engine") if m.get("engine") in sections else "more"].append({
             "key": key, "path": m["path"], "label": m["label"], "sub": m.get("sub", ""), "locked": not unlocked,
-            "lock": None if unlocked else "day" if by_day else "starter" if starter_locked(owner, key) else "plan", "opens_day": feature_day(key) if by_day else None,
+            "lock": None if unlocked else "day" if by_day else (signup_set(owner) if starter_locked(owner, key) else "plan"), "opens_day": feature_day(key) if by_day else None,
             "tier": m["tier"], "tier_name": PLANS[m["tier"]]["name"], "tier_short": PLANS[m["tier"]]["short"], "order": m["order"]})
     return [{"group": SECTION_LABEL[s], "section": s, "engine": s in ENGINE_DAY, "day": ENGINE_DAY.get(s),
              "items": sorted(items, key=lambda i: i["order"])} for s, items in sections.items() if items]

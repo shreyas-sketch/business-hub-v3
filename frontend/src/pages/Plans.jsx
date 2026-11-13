@@ -23,6 +23,7 @@ function whereFrom(b) {
     return `Membership · renews every month${sub.paid_until ? `, next on ${day(sub.paid_until)}` : ""}`;
   }
   if (b.source === "trial") return b.until ? `Free from your invite · until ${day(b.until)}` : "Event access · open until the event's access is closed";
+  if (b.threeday) return "The pages from the 3-day event, open for you since you joined · the rest opens when you join";
   if (b.starter) return "The starter pages from the webinar, open for you since you joined · the rest opens when you join";
   if (b.source === "welcome") return "The full hub, open for you since you joined";
   return b.plan === "free" ? "Given free at the Business AI workshop" : "Set up for you by the Business AI team";
@@ -244,6 +245,8 @@ function PlansV23() {
     ? { label: "Your plan", title: m.name, line: m.paid_until ? `Paid until ${day(m.paid_until)}.` : "Switched on for you by the OwnerDesk team." }
     : me.event
       ? { label: "Event access", title: "Your event access", line: `${me.event.until ? `Open until ${day(me.event.until)}` : "Open until the event's access is closed"}${me.event.day ? ` · Day ${me.event.day} of the event` : ""}. Everything you make stays in your hub.` }
+      : me.threeday
+      ? { label: "Event access", title: "Your 3-day event access", line: "The pages from the 3-day event are open for you. Everything you make stays in your hub — join to open every engine." }
       : { label: "Your plan", title: "Free", line: "Your Knowledge Hub and Engine Audit stay open. Everything you made is saved — join to open the engines again." };
   const ask = () => { api("/upgrade-click", { method: "POST", body: { tier: "lite", from_feature: "plans" } }).catch(() => {}); setContact(true); };
   return (

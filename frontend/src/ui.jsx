@@ -187,11 +187,12 @@ export function Gate({ feature, role = "staff", children, title, what, kicker = 
       </Sheet>
     );
   }
-  if (feature && !me.features?.[feature] && (why?.lock === "paid" || why?.lock === "starter" || (me.ui?.menu === "engines" && me.feature_info?.[feature]?.on !== false))) {   // v2.3: one paid plan
+  if (feature && !me.features?.[feature] && (why?.lock === "paid" || why?.lock === "starter" || why?.lock === "threeday" || (me.ui?.menu === "engines" && me.feature_info?.[feature]?.on !== false))) {   // v2.3: one paid plan
     return (
       <Sheet kicker={kicker} id={id} money title={title || <>Part of <em>OwnerDesk</em> Membership.</>} sub={what}>
         <JoinPanel note={why?.lock === "paid" ? "This opens once you join — it isn't part of the event access."
-          : why?.lock === "starter" ? "This opens once you join — your free access covers the pages from the webinar." : undefined} />
+          : why?.lock === "starter" ? "This opens once you join — your free access covers the pages from the webinar."
+          : why?.lock === "threeday" ? "This opens once you join — your event access covers the pages from the 3-day event." : undefined} />
       </Sheet>
     );
   }

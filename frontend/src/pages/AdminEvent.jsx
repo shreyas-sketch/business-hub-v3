@@ -108,6 +108,38 @@ function Settings({ e, reload }) {
   );
 }
 
+/* The 3-Day set: owners who sign up from this cohort's links (the join link or the event link) up to the day set here get only
+   the pages marked "In the 3-Day set" in Features & plans, until they pay. The L0 starter and other signups aren't touched. */
+function ThreeDay({ e, reload }) {
+  const { toast } = useHub();
+  const [until, setUntil] = useState(e.threeday_until || "");
+  const [err, setErr] = useState("");
+  const save = async (v) => {
+    await api(`/admin/event/${e.code}/threeday`, { method: "POST", body: { until: v || null } });
+    toast(v ? `Signups from this cohort's links until ${v} get only the 3-Day pages.` : "Signups from this cohort's links get what every new signup gets again.");
+    reload();
+  };
+  return (
+    <div className="panel stack">
+      <div className="stack" style={{ gap: 4 }}>
+        <span className="label">3-Day pages · for people who sign up from this cohort's links</span>
+        <span className="small muted">{e.threeday_until
+          ? `On: new signups from the join link or the event link until ${e.threeday_until} get only the pages marked 3-Day in Features & plans. Owners who already had an account keep what they have.`
+          : "Off: signups from these links get what every new signup gets (Admin → Onboarding). The L0 starter isn't affected either way."}</span>
+      </div>
+      <div className="row" style={{ flexWrap: "wrap" }}>
+        <Field label="Last day to sign up for the 3-Day pages">
+          <input className="input" type="date" value={until} onChange={(x) => setUntil(x.target.value)} />
+        </Field>
+        <Busy className="btn sm primary" onError={setErr} disabled={!until || until === e.threeday_until} run={() => save(until)}>{e.threeday_until ? "Save" : "Switch on"}</Busy>
+        {e.threeday_until && <Busy className="btn sm ghost" onError={setErr} run={async () => { await save(null); setUntil(""); }}>Switch off</Busy>}
+      </div>
+      <FormError msg={err} />
+      <span className="small muted">Join link: <span className="mono">{e.join_link}</span> <Copy text={e.join_link} label="Copy" /></span>
+    </div>
+  );
+}
+
 const DAYS = [[0, "Not started", "Nothing open yet"], [1, "Day 1", "Lead + Sales"], [2, "Day 2", "+ Conversion + Operations"], [3, "Day 3", "+ Brand + Data"]];
 
 /* v2.3: which engines the room has open. Attendees on the event's access see later engines locked with their day; paying
@@ -239,6 +271,7 @@ export default function AdminEvent() {
               <Settings key={e.code + String(e.open) + e.pack_cap + e.ai_cap + (e.trial_until || "") + e.tokens + e.images} e={e} reload={reload} />
             </div>
           )}
+          {e && <ThreeDay key={e.code + (e.threeday_until || "")} e={e} reload={reload} />}
           {e && <EventDay e={e} reload={reload} />}
           {e && (
             <>

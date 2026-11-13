@@ -39,9 +39,9 @@ CHECKS = [("knowledge", "Knowledge Hub filled"), ("audit", "Engine Audit taken")
           ("whatsapp", "WhatsApp tool connected"), ("inquiry", "First inquiry")]
 LIST_LIMIT = 500
 PERIOD_DAYS = {"month": 31, "year": 366}     # a month or a year from today (or from the current paid date, if later)
-ACCESS_STATUSES = ("starter", "welcome", "event", "paid", "ended", "free", "off")
+ACCESS_STATUSES = ("starter", "threeday", "welcome", "event", "paid", "ended", "free", "off")
 OWNERS = {"team_of": {"$in": [None, ""]}, "role": {"$ne": "admin"}}     # not team logins or admins
-EXPORT_FILE = {"": "everyone", "starter": "l0-starter", "welcome": "full-hub", "off": "switched-off"}
+EXPORT_FILE = {"": "everyone", "starter": "l0-starter", "threeday": "3-day", "welcome": "full-hub", "off": "switched-off"}
 EXPORT_CHUNK = 1000
 # Saved work that shows an agent was used: the records the setup checklist reads, so a tick on a member's card is always in
 # the file, however the record got there. (collection, field holding the owner, what counts, feature)
@@ -106,6 +106,8 @@ def _access(u: dict) -> dict:
         status, label = "paid", "Paid"
     elif plans.starter_only(u):
         status, label = "starter", "L0 starter"
+    elif plans.threeday_only(u):
+        status, label = "threeday", "3-Day"
     elif plans.welcome_active(u):
         status, label = "welcome", "Full hub"
     elif plans.event_trial(u):

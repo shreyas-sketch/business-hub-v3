@@ -35,6 +35,7 @@ class FeaturePatch(BaseModel):
     paid_only: bool | None = None
     day: int | None = Field(default=None, ge=-1, le=3)
     starter: bool | None = None   # in the L0 starter set new signups get (Admin → Onboarding)
+    threeday: bool | None = None  # in the 3-Day set signups from a 3-Day cohort link get (Admin → Live event)
 
 
 class MenuIn(BaseModel):

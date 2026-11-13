@@ -8,8 +8,8 @@ import "./admin.css";
 /* Admin → Onboarding (v2.3): every member from the event or who paid, with where their access comes from, the setup the hub
    can see for itself, and the team's notes. Members pay outside the hub (Razorpay); "Mark paid" switches Membership on. */
 
-const FILTERS = [["", "Everyone"], ["starter", "L0 starter"], ["welcome", "Full hub"], ["event", "Event access"], ["paid", "Paid"], ["ended", "Event ended"], ["free", "Free"], ["off", "Switched off"]];
-const PILL = { starter: "warn", welcome: "warn", event: "warn", paid: "on", ended: "off", free: "off", off: "off" };
+const FILTERS = [["", "Everyone"], ["starter", "L0 starter"], ["threeday", "3-Day"], ["welcome", "Full hub"], ["event", "Event access"], ["paid", "Paid"], ["ended", "Event ended"], ["free", "Free"], ["off", "Switched off"]];
+const PILL = { starter: "warn", threeday: "warn", welcome: "warn", event: "warn", paid: "on", ended: "off", free: "off", off: "off" };
 
 // What a new signup gets: only the L0 starter pages (the webinar's), the whole hub, or their plan (Free, or the event's access)
 const SIGNUP = [

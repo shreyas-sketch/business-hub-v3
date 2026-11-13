@@ -258,7 +258,13 @@ def _cfg_out(c: dict) -> dict:
             # v2.3: the event day (which engines are open), and each attendee's AI tokens and social images for the event
             # ("tokens", not "runs": the live numbers below already use "runs" for the packs)
             "day": cfg.get("day"), "tokens": cfg.get("runs") or plans.EVENT_RUNS_DEFAULT,
-            "images": cfg.get("images") or plans.EVENT_IMAGES_DEFAULT, "ended_at": cfg.get("ended_at")}
+            "images": cfg.get("images") or plans.EVENT_IMAGES_DEFAULT, "ended_at": cfg.get("ended_at"),
+            # the 3-Day set: owners who sign up from this cohort's links up to this day get only the 3-Day pages
+            "threeday_until": _day(cfg.get("threeday_until"))}
+
+
+def _day(v) -> str | None:
+    return v.astimezone(IST).date().isoformat() if isinstance(v, datetime) else None
 
 
 @admin.get("")
@@ -266,7 +272,8 @@ async def events():
     out = []
     async for c in db().cohorts.find().sort("created_at", -1).limit(50):
         out.append({"code": c["code"], "name": c.get("name", ""), "date": c.get("workshop_date"), **_cfg_out(c),
-                    "link": f"{settings.app_url}/event?e={c['code']}", "counters": await ev.counters(c["code"])})
+                    "link": f"{settings.app_url}/event?e={c['code']}",
+                    "join_link": f"{settings.app_url}/join?c={c['code']}", "counters": await ev.counters(c["code"])})
     return out
 
 
@@ -295,7 +302,7 @@ async def save_event(code: str, body: EventIn, user: dict = Depends(require_admi
     cfg = {"open": body.open, "ai": body.ai, "pack_cap": body.pack_cap, "ai_cap": min(body.ai_cap, body.pack_cap), "trial_until": until,
            "updated_at": now(), "updated_by": user["_id"]}
     old = c.get("event") or {}
-    for k in ("day", "runs", "images", "ended_at"):   # v2.3 settings saved by their own buttons stay as they are
+    for k in ("day", "runs", "images", "ended_at", "threeday_until"):   # settings saved by their own buttons stay as they are
         if k in old:
             cfg[k] = old[k]
     if body.tokens is not None:
@@ -306,6 +313,29 @@ async def save_event(code: str, body: EventIn, user: dict = Depends(require_admi
     await plans.load(force=True)
     await track("event_settings", user["_id"], cohort=c["code"], open=body.open)
     return {"code": c["code"], **_cfg_out({"event": cfg})}
+
+
+class ThreeDayIn(BaseModel):
+    until: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")   # the last day a signup gets the 3-Day pages; None: off
+
+
+@admin.post("/{code}/threeday")
+async def set_threeday(code: str, body: ThreeDayIn, user: dict = Depends(require_admin)):
+    """Owners who sign up from this cohort's links (the join link or the event link) up to and including this day get only
+    the 3-Day set's pages (Admin → Features & plans → "In the 3-Day set") until they pay. Owners who already had an account
+    keep what they have. It doesn't touch the L0 starter or what other signups get."""
+    c = await ev.cohort(code)
+    if not c:
+        raise HTTPException(404, "Cohort not found. Create it in Admin first.")
+    until = None
+    if body.until:
+        until = datetime.combine(datetime.fromisoformat(body.until).date(), dtime(23, 59, 59), tzinfo=IST)
+        if until < now():
+            raise HTTPException(400, "Pick a last day that hasn't passed.")
+    await db().cohorts.update_one({"_id": c["_id"]}, {"$set": {"event.threeday_until": until, "event.threeday_set_at": now(),
+                                                               "event.threeday_set_by": user["_id"]}})
+    await track("event_threeday", user["_id"], cohort=c["code"], until=body.until)
+    return {"code": c["code"], **_cfg_out(await ev.cohort(code))}
 
 
 class DayIn(BaseModel):
@@ -339,7 +369,15 @@ async def end_access(code: str, user: dict = Depends(require_admin)):
         await notify(u["_id"], "Your event access has ended. Everything you made is saved — continue with OwnerDesk Membership "
                                "to keep using it (Plans & billing).")
         ended += 1
-    await db().cohorts.update_one({"_id": c["_id"]}, {"$set": {"event.ended_at": now(), "event.open": False}})
+    # the 3-Day pages given at signup from this cohort's links close too (their work stays), and the links stop giving them
+    async for u in db().users.find({"welcome.on": True, "welcome.only": "threeday", "welcome.cohort": c["code"]}):
+        if plans.is_paid(u):
+            continue
+        await db().users.update_one({"_id": u["_id"]}, {"$set": {"welcome.on": False, "welcome.changed_at": now(), "welcome.changed_by": user["_id"]}})
+        await notify(u["_id"], "Your 3-day event access has ended. Everything you made is saved — continue with OwnerDesk Membership "
+                               "to keep using it (Plans & billing).")
+        ended += 1
+    await db().cohorts.update_one({"_id": c["_id"]}, {"$set": {"event.ended_at": now(), "event.open": False, "event.threeday_until": None}})
     await plans.load(force=True)
     await track("event_end_access", user["_id"], cohort=c["code"], ended=ended)
     return {"ended": ended, "code": c["code"], **_cfg_out(await ev.cohort(code))}
