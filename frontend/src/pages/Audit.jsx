@@ -5,7 +5,7 @@ import { Busy, FormError, Sheet, Stat } from "../ui.jsx";
 import { Loading } from "../v2.jsx";
 import "./audit.css";
 
-/* Engine Audit (v2.3): the Day 1 activity. Have it or Missing for each of the 14 processes, one list, nothing to type: a gap
+/* Engine Audit (v2.3): the Day 1 activity. Have it or Missing for each line (Lead, Operations, Brand), nothing to type: a gap
    counts the hours a week a typical small business loses to it. Totals add up live, here on the phone (the server does the
    same sums when the audit is saved). 0 tokens. Audits saved before may hold ₹ figures; those show only when there are some. */
 
@@ -105,6 +105,7 @@ function Take({ data, initial, onDone, onCancel }) {
   const [year, setYear] = useState(false);
   const [err, setErr] = useState("");
   const items = data.items;
+  const label = useMemo(() => Object.fromEntries((data.engines || []).map((e) => [e.key, e.label])), [data.engines]);
   const live = useMemo(() => compute(items, answers, 0, data.cap_pct), [items, answers, data.cap_pct]);
   const n = live.total.answered;
 
@@ -132,7 +133,12 @@ function Take({ data, initial, onDone, onCancel }) {
 
       <section className="panel au-engine">
         {items.map((it, i) => (
-          <Item key={it.key} it={it} n={i + 1} a={answers[it.key] || {}} onChange={(a) => setAnswers({ ...answers, [it.key]: a })} />
+          <React.Fragment key={it.key}>
+            {(i === 0 || items[i - 1].engine !== it.engine) && (
+              <span className="label au-group">{(label[it.engine] || it.engine)} audit</span>
+            )}
+            <Item it={it} n={i + 1} a={answers[it.key] || {}} onChange={(a) => setAnswers({ ...answers, [it.key]: a })} />
+          </React.Fragment>
         ))}
       </section>
 
@@ -293,7 +299,7 @@ export default function Audit() {
     : data.latest ? { answers: Object.fromEntries(data.latest.answers.map((r) => [r.item_key, { status: statusOf(r.status) }])) }
       : { answers: {} };
   return (
-    <Sheet {...head} title={<>Check your business against <em>14 processes</em>.</>}
+    <Sheet {...head} title={<>Have it, or <em>missing?</em></>}
       sub="See which parts of your business run without you, the hours each gap costs you a week, and what fixes it.">
       <Take data={data} initial={initial} onCancel={data.latest ? () => setTaking(false) : null}
         onDone={async (res) => { await load(); setShown(res); setTaking(false); window.scrollTo(0, 0); }} />

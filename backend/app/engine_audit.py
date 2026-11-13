@@ -1,8 +1,8 @@
 """
 Engine Audit (v2.3): the 4-3-2-1 audit, done on the hub — the Day 1 activity of the 3-day "your time back" event.
 
-The owner checks their business against the 14 processes of the AI Advantage Day 1 audit ("A website that brings you
-inquiries every week, without you chasing anyone"), one list. For each one the owner taps Have it or Missing — nothing to
+The owner checks their business against the 9 lines of the Day 1 audit slides ("Have it, or missing?"): 3 for Lead, 3 for
+Operations and 3 for Brand ("A website that brings you enquiries every week"). For each one the owner taps Have it or Missing — nothing to
 type. A gap counts the hours a week a typical small business loses to it (est_hours, the admin can tune it), and the owner
 sees straight away which OwnerDesk feature fixes it. (The API still takes a ₹ a month and an hours figure per gap; audits
 saved before the page stopped asking hold them, and the ₹ figures show only when there are some.)
@@ -15,8 +15,8 @@ Every figure is labelled "Estimated from your own numbers." Nothing here calls t
 
 Items follow the feature registry: an item whose feature is switched off (or that the admin switches off) drops out.
 
-config {_id "engine_audit", items_day1 {key: {statement, hint_cost, hint_hours, est_hours, rate, hours_rate, on}}, cap_pct, updated_at}
-       (items: the admin's edits to the 16 statements used before the Day 1 audit's 14; no longer read)
+config {_id "engine_audit", items_abb2027 {key: {statement, hint_cost, hint_hours, est_hours, rate, hours_rate, on}}, cap_pct, updated_at}
+       (items_abb2027: the admin's edits to the 9 questions. items_day1 and items: edits to the earlier 14 and 16; no longer read)
 engine_audits {_id, owner_id, answers [{item_key, engine, feature, status, monthly_cost, hours_week, growth_unlocked,
                hours_back}], totals {...}, revenue {month, source}, completed_at, by}
   (audits saved before "Not sure" was taken out may hold status "unsure" and cost_unsure / hours_unsure: read as Missing)
@@ -38,46 +38,38 @@ MAX_COST = 1e9          # ₹ a month for one gap
 MAX_HOURS = 1000        # hours a week (a whole team's)
 
 # (key, engine, statement, feature that fixes it, hint for the ₹ question, what the hours go on, hours a week a typical small
-# business loses to the gap): the 14 processes of the AI Advantage Day 1 audit, in its order, with its words
+# business loses to the gap): the 9 lines of the AI Business Breakthrough 2027 Day 1 audit slides ("Have it, or missing?"),
+# Lead, then Operations, then Brand, in their order, with their words
 DEFAULT_ITEMS = [
-    ("lead_website", "lead", "A website that brings you inquiries every week, without you chasing anyone", "website",
-     "Inquiries you miss a month × your average order", "Hours spent explaining your business and sending details again and again", 3),
-    ("lead_magnet", "lead", "A free guide or checklist that collects contacts of people interested in what you sell", "lead_magnet",
-     "Leads you could collect a month × your close rate × your average order", "Hours spent finding new people to talk to", 3),
-    ("sales_invoicing", "sales", "Quotations and invoices that go out the same day, without you sitting to make them", "quotations",
-     "Staff hours a month × hourly cost, plus payments delayed by late invoices", "Hours spent making, checking and resending quotes and bills", 5),
-    ("sales_levers", "sales", "A clear plan to grow revenue: more customers, bigger orders, more repeat buying", "revenue_levers",
-     "Growth you're leaving on the table a month", "Hours spent on growth ideas that go nowhere", 2),
-    ("conv_inquiries", "conversion", "Every inquiry, from WhatsApp, email, calls and website, in one place and answered fast",
-     "inquiry_desk", "Inquiries a month that never get a reply × your close rate × your average order",
+    ("lead_site", "lead", "A website that brings you enquiries every week", "website",
+     "Enquiries you miss a month × your average order", "Hours spent explaining your business and sending details again and again", 3),
+    ("lead_found", "lead", "New customers who find you without a referral", "lead_magnet",
+     "New customers a month you'd win without a referral × your average order", "Hours spent finding new people to talk to", 3),
+    ("lead_captured", "lead", "Every enquiry captured in one place, even at night", "inquiry_desk",
+     "Enquiries a month that never get a reply × your close rate × your average order",
      "Hours spent searching chats and replying late", 5),
-    ("conv_pipeline", "conversion", "Every lead tracked stage by stage, so none is forgotten", "pipeline",
-     "Deals a month lost to forgotten follow-ups × your average order", "Hours spent remembering who to call back", 3),
-    ("conv_deal_value", "conversion", "You know exactly how much money is sitting in open deals right now", "crm",
-     "Deals a month that slip because nobody was watching them × your average order", "Hours spent asking your team for updates", 2),
-    ("ops_compliance", "operations", "Every GST, TDS, licence and renewal date tracked, and reminded before it's due",
-     "compliance_calendar", "Penalties and late fees in a typical year ÷ 12", "Hours spent chasing your CA and fixing late filings", 2),
-    ("ops_sops", "operations", "Your key processes written down, so your team doesn't need to ask you", "sop_library",
+    ("ops_written", "operations", "Your key tasks written down, step by step", "sop_library",
      "Your hours a month spent explaining and fixing mistakes × what an hour of your time is worth",
-     "Hours spent answering the same questions", 5),
-    ("ops_payments", "operations", "Pending payments followed up on time, without you chasing", "money_owed",
-     "Money stuck overdue a month (the interest on it, plus your time)", "Hours spent calling customers for money", 4),
-    ("brand_kit", "brand", "One brand message and voice, the same on your website, WhatsApp and sales calls", "brand_kit",
-     "Business lost to looking smaller or less trustworthy than competitors", "Hours spent rewriting how you describe your business", 1.5),
-    ("brand_social", "brand", "Posting on social media every week, with content ready in advance", "social_media",
-     "Inquiries a month you'd get from regular posting × your close rate × your average order",
-     "Hours spent thinking what to post, or not posting at all", 4),
-    ("data_money", "data", "Knowing exactly where your money goes every month", "expenses",
-     "Spending a month you'd cut if you could see it", "Hours spent going through bank statements and bills", 3),
-    ("data_keyperson", "data", "If your most important employee left tomorrow, their know-how stays in the business", "key_person",
+     "Hours spent explaining the same tasks again", 4),
+    ("ops_team", "operations", "A team that does the daily work without calling you", "sop_library",
+     "Your hours a month spent on calls your team could handle × what an hour of your time is worth",
+     "Hours spent answering your team's calls and questions", 5),
+    ("ops_keyperson", "operations", "A business that keeps running if your best person leaves tomorrow", "key_person",
      "What a month of disruption would cost if that person left", "Hours spent covering for, or depending on, one person", 3),
+    ("brand_weekly", "brand", "Something posted about your business every week", "social_media",
+     "Enquiries a month you'd get from regular posting × your close rate × your average order",
+     "Hours spent thinking what to post, or not posting at all", 3),
+    ("brand_same", "brand", "The same look and message everywhere a customer sees you", "brand_kit",
+     "Business lost to looking smaller or less trustworthy than competitors", "Hours spent rewriting how you describe your business", 1.5),
+    ("brand_planned", "brand", "Next month's posts already planned", "social_media",
+     "Posting days a month you miss because nothing is ready", "Hours spent making posts at the last minute", 2),
 ]
 ITEM_KEYS = [i[0] for i in DEFAULT_ITEMS]
 # features without a page of their own: where the fix lives
 FIX_PATH = {"brochures": "/brand-kit?tab=brochures"}
-# where the admin's edits are kept: a new field for the 14 Day 1 questions, so edits made to the earlier 16 don't put old
-# wording on the new questions
-ITEMS_FIELD = "items_day1"
+# where the admin's edits are kept: a new field for the 9 questions of the 2027 slides, so edits made to the earlier lists
+# (the 16 statements, then the 14 Day 1 processes in "items_day1") don't put old wording on the new questions
+ITEMS_FIELD = "items_abb2027"
 EDITABLE = {"statement": str, "hint_cost": str, "hint_hours": str, "est_hours": (int, float), "rate": (int, float),
             "hours_rate": (int, float), "on": bool}
 

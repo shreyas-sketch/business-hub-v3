@@ -99,7 +99,7 @@ async def finish(body: AuditIn, ctx: Ctx = Depends(feature("engine_audit", "owne
     result = ea.compute(items, answers, revenue.get("month"), cfg["cap_pct"])
     prev = await db().engine_audits.find_one({"owner_id": ctx.ws}, {"totals": 1, "completed_at": 1}, sort=[("completed_at", -1)])
     change = None
-    if prev:
+    if prev and prev["totals"].get("total") == result["totals"]["total"]:   # an audit of the earlier questions isn't comparable
         p, t = prev["totals"], result["totals"]
         change = {"since": prev["completed_at"].isoformat(), "in_place": t["in_place"] - p["in_place"],
                   "cost_month": t["cost_month"] - p["cost_month"], "hours_week": round(t["hours_week"] - p["hours_week"], 1)}

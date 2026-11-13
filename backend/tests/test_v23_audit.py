@@ -1,4 +1,4 @@
-"""v2.3 Engine Audit: the 4-3-2-1 audit on the hub. Have it / Missing for each of the 14 processes, a rupee
+"""v2.3 Engine Audit: the Day 1 audit on the hub. Have it / Missing for each of the 9 lines (Lead, Operations, Brand), a rupee
 cost a month and hours a week for each gap, growth unlocked and hours back (× the item's rate, capped at half a month's
 sales), the fix for each gap (open, opening on an event day, or in the plan), history with the change since last time, the
 PDF and the share card, and Admin → Engine Audit. 0 AI tokens. Every business, person and number here is invented."""
@@ -9,9 +9,9 @@ from app.db import db, now
 from tests.conftest import new_owner
 from tests.v23_helpers import admin_client, owner_id, setup_v23, v23_member
 
-# the 14 processes of the AI Advantage Day 1 audit, in its order
-ALL_KEYS = ["lead_website", "lead_magnet", "sales_invoicing", "sales_levers", "conv_inquiries", "conv_pipeline", "conv_deal_value",
-            "ops_compliance", "ops_sops", "ops_payments", "brand_kit", "brand_social", "data_money", "data_keyperson"]
+# the 9 lines of the AI Business Breakthrough 2027 Day 1 audit slides, in their order: Lead, Operations, Brand
+ALL_KEYS = ["lead_site", "lead_found", "lead_captured", "ops_written", "ops_team", "ops_keyperson",
+            "brand_weekly", "brand_same", "brand_planned"]
 
 
 def all_have(**changes) -> dict:
@@ -32,45 +32,51 @@ async def test_items_by_engine_with_their_fixes(client):
     m = await v23_member("9811000002")
     a = (await m.get("/api/audit")).json()
     assert [i["key"] for i in a["items"]] == ALL_KEYS
-    assert [e["key"] for e in a["engines"]] == ["lead", "sales", "conversion", "operations", "brand", "data"]
+    assert [e["key"] for e in a["engines"]] == ["lead", "operations", "brand"]
+    assert [e["label"] for e in a["engines"]] == ["Lead", "Operations", "Brand"]
     fixes = {i["key"]: i["fix"] for i in a["items"]}
-    assert fixes["lead_website"] == {"state": "open", "label": "Website", "path": "/website"}
-    assert fixes["sales_levers"]["label"] == "Revenue Multiplier" and fixes["sales_levers"]["state"] == "open"
-    assert fixes["conv_deal_value"] == {"state": "open", "label": "CRM", "path": "/contacts"}
+    assert fixes["lead_site"] == {"state": "open", "label": "Website", "path": "/website"}
+    assert fixes["ops_written"]["label"] == "SOP Writer" and fixes["ops_written"]["state"] == "open"
+    assert fixes["brand_same"] == {"state": "open", "label": "Brand kit", "path": "/brand-kit"}
     st = {i["key"]: i["statement"] for i in a["items"]}
-    assert st["lead_website"] == "A website that brings you inquiries every week, without you chasing anyone"
-    assert st["data_keyperson"] == "If your most important employee left tomorrow, their know-how stays in the business"
-    assert next(i for i in a["items"] if i["key"] == "ops_payments")["hint_hours"] == "Hours spent calling customers for money"
+    assert list(st.values()) == [
+        "A website that brings you enquiries every week", "New customers who find you without a referral",
+        "Every enquiry captured in one place, even at night",
+        "Your key tasks written down, step by step", "A team that does the daily work without calling you",
+        "A business that keeps running if your best person leaves tomorrow",
+        "Something posted about your business every week", "The same look and message everywhere a customer sees you",
+        "Next month's posts already planned"]
+    assert next(i for i in a["items"] if i["key"] == "ops_team")["hint_hours"] == "Hours spent answering your team's calls and questions"
     assert all(i["hint_cost"] and i["hint_hours"] and i["rate"] == 0.5 and i["hours_rate"] == 0.5 for i in a["items"])
     assert a["latest"] is None and a["history"] == [] and a["note"] == "Estimated from your own numbers." and a["cap_pct"] == 50
 
     free = await v23_member("9811000003", paid=False)
     fx = {i["key"]: i["fix"] for i in (await free.get("/api/audit")).json()["items"]}
-    assert fx["lead_website"]["state"] == "plan" and fx["lead_website"]["path"] == "/plans"
-    assert fx["lead_website"]["tier_name"] == "OwnerDesk Membership"
+    assert fx["lead_site"]["state"] == "plan" and fx["lead_site"]["path"] == "/plans"
+    assert fx["lead_site"]["tier_name"] == "OwnerDesk Membership"
 
 
 async def test_totals_growth_hours_and_top_gaps_with_no_tokens(client):
     m = await v23_member("9811000004")
     before = (await m.get("/api/me")).json()["runs"]["used"]
-    r = await m.post("/api/audit", json={"answers": {"lead_website": {"status": "missing"}}})
+    r = await m.post("/api/audit", json={"answers": {"lead_site": {"status": "missing"}}})
     assert r.status_code == 400 and "still to go" in r.json()["detail"]
     answers = all_have(
-        lead_magnet={"status": "missing", "monthly_cost": 40000, "hours_week": 4},
-        ops_payments={"status": "missing", "monthly_cost": 90000, "hours_week": 6},
-        brand_social={"status": "missing", "monthly_cost": 15000, "hours_week": 3},
-        ops_sops={"status": "missing", "monthly_cost": 25000, "hours_week": 10},
+        lead_found={"status": "missing", "monthly_cost": 40000, "hours_week": 4},
+        ops_team={"status": "missing", "monthly_cost": 90000, "hours_week": 6},
+        brand_weekly={"status": "missing", "monthly_cost": 15000, "hours_week": 3},
+        ops_written={"status": "missing", "monthly_cost": 25000, "hours_week": 10},
     )
     res = (await m.post("/api/audit", json={"answers": answers})).json()
     t = res["totals"]
-    assert t["in_place"] == 10 and t["total"] == 14 and t["gaps"] == 4
+    assert t["in_place"] == 5 and t["total"] == 9 and t["gaps"] == 4
     assert t["cost_month"] == 170000
     assert t["growth_month"] == 85000 and t["hours_week"] == 23 and t["hours_back_week"] == 11.5
     assert "unsure_amounts" not in t and not t["capped"]
     rows = {x["item_key"]: x for x in res["answers"]}
-    assert rows["brand_social"]["monthly_cost"] == 15000 and "cost_unsure" not in rows["brand_social"]
-    assert rows["ops_payments"]["growth_unlocked"] == 45000 and rows["ops_payments"]["hours_back"] == 3
-    assert res["top_gaps"] == ["ops_payments", "lead_magnet", "ops_sops"]
+    assert rows["brand_weekly"]["monthly_cost"] == 15000 and "cost_unsure" not in rows["brand_weekly"]
+    assert rows["ops_team"]["growth_unlocked"] == 45000 and rows["ops_team"]["hours_back"] == 3
+    assert res["top_gaps"] == ["ops_team", "lead_found", "ops_written"]
     ops = next(e for e in res["engines"] if e["key"] == "operations")
     assert ops["in_place"] == 1 and ops["total"] == 3 and ops["cost_month"] == 115000 and ops["hours_week"] == 16
     assert res["change"] is None and res["note"] == "Estimated from your own numbers."
@@ -82,13 +88,13 @@ async def test_totals_growth_hours_and_top_gaps_with_no_tokens(client):
 
 async def test_growth_is_capped_at_half_a_months_sales(client):
     m = await v23_member("9811000005")
-    answers = all_have(lead_website={"status": "missing", "monthly_cost": 300000, "hours_week": 2},
-                       conv_inquiries={"status": "missing", "monthly_cost": 100000, "hours_week": 2})
+    answers = all_have(lead_site={"status": "missing", "monthly_cost": 300000, "hours_week": 2},
+                       lead_captured={"status": "missing", "monthly_cost": 100000, "hours_week": 2})
     res = (await m.post("/api/audit", json={"answers": answers, "revenue_month": 100000})).json()
     t = res["totals"]
     assert t["capped"] and t["cap_amount"] == 50000 and t["growth_month"] == 50000 and t["cost_month"] == 400000
     rows = {x["item_key"]: x for x in res["answers"]}
-    assert rows["lead_website"]["growth_unlocked"] == 37500 and rows["conv_inquiries"]["growth_unlocked"] == 12500
+    assert rows["lead_site"]["growth_unlocked"] == 37500 and rows["lead_captured"]["growth_unlocked"] == 12500
     assert res["revenue"] == {"month": 100000, "source": "the sales a month you typed"}
 
     # with no sales typed, the Knowledge Hub's monthly revenue target is used
@@ -102,15 +108,15 @@ async def test_growth_is_capped_at_half_a_months_sales(client):
 
 async def test_draft_history_change_pdf_and_card(client):
     m = await v23_member("9811000006")
-    draft = {"answers": {"lead_website": {"status": "missing", "monthly_cost": 5000}}, "revenue_month": 80000}
+    draft = {"answers": {"lead_site": {"status": "missing", "monthly_cost": 5000}}, "revenue_month": 80000}
     assert (await m.put("/api/audit/draft", json=draft)).status_code == 200
     got = (await m.get("/api/audit")).json()
-    assert got["draft"]["answers"]["lead_website"]["monthly_cost"] == 5000 and got["draft"]["revenue_month"] == 80000
+    assert got["draft"]["answers"]["lead_site"]["monthly_cost"] == 5000 and got["draft"]["revenue_month"] == 80000
 
-    first = (await m.post("/api/audit", json={"answers": all_have(lead_website={"status": "missing", "monthly_cost": 20000,
-                                                                                   "hours_week": 5},
-                                                                     data_money={"status": "missing", "monthly_cost": 8000})})).json()
-    second = (await m.post("/api/audit", json={"answers": all_have(data_money={"status": "missing", "monthly_cost": 8000})})).json()
+    first = (await m.post("/api/audit", json={"answers": all_have(lead_site={"status": "missing", "monthly_cost": 20000,
+                                                                                "hours_week": 5},
+                                                                     brand_planned={"status": "missing", "monthly_cost": 8000})})).json()
+    second = (await m.post("/api/audit", json={"answers": all_have(brand_planned={"status": "missing", "monthly_cost": 8000})})).json()
     assert second["change"] == {"since": first["completed_at"], "in_place": 1, "cost_month": -20000, "hours_week": -5}
     got = (await m.get("/api/audit")).json()
     assert [h["id"] for h in got["history"]] == [second["id"], first["id"]] and got["draft"] is None
@@ -131,9 +137,9 @@ async def test_an_item_drops_out_when_its_feature_is_switched_off(client):
     adm = await admin_client()
     assert (await adm.patch("/api/admin/config/features/social_media", json={"on": False})).status_code == 200
     keys = [i["key"] for i in (await m.get("/api/audit")).json()["items"]]
-    assert "brand_social" not in keys and len(keys) == 13
+    assert "brand_weekly" not in keys and "brand_planned" not in keys and len(keys) == 7
     res = (await m.post("/api/audit", json={"answers": {k: {"status": "have"} for k in keys}})).json()
-    assert res["totals"]["total"] == 13
+    assert res["totals"]["total"] == 7
 
 
 async def test_event_day_shows_when_a_fix_opens(client):
@@ -146,61 +152,74 @@ async def test_event_day_shows_when_a_fix_opens(client):
                                                                  "cohort": "AUDITDAY"}}})
     await plans.load(force=True)
     fx = {i["key"]: i["fix"] for i in (await m.get("/api/audit")).json()["items"]}
-    assert fx["lead_website"]["state"] == "open" and fx["sales_invoicing"]["state"] == "open"
-    assert fx["conv_inquiries"] == {"state": "day", "label": "Inquiries", "path": "/inquiries", "opens_day": 2}
-    assert fx["data_money"]["state"] == "day" and fx["data_money"]["opens_day"] == 3
-    assert fx["conv_deal_value"]["state"] == "day" and fx["conv_deal_value"]["opens_day"] == 2
+    assert fx["lead_site"]["state"] == "open"
+    assert fx["lead_captured"] == {"state": "day", "label": "Inquiries", "path": "/inquiries", "opens_day": 2}
+    assert fx["ops_written"]["state"] == "day" and fx["ops_written"]["opens_day"] == 2
+    assert fx["brand_same"]["state"] == "day" and fx["brand_same"]["opens_day"] == 3
 
 
 async def test_admin_edits_items_rates_and_the_cap(client):
     m = await v23_member("9811000010")
     adm = await admin_client()
     view = (await adm.get("/api/admin/audit")).json()
-    assert len(view["items"]) == 14 and view["cap_pct"] == 50 and view["stats"]["audits"] == 0
-    r = await adm.put("/api/admin/audit/items/lead_magnet", json={"statement": "A free guide on my website collects leads every week",
+    assert len(view["items"]) == 9 and view["cap_pct"] == 50 and view["stats"]["audits"] == 0
+    r = await adm.put("/api/admin/audit/items/lead_found", json={"statement": "A free guide on my website collects leads every week",
                                                                    "rate": 0.25, "hours_rate": 1})
     assert r.status_code == 200
-    item = next(i for i in r.json()["items"] if i["key"] == "lead_magnet")
+    item = next(i for i in r.json()["items"] if i["key"] == "lead_found")
     assert item["changed"] and item["rate"] == 0.25 and item["default"]["rate"] == 0.5
-    assert (await adm.put("/api/admin/audit/items/ops_compliance", json={"on": False})).status_code == 200
+    assert (await adm.put("/api/admin/audit/items/ops_keyperson", json={"on": False})).status_code == 200
     assert (await adm.put("/api/admin/audit/settings", json={"cap_pct": 20})).json()["cap_pct"] == 20
     assert (await adm.put("/api/admin/audit/items/nope", json={"on": False})).status_code == 404
-    assert (await adm.put("/api/admin/audit/items/lead_magnet", json={"rate": 2})).status_code == 422
+    assert (await adm.put("/api/admin/audit/items/lead_found", json={"rate": 2})).status_code == 422
 
     a = (await m.get("/api/audit")).json()
     items = {i["key"]: i for i in a["items"]}
-    assert "ops_compliance" not in items and items["lead_magnet"]["statement"].startswith("A free guide on my website")
+    assert "ops_keyperson" not in items and items["lead_found"]["statement"].startswith("A free guide on my website")
     assert a["cap_pct"] == 20
     answers = {k: {"status": "have"} for k in items}
-    answers["lead_magnet"] = {"status": "missing", "monthly_cost": 40000, "hours_week": 4}
+    answers["lead_found"] = {"status": "missing", "monthly_cost": 40000, "hours_week": 4}
     res = (await m.post("/api/audit", json={"answers": answers, "revenue_month": 1000000})).json()
     assert res["totals"]["growth_month"] == 10000 and res["totals"]["hours_back_week"] == 4 and not res["totals"]["capped"]
 
-    r = (await adm.post("/api/admin/audit/items/lead_magnet/reset")).json()
-    item = next(i for i in r["items"] if i["key"] == "lead_magnet")
+    r = (await adm.post("/api/admin/audit/items/lead_found/reset")).json()
+    item = next(i for i in r["items"] if i["key"] == "lead_found")
     assert not item["changed"] and item["rate"] == 0.5 and r["stats"]["audits"] == 1 and r["stats"]["owners"] == 1
     assert (await m.get("/api/admin/audit")).status_code == 403
 
 
-async def test_edits_made_to_the_earlier_questions_dont_reword_the_day1_ones(client):
-    """Admin edits saved for the 16 statements used before (config "items") are not read: the 14 keep their own words."""
+async def test_edits_made_to_the_earlier_questions_dont_reword_the_new_ones(client):
+    """Admin edits saved for the earlier lists (config "items": the 16 statements, "items_day1": the 14 Day 1 processes) are
+    not read: the 9 keep their own words, even where a key was used before."""
     m = await v23_member("9811000012")
     from app import engine_audit as ea
-    await db().config.update_one({"_id": "engine_audit"}, {"$set": {"items": {"lead_website": {"statement": "My website brings me inquiries every week"}}}},
-                                 upsert=True)
+    await db().config.update_one({"_id": "engine_audit"}, {"$set": {
+        "items": {"lead_site": {"statement": "My website brings me inquiries every week"}},
+        "items_day1": {"ops_team": {"statement": "Old wording"}, "brand_kit": {"on": False}}}}, upsert=True)
     ea.forget_cache()
-    item = next(i for i in (await m.get("/api/audit")).json()["items"] if i["key"] == "lead_website")
-    assert item["statement"] == "A website that brings you inquiries every week, without you chasing anyone"
+    items = {i["key"]: i for i in (await m.get("/api/audit")).json()["items"]}
+    assert items["lead_site"]["statement"] == "A website that brings you enquiries every week"
+    assert items["ops_team"]["statement"] == "A team that does the daily work without calling you" and len(items) == 9
+
+
+async def test_an_audit_of_the_earlier_questions_shows_no_change_line(client):
+    m = await v23_member("9811000014")
+    uid = await owner_id(m)
+    await db().engine_audits.insert_one({"_id": "old-14", "owner_id": uid, "completed_at": now() - timedelta(days=1),
+                                         "answers": [], "engines": [], "top_gaps": [],
+                                         "totals": {"in_place": 10, "total": 14, "cost_month": 0, "hours_week": 12}})
+    res = (await m.post("/api/audit", json={"answers": all_have()})).json()
+    assert res["totals"]["total"] == 9 and res["change"] is None
 
 
 async def test_there_is_no_not_sure_answer_and_older_ones_read_as_missing(client):
     m = await v23_member("9811000013")
-    r = await m.post("/api/audit", json={"answers": all_have(lead_magnet={"status": "unsure"})})
+    r = await m.post("/api/audit", json={"answers": all_have(lead_found={"status": "unsure"})})
     assert r.status_code == 422                                     # only Have it or Missing
     from app import engine_audit as ea
     items = [dict(v) for v in ea.defaults().values()]
-    old = {k: {"status": "have"} for k in ALL_KEYS} | {"lead_magnet": {"status": "unsure", "monthly_cost": 5000, "cost_unsure": True}}
+    old = {k: {"status": "have"} for k in ALL_KEYS} | {"lead_found": {"status": "unsure", "monthly_cost": 5000, "cost_unsure": True}}
     res = ea.compute(items, old, None, 50)                          # a draft saved when there was a "Not sure"
-    row = next(x for x in res["rows"] if x["item_key"] == "lead_magnet")
+    row = next(x for x in res["rows"] if x["item_key"] == "lead_found")
     assert row["status"] == "missing" and row["monthly_cost"] == 5000 and res["totals"]["gaps"] == 1
     assert ea.STATUS_WORD["unsure"] == "Missing"                    # an older audit's PDF says Missing
