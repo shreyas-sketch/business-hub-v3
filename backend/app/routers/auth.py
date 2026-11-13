@@ -251,8 +251,13 @@ async def _create_user(phone: str, body: VerifyIn) -> tuple[dict, bool]:
     body.src = (body.src or "").strip().lower()[:24] or None
     user = {"_id": new_id(), "phone": phone, "name": (body.name or "").strip()[:80], "plan": "free", "bonus_runs": 0,
             "role": "admin" if phone in settings.admin_phones else "owner", "cohort": cohort, "session_version": 0, "created_at": now()}
+    threeday_until = ((c or {}).get("event") or {}).get("threeday_until")
     if invite:  # joining someone's team, not starting their own hub
         user.update(team_of=invite["owner_id"], team_role=invite.get("role", "staff"), name=user["name"] or invite.get("name", ""), cohort=None)
+    elif hasattr(threeday_until, "tzinfo") and threeday_until > now():
+        # signed up from a cohort link set to give the 3-Day pages (Admin → Live event): only those open until they join.
+        # It wins over the hub-wide "New signups get" choice, so the L0 signups elsewhere carry on as they are.
+        user["welcome"] = {"on": True, "only": "threeday", "at": now(), "cohort": cohort}
     elif plans.UI.get("welcome_starter"):   # a new hub starts with only the L0 starter pages open, the rest locked until they join
         user["welcome"] = {"on": True, "only": "starter", "at": now()}
     elif plans.UI.get("welcome_full_hub"):   # a new hub starts with everything open, until the admin switches it off
@@ -356,8 +361,8 @@ def _v23_me(owner: dict) -> dict:
             continue
         if m.get("grants_only"):   # open only to owners the admin has granted it to: no plan or event day opens it
             locks[k] = {"lock": "grant"}
-        elif plans.starter_locked(owner, k):   # outside the L0 starter given at signup: opens once they join
-            locks[k] = {"lock": "starter"}
+        elif plans.starter_locked(owner, k):   # outside the L0 starter or 3-Day set given at signup: opens once they join
+            locks[k] = {"lock": plans.signup_set(owner)}
         elif plans.day_locked(owner, k):
             locks[k] = {"lock": "day", "opens_day": plans.feature_day(k)}
         elif m.get("paid_only") and plans.rank(plans.effective_plan(owner)) >= plans.rank(m["tier"]):
@@ -370,6 +375,7 @@ def _v23_me(owner: dict) -> dict:
         "feature_locks": locks,
         "paid": plans.is_paid(owner),
         "starter": plans.starter_only(owner),
+        "threeday": plans.threeday_only(owner),
         "event": {"cohort": trial.get("cohort"), "day": plans.event_day(owner), "until": None if plans.open_ended(trial["until"]) else trial["until"].isoformat()} if trial else None,
         "membership": {"name": lite["name"], "price_minor": lite["price_minor"], "price_year_minor": lite.get("price_year_minor", 0),
                        "runs": lite["runs"] + lite.get("extra_runs", 0), "images": lite.get("images", 30),

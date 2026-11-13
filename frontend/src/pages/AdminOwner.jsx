@@ -9,6 +9,8 @@ import "./admin.css";
 
 const TIERS = ["free", "lite", "program", "running", "growth", "office"];
 const rank = (t) => Math.max(TIERS.indexOf(t), 0);
+// what an owner's signup access can be limited to (Admin → Features & plans marks each set's pages)
+const SIGNUP_SET = { starter: "L0", threeday: "3-Day", full: "Full hub" };
 const SOURCE = { purchase: "paid once", subscription: "Membership subscription", trial: "invite trial", welcome: "full hub from signup", admin: "set by the team", hub_admin: "admin number — everything unlocked" };
 // WhatsApp tool: the server says which fields each service needs (c.service_fields) and the services' names (c.services).
 const OPTION_NAMES = { twilio: "Twilio", sip: "SIP trunk", demo: "Demo (test setup)" };
@@ -35,19 +37,19 @@ function PlanPanel({ o, tierNames, onSaved }) {
       </div>
       <p className="small">In use now: <b>{o.plan_name}</b> <span className="muted">({SOURCE[o.plan_source] || o.plan_source})</span></p>
       <div className="row">
-        <span className="small">{o.starter ? "L0 starter" : "Full hub"} from signup: <b>{o.welcome ? "on" : "off"}</b></span>
+        <span className="small">{SIGNUP_SET[o.only] || "Full hub"} from signup: <b>{o.welcome ? "on" : "off"}</b></span>
         <Busy className="btn sm" run={async () => {
           await api(`/admin/users/${o.id}`, { method: "PATCH", body: { welcome: !o.welcome } });
           toast(o.welcome ? "Signup access switched off. The owner keeps what their plan gives them." : "Signup access switched on for this owner.");
           onSaved();
         }}>{o.welcome ? "Switch off" : "Switch on"}</Busy>
-        {o.welcome && (
-          <Busy className="btn sm ghost" run={async () => {
-            await api(`/admin/users/${o.id}`, { method: "PATCH", body: { starter: !o.starter } });
-            toast(o.starter ? "The full hub is open for this owner." : "This owner now has only the L0 pages; the rest is locked until they join.");
+        {o.welcome && Object.entries(SIGNUP_SET).filter(([k]) => k !== (o.only || "full")).map(([k, label]) => (
+          <Busy key={k} className="btn sm ghost" run={async () => {
+            await api(`/admin/users/${o.id}`, { method: "PATCH", body: { only: k } });
+            toast(k === "full" ? "The full hub is open for this owner." : `This owner now has only the ${label} pages; the rest is locked until they join.`);
             onSaved();
-          }}>{o.starter ? "Open the full hub" : "L0 only"}</Busy>
-        )}
+          }}>{k === "full" ? "Open the full hub" : `${label} only`}</Busy>
+        ))}
       </div>
       {paid.length > 0 && (
         <div className="stack" style={{ gap: 4 }}>
