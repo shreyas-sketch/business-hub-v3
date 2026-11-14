@@ -75,7 +75,7 @@ function ImportBox({ onDone }) {
 function ListPage() {
   const { me } = useHub();
   const nav = useNavigate();
-  const [tab, setTab] = useState("contacts");
+  const [tab, setTab] = useState(() => (new URLSearchParams(window.location.search).get("tab") === "followups" ? "followups" : "contacts"));
   const [q, setQ] = useState("");
   const [source, setSource] = useState("");
   const [tag, setTag] = useState("");
