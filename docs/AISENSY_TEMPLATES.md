@@ -45,7 +45,7 @@ Also used by the event link's "Send my code" and by the Day-1 report.
 
 ### 3. Any other alert to the owner: `AISENSY_OWNER_ALERT_CAMPAIGN`
 Used for compliance reminders, cash-flow warnings, the Monday CEO report, WhatsApp chats that need the owner, new email
-inquiries and attachments.
+inquiries and attachments, and CRM follow-up reminders ("Follow up today: Ramesh Patel — Send the revised quotation").
 
 - **Name:** `hub_owner_alert`
 - **Category:** Utility
