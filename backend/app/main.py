@@ -117,6 +117,16 @@ async def membership_page():
     return JSONResponse({"detail": "Frontend not built. Run: cd frontend && npm install && npm run build"}, status_code=503)
 
 
+@app.get("/breakthrough", include_in_schema=False)
+@app.get("/breakthrough/", include_in_schema=False)
+async def breakthrough_page():
+    """The AI Business Breakthrough 2027 sales page: a standalone page (frontend/public/breakthrough.html) that pays on a Razorpay link."""
+    page = DIST / "breakthrough.html"
+    if page.exists():
+        return FileResponse(page, headers={"Cache-Control": "no-cache"})
+    return JSONResponse({"detail": "Frontend not built. Run: cd frontend && npm install && npm run build"}, status_code=503)
+
+
 @app.get("/{path:path}", include_in_schema=False)
 async def spa(path: str):
     if path.startswith("api/"):
