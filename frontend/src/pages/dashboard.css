@@ -69,3 +69,8 @@
   .db-tile.t-today { order: -1; }     /* on a phone, what needs you today comes first */
   .db-big { font-size: 28px; }
 }
+
+/* What needs you today: hub notices and follow-ups due, above the tiles */
+.db-today { display: grid; gap: 10px; margin-bottom: 16px; }
+.db-today .notice span { min-width: 0; }
+@media (max-width: 640px) { .db-today .notice { flex-direction: column; align-items: flex-start; } }

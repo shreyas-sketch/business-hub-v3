@@ -282,6 +282,41 @@ function Editor({ data, onSaved, onCancel }) {
   );
 }
 
+/** What needs the owner today, above the tiles: the newest hub notice (e.g. a CRM follow-up reminder at 10am, which
+    otherwise only shows on Home) and the follow-ups due today or overdue, linking to CRM → Follow-ups. */
+function TodayStrip({ at }) {
+  const { me, refresh } = useHub();
+  const crm = !!me?.features?.crm;
+  const [fu, setFu] = useState(null);
+  useEffect(() => {
+    if (!crm) return;
+    let live = true;
+    api("/crm/followups").then((r) => { if (live) setFu(r); }).catch(() => {});
+    return () => { live = false; };
+  }, [crm, at]);
+  const notice = me?.notices?.[0];
+  const due = fu ? [...(fu.overdue || []), ...(fu.today || [])] : [];
+  if (!notice && !due.length) return null;
+  const names = due.slice(0, 3).map((i) => i.name).filter(Boolean).join(", ");
+  return (
+    <div className="db-today">
+      {notice && (
+        <div className="notice">
+          <span>{notice.text}</span>
+          <button className="btn sm ghost" onClick={() => api("/notices/read", { method: "POST", body: { ids: [notice.id] } }).then(refresh).catch(() => {})}>Got it</button>
+        </div>
+      )}
+      {due.length > 0 && (
+        <div className="notice">
+          <span><b>{due.length} {due.length === 1 ? "follow-up" : "follow-ups"} due</b>{fu.overdue?.length ? ` (${fu.overdue.length} overdue)` : ""}
+            {names && `: ${names}${due.length > 3 ? ` and ${due.length - 3} more` : ""}`}</span>
+          <Link className="btn sm" to="/contacts?tab=followups">Open follow-ups</Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const [loaded, reload, err] = useLoad("/dashboard");
   const [data, setData] = useState(null);
@@ -303,6 +338,7 @@ export default function Dashboard() {
   if (!data) return <Sheet {...head}>{err ? <LoadError err={err} /> : <Loading />}</Sheet>;
   return (
     <Sheet {...head} actions={!editing && <button className="btn sm ghost" onClick={() => setEditing(true)}>Edit dashboard</button>}>
+      {!editing && <TodayStrip at={at} />}
       {editing && <Editor data={data} onCancel={() => setEditing(false)} onSaved={(d) => { setData(d); setAt(new Date().toISOString()); setEditing(false); }} />}
       <div className="db-grid">
         {data.tiles.map((t) => <Tile key={t.key} t={t} />)}
