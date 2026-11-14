@@ -253,6 +253,21 @@ function Result({ data, audit, onRetake }) {
         </details>
       )}
 
+      {(() => {
+        const done = new Set(audit.answers.map((r) => r.item_key));
+        const fresh = (data.items || []).filter((it) => !done.has(it.key));
+        if (!fresh.length || (data.latest && audit.id !== data.latest.id)) return null;
+        const names = [...new Set(fresh.map((it) => it.engine))].map((k) => (data.engines || []).find((e) => e.key === k)?.label || k);
+        return (
+          <div className="panel au-new">
+            <span className="label">New · {names.join(" and ")} audit</span>
+            <p><b>{fresh.length} new {fresh.length === 1 ? "question" : "questions"}</b> for the {names.join(" and ")} {names.length === 1 ? "engine" : "engines"}.
+              Your answers from {day(audit.completed_at)} are kept — only the new ones are left to answer.</p>
+            <button className="btn primary" onClick={onRetake}>Answer the {fresh.length} new {fresh.length === 1 ? "question" : "questions"}</button>
+          </div>
+        );
+      })()}
+
       <div className="row">
         <a className="btn primary" href={`/api/audit/${audit.id}/pdf`}>Download the PDF</a>
         <button className="btn" onClick={() => shareCard(audit.id)}>Share the image</button>

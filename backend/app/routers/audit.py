@@ -69,7 +69,7 @@ async def get_audit(ctx: Ctx = Depends(feature("engine_audit", "owner"))):
     draft = await db().engine_audit_drafts.find_one({"_id": ctx.ws}) or {}
     history = [d async for d in db().engine_audits.find({"owner_id": ctx.ws}).sort("completed_at", -1).limit(HISTORY)]
     return {"items": [ea.item_view(ctx.owner, it) for it in items],
-            "engines": [{"key": e["key"], "label": e["label"], "day": e["day"], "blurb": e["blurb"]} for e in plans.ENGINES
+            "engines": [{"key": e["key"], "label": e["label"], "day": e["day"], "blurb": e["blurb"]} for e in ea.audit_engines()
                         if any(it["engine"] == e["key"] for it in items)],
             "cap_pct": cfg["cap_pct"], "revenue": await ea.revenue_hint(ctx.ws),
             "draft": {"answers": draft.get("answers") or {}, "revenue_month": draft.get("revenue_month")} if draft else None,
@@ -167,7 +167,7 @@ async def _admin_view() -> dict:
     cfg = await ea.load_config(fresh=True)
     d = ea.defaults()
     items = []
-    for it in sorted(cfg["items"].values(), key=lambda i: (plans.ENGINE_KEYS.index(i["engine"]), i["order"])):
+    for it in sorted(cfg["items"].values(), key=lambda i: (ea.engine_rank(i["engine"]), i["order"])):
         m = plans.META.get(it["feature"]) or {}
         items.append({**{k: it[k] for k in ("key", "engine", "statement", "feature", "hint_cost", "hint_hours", "est_hours", "rate", "hours_rate", "on")},
                       "feature_label": m.get("label", it["feature"]), "feature_on": bool(m.get("on")),
@@ -175,7 +175,7 @@ async def _admin_view() -> dict:
                                                                                                            "hint_hours", "est_hours", "rate", "hours_rate")}})
     since = now().astimezone(IST).replace(hour=0, minute=0, second=0, microsecond=0)   # today, India time
     return {"items": items, "cap_pct": cfg["cap_pct"], "default_cap_pct": ea.DEFAULT_CAP_PCT,
-            "engines": [{"key": e["key"], "label": e["label"]} for e in plans.ENGINES],
+            "engines": [{"key": e["key"], "label": e["label"]} for e in ea.audit_engines()],
             "stats": {"audits": await db().engine_audits.estimated_document_count(),
                       "owners": len(await db().engine_audits.distinct("owner_id")),
                       "today": await db().engine_audits.count_documents({"completed_at": {"$gte": since}})}}

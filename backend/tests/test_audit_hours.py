@@ -1,4 +1,4 @@
-"""Engine Audit, hours only: one list of the 9 Day 1 lines, Have it or Missing and nothing to type. A gap counts the hours a
+"""Engine Audit, hours only: one list of the 9 Day 1 lines and the 6 Day 2 lines, Have it or Missing and nothing to type. A gap counts the hours a
 week a typical small business loses to it (the admin can change that figure); no rupee figures appear unless sent."""
 from tests.test_v23_audit import ALL_KEYS, all_have
 from tests.v23_helpers import admin_client, v23_member
