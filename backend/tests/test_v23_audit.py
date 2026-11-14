@@ -11,7 +11,10 @@ from tests.v23_helpers import admin_client, owner_id, setup_v23, v23_member
 
 # the 9 lines of the AI Business Breakthrough 2027 Day 1 audit slides, in their order: Lead, Operations, Brand
 ALL_KEYS = ["lead_site", "lead_found", "lead_captured", "ops_written", "ops_team", "ops_keyperson",
-            "brand_weekly", "brand_same", "brand_planned"]
+            "brand_weekly", "brand_same", "brand_planned",
+            # then the Day 2 slides, below the Day 1 lines: the Sales audit and the Conversion audit
+            "sales_followup", "sales_quote_chase", "sales_pay_remind", "conv_fast_reply", "conv_quote_sameday", "conv_one_place"]
+DAY1_KEYS = ALL_KEYS[:9]
 
 
 def all_have(**changes) -> dict:
@@ -32,8 +35,8 @@ async def test_items_by_engine_with_their_fixes(client):
     m = await v23_member("9811000002")
     a = (await m.get("/api/audit")).json()
     assert [i["key"] for i in a["items"]] == ALL_KEYS
-    assert [e["key"] for e in a["engines"]] == ["lead", "operations", "brand"]
-    assert [e["label"] for e in a["engines"]] == ["Lead", "Operations", "Brand"]
+    assert [e["key"] for e in a["engines"]] == ["lead", "operations", "brand", "sales", "conversion"]
+    assert [e["label"] for e in a["engines"]] == ["Lead", "Operations", "Brand", "Sales", "Conversion"]
     fixes = {i["key"]: i["fix"] for i in a["items"]}
     assert fixes["lead_site"] == {"state": "open", "label": "Website", "path": "/website"}
     assert fixes["ops_written"]["label"] == "SOP Writer" and fixes["ops_written"]["state"] == "open"
@@ -69,7 +72,7 @@ async def test_totals_growth_hours_and_top_gaps_with_no_tokens(client):
     )
     res = (await m.post("/api/audit", json={"answers": answers})).json()
     t = res["totals"]
-    assert t["in_place"] == 5 and t["total"] == 9 and t["gaps"] == 4
+    assert t["in_place"] == 11 and t["total"] == 15 and t["gaps"] == 4
     assert t["cost_month"] == 170000
     assert t["growth_month"] == 85000 and t["hours_week"] == 23 and t["hours_back_week"] == 11.5
     assert "unsure_amounts" not in t and not t["capped"]
@@ -137,9 +140,9 @@ async def test_an_item_drops_out_when_its_feature_is_switched_off(client):
     adm = await admin_client()
     assert (await adm.patch("/api/admin/config/features/social_media", json={"on": False})).status_code == 200
     keys = [i["key"] for i in (await m.get("/api/audit")).json()["items"]]
-    assert "brand_weekly" not in keys and "brand_planned" not in keys and len(keys) == 7
+    assert "brand_weekly" not in keys and "brand_planned" not in keys and len(keys) == 13
     res = (await m.post("/api/audit", json={"answers": {k: {"status": "have"} for k in keys}})).json()
-    assert res["totals"]["total"] == 7
+    assert res["totals"]["total"] == 13
 
 
 async def test_event_day_shows_when_a_fix_opens(client):
@@ -162,7 +165,7 @@ async def test_admin_edits_items_rates_and_the_cap(client):
     m = await v23_member("9811000010")
     adm = await admin_client()
     view = (await adm.get("/api/admin/audit")).json()
-    assert len(view["items"]) == 9 and view["cap_pct"] == 50 and view["stats"]["audits"] == 0
+    assert len(view["items"]) == 15 and view["cap_pct"] == 50 and view["stats"]["audits"] == 0
     r = await adm.put("/api/admin/audit/items/lead_found", json={"statement": "A free guide on my website collects leads every week",
                                                                    "rate": 0.25, "hours_rate": 1})
     assert r.status_code == 200
@@ -199,7 +202,7 @@ async def test_edits_made_to_the_earlier_questions_dont_reword_the_new_ones(clie
     ea.forget_cache()
     items = {i["key"]: i for i in (await m.get("/api/audit")).json()["items"]}
     assert items["lead_site"]["statement"] == "A website that brings you enquiries every week"
-    assert items["ops_team"]["statement"] == "A team that does the daily work without calling you" and len(items) == 9
+    assert items["ops_team"]["statement"] == "A team that does the daily work without calling you" and len(items) == 15
 
 
 async def test_an_audit_of_the_earlier_questions_shows_no_change_line(client):
@@ -209,7 +212,7 @@ async def test_an_audit_of_the_earlier_questions_shows_no_change_line(client):
                                          "answers": [], "engines": [], "top_gaps": [],
                                          "totals": {"in_place": 10, "total": 14, "cost_month": 0, "hours_week": 12}})
     res = (await m.post("/api/audit", json={"answers": all_have()})).json()
-    assert res["totals"]["total"] == 9 and res["change"] is None
+    assert res["totals"]["total"] == 15 and res["change"] is None
 
 
 async def test_there_is_no_not_sure_answer_and_older_ones_read_as_missing(client):

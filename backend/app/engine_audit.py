@@ -2,7 +2,10 @@
 Engine Audit (v2.3): the 4-3-2-1 audit, done on the hub — the Day 1 activity of the 3-day "your time back" event.
 
 The owner checks their business against the 9 lines of the Day 1 audit slides ("Have it, or missing?"): 3 for Lead, 3 for
-Operations and 3 for Brand ("A website that brings you enquiries every week"). For each one the owner taps Have it or Missing — nothing to
+Operations and 3 for Brand ("A website that brings you enquiries every week"), then the 6 of the Day 2 slides: the Sales
+audit and the Conversion audit, 3 each. The Day 2 lines come after the Day 1 lines (AUDIT_ENGINE_ORDER), and have keys of
+their own, so the answers owners gave the 9 on Day 1 stay as they are: their finished audits are untouched history, and
+taking the audit again starts from those answers with only the new lines to answer. For each one the owner taps Have it or Missing — nothing to
 type. A gap counts the hours a week a typical small business loses to it (est_hours, the admin can tune it), and the owner
 sees straight away which OwnerDesk feature fixes it. (The API still takes a ₹ a month and an hours figure per gap; audits
 saved before the page stopped asking hold them, and the ₹ figures show only when there are some.)
@@ -16,7 +19,7 @@ Every figure is labelled "Estimated from your own numbers." Nothing here calls t
 Items follow the feature registry: an item whose feature is switched off (or that the admin switches off) drops out.
 
 config {_id "engine_audit", items_abb2027 {key: {statement, hint_cost, hint_hours, est_hours, rate, hours_rate, on}}, cap_pct, updated_at}
-       (items_abb2027: the admin's edits to the 9 questions. items_day1 and items: edits to the earlier 14 and 16; no longer read)
+       (items_abb2027: the admin's edits to the 15 questions. items_day1 and items: edits to the earlier 14 and 16; no longer read)
 engine_audits {_id, owner_id, answers [{item_key, engine, feature, status, monthly_cost, hours_week, growth_unlocked,
                hours_back}], totals {...}, revenue {month, source}, completed_at, by}
   (audits saved before "Not sure" was taken out may hold status "unsure" and cost_unsure / hours_unsure: read as Missing)
@@ -63,11 +66,40 @@ DEFAULT_ITEMS = [
      "Business lost to looking smaller or less trustworthy than competitors", "Hours spent rewriting how you describe your business", 1.5),
     ("brand_planned", "brand", "Next month's posts already planned", "social_media",
      "Posting days a month you miss because nothing is ready", "Hours spent making posts at the last minute", 2),
+    # Day 2: the Sales audit, then the Conversion audit (slides 18 and 29), in their order, with their words
+    ("sales_followup", "sales", "Every enquiry followed up until there is a yes or a no", "pipeline",
+     "Enquiries a month that go quiet without a yes or a no × your close rate × your average order",
+     "Hours spent remembering who to call back, and chasing late", 4),
+    ("sales_quote_chase", "sales", "Every quotation chased, without you having to remember it", "quotations",
+     "Quotations a month that are never followed up × your close rate × your average order",
+     "Hours spent checking which quotations still need a call", 2),
+    ("sales_pay_remind", "sales", "Payment reminders that go out on their own", "money_owed",
+     "Money a month that comes in late, or not at all, because nobody reminded the customer",
+     "Hours spent reminding customers to pay", 2),
+    ("conv_fast_reply", "conversion", "Every enquiry answered within minutes, day or night", "lead_response",
+     "Enquiries a month that go to someone who replied first × your close rate × your average order",
+     "Hours spent replying to the same first questions, often late", 4),
+    ("conv_quote_sameday", "conversion", "Quotations that go out the same day", "quotations",
+     "Orders a month lost while a quotation waits × your average order", "Hours spent making quotations from scratch", 3),
+    ("conv_one_place", "conversion", "Every enquiry in one place, not spread across phones and notebooks", "crm",
+     "Enquiries a month lost in phones, chats and notebooks × your close rate × your average order",
+     "Hours spent searching phones and notebooks for an enquiry", 3),
 ]
+# the order of the audit's sections: the Day 1 engines first, then the Day 2 audits below them (not the menu's engine order)
+AUDIT_ENGINE_ORDER = ["lead", "operations", "brand", "sales", "conversion", "data"]
+
+
+def engine_rank(key: str) -> int:
+    return AUDIT_ENGINE_ORDER.index(key) if key in AUDIT_ENGINE_ORDER else len(AUDIT_ENGINE_ORDER)
+
+
+def audit_engines() -> list[dict]:
+    """plans.ENGINES in the audit's order."""
+    return sorted(plans.ENGINES, key=lambda e: engine_rank(e["key"]))
 ITEM_KEYS = [i[0] for i in DEFAULT_ITEMS]
 # features without a page of their own: where the fix lives
 FIX_PATH = {"brochures": "/brand-kit?tab=brochures"}
-# where the admin's edits are kept: a new field for the 9 questions of the 2027 slides, so edits made to the earlier lists
+# where the admin's edits are kept: a field for the questions of the 2027 slides (9 for Day 1, 6 added for Day 2), so edits made to the earlier lists
 # (the 16 statements, then the 14 Day 1 processes in "items_day1") don't put old wording on the new questions
 ITEMS_FIELD = "items_abb2027"
 EDITABLE = {"statement": str, "hint_cost": str, "hint_hours": str, "est_hours": (int, float), "rate": (int, float),
@@ -111,7 +143,7 @@ def forget_cache() -> None:
 def active_items(cfg: dict) -> list[dict]:
     """The items in the audit right now: switched on here, and their feature on in the registry."""
     out = []
-    for it in sorted(cfg["items"].values(), key=lambda i: (plans.ENGINE_KEYS.index(i["engine"]), i["order"])):
+    for it in sorted(cfg["items"].values(), key=lambda i: (engine_rank(i["engine"]), i["order"])):
         m = plans.META.get(it["feature"])
         if it["on"] and m and m["on"]:
             out.append(it)
@@ -191,7 +223,7 @@ def compute(items: list[dict], answers: dict, revenue_month: float | None, cap_p
                 "hours_week": round(sum(r["hours_week"] for r in rs), 1), "hours_back_week": round(sum(r["hours_back"] for r in rs), 1)}
 
     engines = []
-    for e in plans.ENGINES:
+    for e in audit_engines():
         rs = [r for r in rows if r["engine"] == e["key"]]
         if rs:
             engines.append({"key": e["key"], "label": e["label"], **sums(rs)})

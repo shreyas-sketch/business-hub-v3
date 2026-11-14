@@ -81,3 +81,7 @@ details.panel summary { cursor: pointer; font-weight: 700; }
 .au-engine .au-group:first-child { margin-top: 0; }
 .au-engine .au-group + .au-item { border-top: 0; padding-top: 8px; }
 .au-num { color: var(--gold); margin-right: 2px; }
+
+/* the results page: questions added since the owner's last audit (the Day 2 Sales and Conversion audits) */
+.au-new { border-color: var(--gold-deep, #8a6d2f); }
+.au-new p { margin: 6px 0 12px; }
