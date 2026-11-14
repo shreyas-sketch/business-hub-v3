@@ -23,8 +23,8 @@ pipelines        {_id: ws, answers {...}, stages [{id, name, ff, hint}], lost_re
                   ONE pipeline per business. Until the owner builds it, the board shows the 5 Football Field stages.
 
 Follow-up reminders: setting a follow-up date on a contact or a deal schedules one agent job ("crm_followup") for 10:00
-India time that day; it leaves a notice in the hub (no customer is ever messaged by it). The in-hub list of follow-ups due is
-always there too.
+India time that day; it leaves a notice in the hub and sends the same line to the owner's WhatsApp from the hub's number
+(the owner-alert template). No customer is ever messaged by it. The in-hub list of follow-ups due is always there too.
 """
 import logging
 import re
@@ -321,7 +321,15 @@ async def _reminder_runner(owner: dict, run: dict):
             raise Skip("The follow-up was changed.")
         text = f"Follow up today: {doc.get('name') or 'a contact'}" + (f" — {doc['follow_up_note']}" if doc.get("follow_up_note") else "")
     await notify(ws, text[:300])
-    return text[:200]
+    # The same line to the owner's own WhatsApp, from the hub's number on the owner-alert template (never to the customer).
+    from .config import settings
+    from .messaging import whatsapp_template
+    sent = {"sent": False}
+    if owner.get("phone"):
+        b = await db().businesses.find_one({"owner_id": ws}, {"name": 1}) or {}
+        sent = await whatsapp_template(owner["phone"], settings.aisensy_owner_alert_campaign, owner.get("name", ""),
+                                       [b.get("name") or "your business", text[:900]], "crm_followup")
+    return text[:200] + ("" if sent.get("sent") else " (Shown in the hub; WhatsApp isn't set up.)")
 
 
 def register_agent() -> None:
@@ -329,7 +337,7 @@ def register_agent() -> None:
     if "crm_followup" in catalog.AGENTS:
         return
     catalog.register("crm_followup", {
-        "name": "CRM follow-up reminders", "what": "On the day you set, a reminder in your hub to follow up a contact or a deal.",
+        "name": "CRM follow-up reminders", "what": "On the day you set, a reminder in your hub and on your WhatsApp to follow up a contact or a deal.",
         "when": "10am on each follow-up date", "feature": "crm", "trigger": "lead", "customer_facing": False,
         "info_only": True, "group": "alerts"}, _reminder_runner)
 
