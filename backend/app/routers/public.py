@@ -267,7 +267,8 @@ async def _checked(slug: str, request: Request, data: dict):
         phone = ""
     if len(name) < 2 or not phone:
         raise HTTPException(400, "Please add your name and a 10-digit mobile number")
-    await rate_limit(f"inq:{site['_id']}:{client_ip(request)}", 5, 600, "Too many messages. Please try again in a few minutes.")
+    await rate_limit(f"inq:{site['_id']}:{client_ip(request)}", settings.inquiries_per_ip_per_10min, 600,
+                     "Too many messages. Please try again in a few minutes.")
     # Ceiling per website, whatever the source: protects the owner's inbox and our WhatsApp spend
     await rate_limit(f"inq-site:{site['_id']}", settings.inquiries_per_site_per_hour, 3600,
                      "This business is getting a lot of messages right now. Please message them on WhatsApp instead.")

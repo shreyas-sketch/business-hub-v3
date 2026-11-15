@@ -76,6 +76,24 @@ async def test_per_site_ceiling_and_one_instant_reply_per_number(client):
         object.__setattr__(settings, "inquiries_per_site_per_hour", 120)
 
 
+async def test_per_address_limit_is_a_setting(client):
+    await login(client, "9827055556")
+    site = await go_live(client)
+    one_wifi = {"x-forwarded-for": "49.36.7.7"}
+
+    async def send(n):
+        return await client.post(f"/s/{site['slug']}/inquiry", json={"name": "Guest", "phone": f"98330200{n:02d}"}, headers=one_wifi)
+
+    for n in range(5):
+        assert (await send(n)).status_code == 200
+    assert (await send(5)).status_code == 429   # the default: 5 in 10 minutes from one address
+    object.__setattr__(settings, "inquiries_per_ip_per_10min", 50)
+    try:
+        assert (await send(6)).status_code == 200   # a room on one Wi-Fi, once the limit is raised
+    finally:
+        object.__setattr__(settings, "inquiries_per_ip_per_10min", 5)
+
+
 async def test_odd_honeypot_values_do_not_crash(client):
     await login(client, "9827066666")
     site = await go_live(client)
