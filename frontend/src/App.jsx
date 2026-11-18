@@ -168,8 +168,8 @@ function Nav({ me, pathname }) {
           <NavLink key={it.key} to={it.path} end={it.path === "/admin"} className={({ isActive }) => `${isActive ? "on" : ""} ${it.locked ? "locked" : ""}`}>
             <span>{it.label}{it.sub && <small className="nav-sub">{it.sub}</small>}</span>
             {it.locked && it.lock === "day" ? <span className="tier" title={`Opens on Day ${it.opens_day} of the event`}><LockIcon />Day {it.opens_day}</span>
-              : it.locked && me.ui?.menu === "engines" ? <span className="tier" title="Part of OwnerDesk Membership"><LockIcon />Member</span>
-              : it.locked ? <span className="tier" title={`Unlocks with ${it.tier_name}`}><LockIcon />{it.tier_short || it.tier_name.split(" ")[0]}</span>
+              : it.locked ? <span className="nav-lock" role="img" aria-label="Locked"
+                  title={me.ui?.menu === "engines" ? "Part of OwnerDesk Membership" : `Unlocks with ${it.tier_name}`}><LockIcon /></span>
               : it.path === "/approvals" && me.approvals_waiting ? <span className="count" aria-label={`${me.approvals_waiting} waiting`}>{me.approvals_waiting}</span>
               : it.path === "/tasks" && me.my_open_tasks ? <span className="count" aria-label={`${me.my_open_tasks} open`}>{me.my_open_tasks}</span>
               : it.path === "/leads" && me.progress.first_lead ? <span className="dot" aria-hidden="true" /> : null}
