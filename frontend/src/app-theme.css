@@ -183,3 +183,14 @@ kbd { margin-left: auto; font: 500 11px/1 var(--mono); color: var(--ivory-70); b
 .nav a .tier .lock-ico, .finder-item .where .lock-ico { width: 9px; height: 11px; margin-right: 4px; vertical-align: 0; }
 .lock-ico.h1 { width: .55em; height: .66em; margin-right: .3em; vertical-align: .02em; opacity: .85; }
 .lock-ico.h3 { opacity: .7; }
+
+/* A locked menu page: a gold padlock that pulses (no plan name), with a soft ring going out from it */
+.nav a .nav-lock { position: relative; display: inline-grid; place-items: center; flex: none; width: 24px; height: 24px;
+  border-radius: 50%; color: var(--gold); background: color-mix(in srgb, var(--gold) 14%, transparent); animation: nav-lock-beat 1.8s ease-in-out infinite; }
+.nav a .nav-lock::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid var(--gold); opacity: 0;
+  animation: nav-lock-ring 1.8s ease-out infinite; }
+.nav a .nav-lock .lock-ico { width: 12px; height: 14px; margin: 0; vertical-align: 0; }
+.nav a.locked:hover .nav-lock { color: var(--gold); background: color-mix(in srgb, var(--gold) 24%, transparent); }
+@keyframes nav-lock-beat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+@keyframes nav-lock-ring { 0% { transform: scale(1); opacity: .6; } 100% { transform: scale(1.7); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .nav a .nav-lock, .nav a .nav-lock::after { animation: none; } }
