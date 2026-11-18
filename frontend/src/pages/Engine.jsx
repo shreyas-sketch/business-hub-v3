@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { rs } from "../api.js";
-import { Sheet, useHub, useLoad } from "../ui.jsx";
+import { LockIcon, Sheet, useHub, useLoad } from "../ui.jsx";
 
 /* v2.3: one engine on a page — what it does for the business, its features (open, opening on a later event day, or part of
    Membership), and the owner's Engine Audit result for this engine when they have one. */
@@ -59,12 +59,12 @@ export default function Engine() {
       <div className="engine-cards">
         {items.map((it) => (
           <div key={it.key} className="engine-card">
-            <h3>{it.label}</h3>
+            <h3>{it.locked && <LockIcon className="h3" />}{it.label}</h3>
             <p className="muted">{me.feature_info?.[it.key]?.what}</p>
             <div className="row">
               {!it.locked ? <button className="btn primary sm" onClick={() => nav(it.path)}>Open</button>
-                : it.lock === "day" ? <span className="small muted">Opens on Day {it.opens_day}</span>
-                : <button className="btn money sm" onClick={() => nav("/plans")}>Part of Membership</button>}
+                : it.lock === "day" ? <span className="small muted"><LockIcon />Opens on Day {it.opens_day}</span>
+                : <button className="btn money sm" onClick={() => nav("/plans")}><LockIcon />Part of Membership</button>}
             </div>
           </div>
         ))}

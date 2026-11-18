@@ -10,7 +10,7 @@ from tests.v23_helpers import mark_paid, setup_v23
 
 ADMIN = "+919999900000"
 L0 = {"home", "business_brain", "engine_audit", "smart_dashboard", "website", "revenue_levers", "inquiry_desk", "sop_library",
-      "social_media", "plans_billing"}
+      "brand_kit", "social_media", "plans_billing"}
 
 
 async def signups_get(client, **body):

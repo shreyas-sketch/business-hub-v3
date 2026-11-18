@@ -1,7 +1,7 @@
 import React, { Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { api, rupees, setChangedHandler, setLimitHandler, setLockedHandler, localPhone, tokenSpan } from "./api.js";
-import { Copy, Gate, HubCtx, Logo, Modal } from "./ui.jsx";
+import { Copy, Gate, HubCtx, LockIcon, Logo, Modal } from "./ui.jsx";
 import { Finder, Icon, allPages, findPage, rememberPage } from "./shell.jsx";
 import Landing from "./pages/Landing.jsx";
 import Login from "./pages/Login.jsx";
@@ -167,9 +167,9 @@ function Nav({ me, pathname }) {
         const link = (it) => (
           <NavLink key={it.key} to={it.path} end={it.path === "/admin"} className={({ isActive }) => `${isActive ? "on" : ""} ${it.locked ? "locked" : ""}`}>
             <span>{it.label}{it.sub && <small className="nav-sub">{it.sub}</small>}</span>
-            {it.locked && it.lock === "day" ? <span className="tier" title={`Opens on Day ${it.opens_day} of the event`}>Day {it.opens_day}</span>
-              : it.locked && me.ui?.menu === "engines" ? <span className="tier" title="Part of OwnerDesk Membership">Member</span>
-              : it.locked ? <span className="tier" title={`Unlocks with ${it.tier_name}`}>{it.tier_short || it.tier_name.split(" ")[0]}</span>
+            {it.locked && it.lock === "day" ? <span className="tier" title={`Opens on Day ${it.opens_day} of the event`}><LockIcon />Day {it.opens_day}</span>
+              : it.locked && me.ui?.menu === "engines" ? <span className="tier" title="Part of OwnerDesk Membership"><LockIcon />Member</span>
+              : it.locked ? <span className="tier" title={`Unlocks with ${it.tier_name}`}><LockIcon />{it.tier_short || it.tier_name.split(" ")[0]}</span>
               : it.path === "/approvals" && me.approvals_waiting ? <span className="count" aria-label={`${me.approvals_waiting} waiting`}>{me.approvals_waiting}</span>
               : it.path === "/tasks" && me.my_open_tasks ? <span className="count" aria-label={`${me.my_open_tasks} open`}>{me.my_open_tasks}</span>
               : it.path === "/leads" && me.progress.first_lead ? <span className="dot" aria-hidden="true" /> : null}
@@ -187,7 +187,7 @@ function Nav({ me, pathname }) {
                 {open_.map(link)}
                 {locked.length > 0 && (open_.length === 0 || showLocked || locked.some((it) => isOn(it.path))
                   ? <>{locked.map(link)}{open_.length > 0 && <button type="button" className="more" onClick={() => toggle(`${group}:locked`, false)}>Hide locked</button>}</>
-                  : <button type="button" className="more" onClick={() => toggle(`${group}:locked`, true)} title="Pages that unlock on a bigger plan">Show {locked.length} locked</button>)}
+                  : <button type="button" className="more" onClick={() => toggle(`${group}:locked`, true)} title="Pages that unlock on a bigger plan"><LockIcon />Show {locked.length} locked</button>)}
                 {section === "account" && me.links?.community_link && (
                   <a href={me.links.community_link} target="_blank" rel="noopener noreferrer"><span>WhatsApp community</span><span className="muted">↗</span></a>)}
                 {section === "account" && me.links?.support_email && (
