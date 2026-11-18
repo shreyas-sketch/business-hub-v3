@@ -204,7 +204,7 @@ DEFAULT_FEATURES: dict[str, dict] = {
 # The L0 starter set: what the free 2-day webinar shows. When new signups get only these (Admin → Onboarding), every other
 # menu page stays locked until they join. The admin can add or take out any feature (Admin → Features & plans → Edit).
 STARTER = ("home", "business_brain", "engine_audit", "smart_dashboard", "website", "revenue_levers", "inquiry_desk", "sop_library",
-           "social_media", "plans_billing")
+           "brand_kit", "social_media", "plans_billing")
 # The 3-Day set: the pages the 3-day event's demos and activities use (AI Business Breakthrough 2027 prep sheet), kept apart
 # from the L0 starter. Owners who sign up from a cohort link set to give the 3-Day pages get only these until they pay.
 # The admin can add or take out any feature (Admin → Features & plans → Edit).

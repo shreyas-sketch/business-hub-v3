@@ -176,3 +176,10 @@ kbd { margin-left: auto; font: 500 11px/1 var(--mono); color: var(--ivory-70); b
   .sheet-head { align-items: flex-start; }
   .sheet-foot { flex-direction: column; gap: 6px; }
 }
+
+/* The padlock next to anything locked for this owner (LockIcon in shell.jsx): takes the colour of the text it sits in */
+.lock-ico { display: inline-block; flex: none; width: .85em; height: 1em; margin-right: .4em; vertical-align: -.12em; }
+.nav a .tier, .finder-item .where.lock { display: inline-flex; align-items: center; }
+.nav a .tier .lock-ico, .finder-item .where .lock-ico { width: 9px; height: 11px; margin-right: 4px; vertical-align: 0; }
+.lock-ico.h1 { width: .55em; height: .66em; margin-right: .3em; vertical-align: .02em; opacity: .85; }
+.lock-ico.h3 { opacity: .7; }

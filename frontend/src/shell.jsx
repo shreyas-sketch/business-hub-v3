@@ -99,6 +99,14 @@ export function rememberPage(path) {
 const recent = () => { try { return JSON.parse(localStorage.getItem(RECENT) || "[]"); } catch { return []; } };
 
 /** Go to: type a page's name or what you want to do, arrows to move, Enter to open. */
+/** The padlock shown next to anything locked for this owner (menu, search, engine cards, dashboard tiles, locked pages). */
+export const LockIcon = ({ className = "" }) => (
+  <svg className={`lock-ico ${className}`} width="10" height="12" viewBox="0 0 10 12" aria-hidden="true" focusable="false">
+    <rect x="1" y="5" width="8" height="6.2" rx="1" fill="none" stroke="currentColor" strokeWidth="1.3" />
+    <path d="M2.9 5V3.4a2.1 2.1 0 0 1 4.2 0V5" fill="none" stroke="currentColor" strokeWidth="1.3" />
+  </svg>
+);
+
 export function Finder({ me, onClose }) {
   const [q, setQ] = useState("");
   const [at, setAt] = useState(0);
@@ -153,7 +161,7 @@ export function Finder({ me, onClose }) {
                   <a key={p.key || p.path} id={`fi-${i}`} role="option" aria-selected={i === at} href={p.path} className={`finder-item ${i === at ? "on" : ""}`}
                     onMouseMove={() => setAt(i)} onClick={(e) => { e.preventDefault(); go(p); }}>
                     <b>{p.label}</b>
-                    {p.locked ? <span className="where lock">On {p.tier_name}</span> : <span className="where">{p.group}</span>}
+                    {p.locked ? <span className="where lock"><LockIcon />On {p.tier_name}</span> : <span className="where">{p.group}</span>}
                     {p.what && <span className="what">{p.what}</span>}
                   </a>
                 );

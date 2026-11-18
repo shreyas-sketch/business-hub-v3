@@ -1,7 +1,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { allPages, findPage } from "./shell.jsx";
+import { allPages, findPage, LockIcon } from "./shell.jsx";
 import { api, rupees } from "./api.js";
+
+export { LockIcon };
 
 export const HubCtx = createContext(null);
 
@@ -125,7 +127,7 @@ export function Locked({ feature, what }) {
   const t = me.tiers?.[tier] || { name: "Membership" };
   return (
     <div className="row between panel flat" style={{ padding: "12px 16px" }}>
-      <span className="small muted">{what} — unlocks with <b style={{ color: "var(--paper)" }}>{t.name}</b></span>
+      <span className="small muted"><LockIcon />{what} — unlocks with <b style={{ color: "var(--paper)" }}>{t.name}</b></span>
       {me.workspace?.role === "owner" && <button className="btn sm money" onClick={() => upgrade(tier, feature)}>See {t.name}</button>}
     </div>
   );
@@ -157,9 +159,12 @@ export function JoinPanel({ note }) {
   );
 }
 
+const LockedSheet = ({ title, ...p }) => <Sheet {...p} title={<><LockIcon className="h1" />{title}</>} />;
+
 export function Gate({ feature, role = "staff", children, title, what, kicker = "Locked", id = "L-01" }) {
   const { me, upgrade } = useHub();
   if (!me) return null;
+  const Sheet = LockedSheet;   // every page this gate shows instead of the feature is a locked one: its title gets the padlock
   if (!canAct(me, role)) {
     return <Sheet kicker={kicker} id={id} title={<>Ask the owner for <em>access</em>.</>} sub="This part of the hub is for the business owner or a manager." />;
   }

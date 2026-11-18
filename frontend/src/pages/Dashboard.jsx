@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ago, api, rs } from "../api.js";
-import { beyondMembership, Busy, FormError, LoadError, Sheet, Switch, useHub, useLoad } from "../ui.jsx";
+import { beyondMembership, Busy, FormError, LoadError, LockIcon, Sheet, Switch, useHub, useLoad } from "../ui.jsx";
 import { Loading, Pill } from "../v2.jsx";
 import "./dashboard.css";
 
@@ -193,7 +193,7 @@ function Tile({ t }) {
   if (t.state === "teaser" && t.opens_day) {   // v2.3: the live event opens this tile's engine on a later day
     return (
       <article className={`db-tile teaser ${t.size} t-${t.key}`}>
-        <div className="db-head"><span className="label">{t.title}</span><Pill>Day {t.opens_day}</Pill></div>
+        <div className="db-head"><span className="label">{t.title}</span><Pill><LockIcon />Day {t.opens_day}</Pill></div>
         <p className="small muted">{t.what}.</p>
         <span className="small">Opens on <b className="paper">Day {t.opens_day}</b> of the event.</span>
       </article>
@@ -203,7 +203,7 @@ function Tile({ t }) {
   if (t.state === "teaser") {
     return (
       <article className={`db-tile teaser ${t.size} t-${t.key}`}>
-        <div className="db-head"><span className="label">{t.title}</span><Pill kind="money">{t.tier_name}</Pill></div>
+        <div className="db-head"><span className="label">{t.title}</span><Pill kind="money"><LockIcon />{t.tier_name}</Pill></div>
         <p className="small muted">{t.what}.</p>
         <span className="small">Unlocks with <b className="paper">{t.tier_name}</b>.</span>
         {me?.workspace?.role === "owner"
