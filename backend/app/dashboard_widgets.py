@@ -20,7 +20,7 @@ from .db import IST, db, now
 
 STAGES = [("identification", "Identification"), ("logic", "Logic"), ("pain", "Pain"), ("vision", "Vision"), ("close", "Close")]
 SOURCES = {"website": "Website", "guide": "Lead magnet", "lead_magnet": "Lead magnet", "gateway": "Payment", "email": "Email", "whatsapp": "WhatsApp", "card": "Card / QR", "qr": "Card / QR",
-           "import": "Imported", "manual": "Added by you"}
+           "import": "Imported", "manual": "Added by you", "prospecting": "Find new customers"}
 
 
 @dataclass
@@ -234,6 +234,14 @@ async def growth_tile(ws: str, owner: dict, t: date) -> dict:
             "estimated": ["hours_saved_month"]}
 
 
+async def quick_answers_tile(ws: str, owner: dict, t: date) -> dict:
+    """v2.4 Quick answers: the fixed questions (each answer is computed by code when tapped — GET /api/ai-team/answers/{key},
+    0 AI tokens), and last week's growth line when the Weekly growth line is on and has something to say."""
+    from . import ai_team
+    return {"empty": False, "questions": [{"key": k, "question": q} for k, q in ai_team.QUESTIONS],
+            "weekly": await ai_team.dashboard_line(owner)}
+
+
 REGISTRY: dict[str, Widget] = {w.key: w for w in [
     Widget("today", "Today", (), "l", today_tile, {"text": "Nothing needs you right now.", "action": "See your leads", "path": "/leads"}, "/leads", 0,
            "What needs you today"),
@@ -266,4 +274,6 @@ REGISTRY: dict[str, Widget] = {w.key: w for w in [
     Widget("growth", "AI team", ("whatsapp_ai", "voice_agent", "results_report"), "m", growth_tile,
            {"text": "Your AI team hasn't started yet.", "action": "Connect WhatsApp", "path": "/connections"}, "/results", 120,
            "Chats handled by AI, calls made, hours saved"),
+    Widget("quick_answers", "Quick answers", ("quick_answers",), "l", quick_answers_tile, {"text": "", "action": "", "path": ""}, "/dashboard",
+           5, "Tap a question — which deals are stuck, who owes the most — and get the answer from your own records"),
 ]}

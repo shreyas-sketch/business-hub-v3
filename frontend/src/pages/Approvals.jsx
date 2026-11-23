@@ -25,9 +25,28 @@ function Message({ a, connected, onDone }) {
   const guard = async (fn) => { try { await fn(); } catch (e) { if (e.status === 409) finish(); throw e; } };
   const who = a.to_name || "the customer";
 
-  // The link opens in the click itself (no pop-up blocker). Opening WhatsApp isn't sending: the hub asks, and only marks it
-  // sent once the owner says it went.
-  const [asking, setAsking] = useState(!!a.opened_at);
+  // v2.4: a message to a business from Find new customers only ever opens the owner's own WhatsApp. The number of a business
+  // found on Google Maps isn't saved, so the server looks it up and returns the link; a blank tab opens in the tap itself
+  // (no pop-up blocker) and then goes to it.
+  const outreach = a.kind === "outreach";
+  const sendOutreach = async () => {
+    let w = null;
+    try { w = window.open("about:blank", "_blank"); if (w) w.opener = null; } catch { w = null; }
+    try {
+      await save();
+      const r = await api(`/approvals/${a.id}/own`, { method: "POST" });
+      if (w && !w.closed) w.location.href = r.link; else window.location.href = r.link;
+      finish("Marked as sent");
+    } catch (e) {
+      if (w && !w.closed) w.close();
+      if (e.status === 409) finish();
+      if (!e.handled) toast(e.message, "err");
+    }
+  };
+
+  // Every other message: the link opens in the click itself (no pop-up blocker). Opening WhatsApp isn't sending: the hub
+  // asks, and only marks it sent once the owner says it went.
+  const [asking, setAsking] = useState(!outreach && !!a.opened_at);
   const openedOwn = async () => {
     setAsking(true);
     try {
@@ -45,7 +64,7 @@ function Message({ a, connected, onDone }) {
         <div className="stack" style={{ gap: 4 }}>
           <b>{a.title}</b>
           <span className="meta small muted">
-            <span>To {a.to_name || "customer"}</span>
+            <span>To {a.to_name || (outreach ? "a business from Find new customers" : "customer")}</span>
             {a.to_phone && <span className="mono">{localPhone(a.to_phone)}</span>}
             <span>{a.agent_name} · {ago(a.created_at)}</span>
           </span>
@@ -67,11 +86,17 @@ function Message({ a, connected, onDone }) {
       {connected && TEMPLATED.includes(a.kind) && (
         <span className="hint">Sent from your number, this goes as your approved WhatsApp template with these details. Your own edits go out when you tap Send on WhatsApp.</span>
       )}
+      {outreach && (
+        <span className="hint">A first message to a business that doesn't know you yet goes only from your own WhatsApp, so you see and send each one yourself.
+          {a.prospect_id && <> <Link to={`/prospects/${a.prospect_id}`}>Open this business</Link></>}</span>
+      )}
       <div className="row">
-        {okText
-          ? <a className={`btn ${asking ? "" : "primary"}`} href={linkFor(a, clean)} target="_blank" rel="noopener" onClick={openedOwn}>{asking ? "Open WhatsApp again" : "Send on WhatsApp"}</a>
-          : <button className="btn primary" disabled>Send on WhatsApp</button>}
-        {connected && (
+        {outreach
+          ? <button className="btn primary" disabled={!okText} onClick={sendOutreach}>Send on WhatsApp</button>
+          : okText
+            ? <a className={`btn ${asking ? "" : "primary"}`} href={linkFor(a, clean)} target="_blank" rel="noopener" onClick={openedOwn}>{asking ? "Open WhatsApp again" : "Send on WhatsApp"}</a>
+            : <button className="btn primary" disabled>Send on WhatsApp</button>}
+        {connected && !outreach && (
           <Busy className="btn" disabled={!okText} run={() => guard(async () => {
             await save();
             await api(`/approvals/${a.id}/send`, { method: "POST" });

@@ -47,7 +47,7 @@ SOURCE_LABEL = {"website": "Website", "guide": "Free guide", "lead_magnet": "Lea
                 "manual": "Added by hand", "import": "Imported", "phone": "Phone", "walk_in": "Walk-in", "referral": "Referral",
                 "marketplace": "IndiaMART / Justdial", "social": "Instagram / Facebook", "exhibition": "Exhibition", "other": "Other",
                 "customer": "Customer list", "event": "Event", "card": "Card / QR", "qr": "Card / QR", "gateway": "Payment",
-                "employz": "Employz.ai"}
+                "employz": "Employz.ai", "prospecting": "Find new customers"}
 TAG_RE = re.compile(r"[^\w\s&+-]", re.UNICODE)
 
 

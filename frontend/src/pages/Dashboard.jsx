@@ -188,6 +188,74 @@ const RENDER = {
   ),
 };
 
+/* v2.4 Quick answers: fixed questions; each answer is counted on the server from the records when tapped (0 AI tokens).
+   No open chat over the owner's data. */
+function QuickAnswer({ a }) {
+  const heads = a.rows.map((r, i) => (r.group && r.group !== a.rows[i - 1]?.group ? r.group : null));
+  return (
+    <>
+      <p className="qa-line">{a.line}</p>
+      {a.rows.length > 0 && (
+        <ul className="qa-rows">
+          {a.rows.map((r, i) => (
+            <React.Fragment key={`${r.group || ""}${i}`}>
+              {heads[i] && <li className="qa-group label">{heads[i]}</li>}
+              <li className="qa-row">
+                {r.link ? <Link to={r.link} className="qa-name">{r.label}</Link> : <span className="qa-name">{r.label}</span>}
+                <b>{r.value}</b>
+                {(r.sub || r.wa) && (
+                  <span className="qa-sub small muted">
+                    {r.sub}{r.wa && <> · <a href={r.wa} target="_blank" rel="noreferrer">Say hello on WhatsApp</a></>}
+                  </span>
+                )}
+              </li>
+            </React.Fragment>
+          ))}
+        </ul>
+      )}
+      {a.next && (a.next.path ? <div><Link className="btn sm" to={a.next.path}>{a.next.text}</Link></div> : <p className="small muted qa-p">{a.next.text}</p>)}
+      <p className="small muted qa-p">{a.rule}</p>
+    </>
+  );
+}
+
+function QuickAnswers({ t }) {
+  const d = t.data || {};
+  const [open, setOpen] = useState(null);
+  const [answers, setAnswers] = useState({});
+  const [busy, setBusy] = useState(null);
+  const [err, setErr] = useState("");
+  const ask = async (key) => {
+    if (open === key) { setOpen(null); return; }
+    setOpen(key); setErr(""); setBusy(key);
+    try {
+      const a = await api(`/ai-team/answers/${key}`);   // counted fresh each time it opens
+      setAnswers((x) => ({ ...x, [key]: a }));
+    } catch (e) {
+      if (!e.handled) setErr(e.message);
+    } finally { setBusy(null); }
+  };
+  const a = open ? answers[open] : null;
+  return (
+    <article className={`db-tile ${t.size} t-${t.key}`}>
+      <div className="db-head"><span className="label">{t.title}</span><span className="small muted">From your records · 0 AI tokens</span></div>
+      {d.weekly && <p className="qa-weekly">{d.weekly}</p>}
+      <div className="qa-qs" role="group" aria-label="Questions">
+        {(d.questions || []).map((q) => (
+          <button key={q.key} type="button" className={`qa-q ${open === q.key ? "on" : ""}`} aria-expanded={open === q.key} onClick={() => ask(q.key)}>
+            {q.question}
+          </button>
+        ))}
+      </div>
+      {open && (
+        <div className="qa-answer" aria-live="polite">
+          {err ? <FormError msg={err} /> : busy === open && !a ? <p className="small muted qa-p">Counting…</p> : a ? <QuickAnswer a={a} /> : null}
+        </div>
+      )}
+    </article>
+  );
+}
+
 function Tile({ t }) {
   const { me, upgrade } = useHub();
   if (t.state === "teaser" && t.opens_day) {   // v2.3: the live event opens this tile's engine on a later day
@@ -212,6 +280,7 @@ function Tile({ t }) {
       </article>
     );
   }
+  if (t.key === "quick_answers" && !t.data?.error) return <QuickAnswers t={t} />;
   const d = t.data || {};
   const render = RENDER[t.key];
   return (

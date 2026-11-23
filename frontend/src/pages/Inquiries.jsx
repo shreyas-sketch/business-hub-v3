@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ago, api } from "../api.js";
 import { Busy, Copy, Field, FormError, LoadError, Sheet, Switch, canAct, useHub, useLoad } from "../ui.jsx";
@@ -151,6 +151,49 @@ function Proposal({ it, reload }) {
 
 const when = (iso) => new Date(iso).toLocaleString("en-IN", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 
+/** v2.4 Lead research: the short brief on this inquiry (who they are, what they asked, 3 questions, a first line), or the button. */
+function Brief({ it, brief, info, reload }) {
+  const { toast } = useHub();
+  const [open, setOpen] = useState(false);
+  const [err, setErr] = useState("");
+  if (!info) return null;
+  const research = info.can_research && (
+    <Busy className="btn sm ghost ai" onError={setErr} run={async () => {
+      const r = await api(`/leads/${it.id}/brief`, { method: "POST" });
+      toast(r.brief?.status === "done" ? "Brief written" : "Nothing useful to add: 3 questions are ready, no token used");
+      setOpen(true);
+      reload();
+    }}>{brief ? "Research again" : "Research this lead"} · 1 AI token</Busy>);
+  if (!brief || brief.status === "failed") {
+    return (
+      <div className="row small">
+        <span className="muted">{brief ? "The brief couldn't be written." : "No brief yet."}</span>{research}
+        <FormError msg={err} />
+      </div>
+    );
+  }
+  return (
+    <div className="stack inq-brief">
+      <div className="row between">
+        <span className="small"><span className="inq-by">By OwnerDesk</span> <b>Brief</b> · {brief.looked_up ? "from their website" : "from their message only"}</span>
+        <button className="btn sm ghost" onClick={() => setOpen(!open)}>{open ? "Hide" : "Read it"}</button>
+      </div>
+      {open && (
+        <div className="stack" style={{ gap: 8 }}>
+          <div>{brief.who.split("\n").map((l, i) => <p key={i} className="small">{l}</p>)}
+            {(brief.sources || []).map((s) => <a key={s.url} className="small" href={s.url} target="_blank" rel="noopener noreferrer nofollow">{s.label}: {s.url.replace(/^https?:\/\//, "")}</a>)}
+            {brief.note && <p className="small muted">{brief.note}</p>}</div>
+          {brief.status === "done" && <div>{brief.asking.split("\n").map((l, i) => <p key={i} className="small">{l}</p>)}</div>}
+          <div><span className="label">3 questions for the first call</span><ol>{brief.questions.map((q) => <li key={q} className="small">{q}</li>)}</ol></div>
+          {brief.first_line && <div className="row"><span className="small prompt" style={{ flex: "1 1 220px" }}>{brief.first_line}</span><Copy text={brief.first_line} label="Copy" className="btn sm ghost" /></div>}
+          <div className="row">{research}</div>
+          <FormError msg={err} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** The follow-up automation's message for this inquiry: send it from here with one tap, or skip it. */
 function FollowUp({ it, reload }) {
   const { me, toast } = useHub();
@@ -199,6 +242,9 @@ export default function Inquiries() {
   const [tab, setTab] = useState("all");
   const [data, reload, err] = useLoad("/inquiries");
   const [s, reloadS] = useLoad(canAct(me, "manager") ? "/inquiries/settings" : "/inquiries");
+  const [briefs, setBriefs] = useState(null);       // v2.4 Lead research: {items: {lead id: brief}, auto_on, can_research…}
+  const loadBriefs = useCallback(() => (me.features?.lead_brief ? api("/leads/briefs").then(setBriefs).catch(() => {}) : Promise.resolve()), [me.features?.lead_brief]);
+  useEffect(() => { loadBriefs(); }, [loadBriefs]);
   const [paste, setPaste] = useState(!!shared);
   useEffect(() => { if (shared) setPaste(true); }, [shared]);
   // proposals and draft quotations are written in the background: look again every few seconds while one is being written
@@ -210,6 +256,9 @@ export default function Inquiries() {
   // the proposal and quotation spend their tokens in the background: show the new count once they're written
   const wasWriting = useRef(false);
   useEffect(() => { if (wasWriting.current && !writing) refresh(); wasWriting.current = writing; }, [writing, refresh]);
+  // v2.4: briefs are written in the background too; look for new ones every 15 seconds (on their own clock, so the quick
+  // look while a proposal is being written doesn't also re-read every brief)
+  useEffect(() => { const t = setInterval(() => { if (document.visibilityState === "visible") loadBriefs(); }, 15000); return () => clearInterval(t); }, [loadBriefs]);
   const items = (data?.items || []).filter((i) => tab === "all" || i.status === tab);
   const c = data?.counts || {};
   return (
@@ -246,6 +295,7 @@ export default function Inquiries() {
               )}
               {it.channel === "email" && it.verified === false && <span className="small muted">The sender's address couldn't be confirmed — check before you reply.</span>}
               {(it.replies || []).map((r, i) => <div key={i} className="inq-reply small"><b>They replied {ago(r.at)}:</b> {r.text}</div>)}
+              {me.features?.lead_brief && <Brief it={it} brief={briefs?.items?.[it.id]} info={briefs} reload={loadBriefs} />}
               <Proposal it={it} reload={reload} />
               {it.quote && <QuoteStatus leadId={it.id} q={it.quote} canMake={canAct(me, "manager") && !!me.features?.quotations} onMade={reload} />}
               <FollowUp it={it} reload={reload} />

@@ -60,6 +60,25 @@
 .db-edit-name { min-width: 0; overflow-wrap: anywhere; }
 .db-edit .btn.sm { min-width: 38px; padding: 0 10px; }
 
+/* v2.4 Quick answers: tap a question, the answer opens under it */
+.qa-weekly { margin: 0; padding: 10px 12px; border: 1px solid var(--teal-line); border-radius: 12px; background: var(--teal-wash); color: var(--paper);
+  font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+.qa-qs { display: flex; flex-wrap: wrap; gap: 8px; }
+.qa-q { min-height: 36px; padding: 7px 14px; border: 1px solid var(--ink-line); border-radius: 999px; background: transparent; color: var(--paper);
+  font: 600 13px/1.3 var(--body); text-align: left; cursor: pointer; max-width: 100%; white-space: normal; }
+.qa-q:hover { border-color: var(--gold-deep); background: var(--gold-wash); }
+.qa-q.on { border-color: var(--gold); color: var(--gold); background: var(--gold-wash); }
+.qa-answer { display: grid; gap: 10px; padding-top: 12px; border-top: 1px solid var(--ink-line); min-width: 0; }
+.qa-line { margin: 0; font: 700 15px/1.45 var(--head); color: var(--paper); overflow-wrap: anywhere; }
+.qa-p { margin: 0; }
+.qa-rows { list-style: none; margin: 0; padding: 0; display: grid; }
+.qa-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 8px 0; border-top: 1px solid var(--ink-line); font-size: 13.5px; }
+.qa-rows > .qa-row:first-child, .qa-group + .qa-row { border-top: 0; }
+.qa-name { min-width: 0; overflow-wrap: anywhere; color: var(--paper); }
+.qa-row b { font-weight: 700; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.qa-sub { grid-column: 1 / -1; overflow-wrap: anywhere; }
+.qa-group { padding: 10px 0 2px; }
+
 @media (max-width: 1000px) {
   .db-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

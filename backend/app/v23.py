@@ -99,7 +99,7 @@ def desired() -> dict[str, dict]:
     for key, engine in KEEP.items():
         out[key] = {"on": True, "show": True, "engine": engine, "teaser": False, "paid_only": False, "day": -1}
     for key in plans.DEFAULT_FEATURES:
-        if key not in out:
+        if key not in out and key not in plans.V24_NEW:   # v2.4's features belong to the v2.4 setup (app/v24.py)
             out[key] = {"on": False, "show": False}
     return out
 

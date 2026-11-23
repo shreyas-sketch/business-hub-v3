@@ -2,7 +2,8 @@
 Email that arrives at the hub (v2.1, 3.6 and 3.8): Amazon SES receives mail for INBOUND_EMAIL_DOMAIN and passes it through
 SNS to /api/hooks/email-in/<secret>. Two kinds of address:
 
-    <handle>@in.employz.ai        an owner's inquiry address: the email becomes a lead (source "email")
+    <handle>@in.employz.ai        an owner's inquiry address: the email becomes a lead (source "email") — or, from a proven
+                                  sender who is already a contact with an open deal, goes into that deal (v2.4, `into_open_deal`)
     r+<thread>@in.employz.ai      a reply to an email the hub sent (a payment follow-up or a proposal): the follow-ups for
                                   that amount stop and the owner is told who replied
 
@@ -135,3 +136,17 @@ def phone_in(text: str) -> str | None:
 def local_part(address: str, domain: str) -> str | None:
     a = (address or "").lower()
     return a.rsplit("@", 1)[0] if domain and a.endswith("@" + domain.lower()) else None
+
+
+async def into_open_deal(owner: dict, mail: dict, name: str, sender: str, text: str, verified: bool) -> str | None:
+    """v2.4 Pipeline fills itself: an email to the owner's inquiry address from someone who is already a contact with an open
+    deal is filed into that deal (a summary note, the follow-up date when a day was said) instead of becoming a new inquiry.
+    Only a sender whose address is proven (DMARC), and only when the owner's plan has it and the Pipeline keeper is on.
+    Returns "deal" or "duplicate" when it was handled, None when the email goes on as before. Never raises."""
+    try:
+        from .deal_fill import from_email
+        return await from_email(owner, mail, name, sender, text, verified)
+    except Exception:  # noqa: BLE001  the email must never be lost: it becomes an inquiry as it always has
+        import logging
+        logging.getLogger("inbound").exception("filing an email into a deal failed")
+        return None

@@ -20,9 +20,15 @@ LEAD_RESPONSE_SOURCES = ("website", "guide", "lead_magnet", "email")   # a paste
 async def on_new_lead(owner: dict, business: dict, site: dict | None, lead: dict) -> dict:
     """A customer sent an inquiry (website form or the guide). Returns fields to save on the lead."""
     patch: dict = {}
+    # v2.4: a deal made from Find new customers is a business the owner messaged from his own WhatsApp and that wrote back to
+    # him there. It never contacted the business number, so nothing here messages or calls it on its own: no day 1/3/7
+    # follow-ups (the prospect's own follow-ups already ran), no instant reply, no Lead Response, no AI Telecaller call,
+    # no automatic proposal.
+    # The brief and the CRM still get it.
+    outbound_ok = lead.get("source") != "prospecting"
     # Follow-up automation (Action Program and up): day 1, 3 and 7 follow-ups, each drafted when it falls due.
     try:
-        if plans.has(owner, "follow_up_agent") and await jobs.is_on_for(owner, "followup") and await _worth_following_up(site, lead):
+        if outbound_ok and plans.has(owner, "follow_up_agent") and await jobs.is_on_for(owner, "followup") and await _worth_following_up(site, lead):
             await schedule_followups(owner["_id"], lead)
             patch["followups"] = True
     except Exception:
@@ -32,7 +38,7 @@ async def on_new_lead(owner: dict, business: dict, site: dict | None, lead: dict
     # If it can't go, it says why and nothing else is sent.
     lead_response = False
     try:
-        if plans.has(owner, "lead_response") and lead.get("source") in LEAD_RESPONSE_SOURCES:
+        if outbound_ok and plans.has(owner, "lead_response") and lead.get("source") in LEAD_RESPONSE_SOURCES:
             from ..routers.leadresponse import active
             st = await active(owner)
             if st is not None:
@@ -46,15 +52,15 @@ async def on_new_lead(owner: dict, business: dict, site: dict | None, lead: dict
         log.exception("Lead Response failed for lead %s", lead.get("_id"))
     # Growth Mentorship: instant reply from the owner's own number, and the AI Telecaller's call — not for an email inquiry,
     # whose number was read out of an email anyone can write (its proposal goes by email, or waits for a tap).
-    by_email = lead.get("source") == "email"
+    no_auto_contact = lead.get("source") == "email" or not outbound_ok
     try:
-        if not by_email and not lead_response and plans.has(owner, "whatsapp_ai") and await jobs.is_on_for(owner, "instant_reply"):
+        if not no_auto_contact and not lead_response and plans.has(owner, "whatsapp_ai") and await jobs.is_on_for(owner, "instant_reply"):
             from .growth import instant_reply
             patch["instant_reply"] = await instant_reply(owner, business, lead)
     except Exception:
         log.exception("instant reply failed for lead %s", lead.get("_id"))
     try:
-        if not by_email and plans.has(owner, "voice_agent") and await jobs.is_on(owner["_id"], "telecaller"):
+        if not no_auto_contact and plans.has(owner, "voice_agent") and await jobs.is_on(owner["_id"], "telecaller"):
             from .growth import schedule_call
             if await schedule_call(owner, lead, minutes=3):
                 patch["call_scheduled"] = True
@@ -62,7 +68,7 @@ async def on_new_lead(owner: dict, business: dict, site: dict | None, lead: dict
         log.exception("could not schedule a call for lead %s", lead.get("_id"))
     # Inquiries (v2.1): a proposal for every new inquiry, written in the background so the customer's form never waits
     try:
-        if plans.has(owner, "inquiry_desk"):
+        if outbound_ok and plans.has(owner, "inquiry_desk"):      # a proposal can go by email on its own
             from ..routers import inquiries
             if await inquiries.wants_proposal(owner["_id"], lead):
                 # set before the task starts (not in the returned patch), so a proposal that finishes first can clear it
@@ -70,13 +76,22 @@ async def on_new_lead(owner: dict, business: dict, site: dict | None, lead: dict
                 inquiries.after_lead(owner, business, lead)
     except Exception:
         log.exception("could not start the proposal for lead %s", lead.get("_id"))
-    # A draft quotation from what the customer asked and the price list, for the owner to check and send (background job)
+    # A draft quotation from what the customer asked and the price list, for the owner to check and send (background job).
+    # Only a draft: nothing goes to the customer until the owner sends it, so it runs for Find new customers deals too.
     try:
         from .. import auto_quote
         if await auto_quote.on_inquiry(owner, lead):
             patch["quote_drafting"] = True
     except Exception:
         log.exception("could not queue the draft quotation for lead %s", lead.get("_id"))
+    # v2.4 Lead research: a short brief on every new inquiry, written in the background so the customer's form never waits
+    # (the Researcher's switch, this month's automatic briefs and the token floor are checked there)
+    try:
+        if plans.has(owner, "lead_brief"):
+            from .. import lead_research
+            lead_research.after_lead(owner, lead)
+    except Exception:
+        log.exception("could not start the brief for lead %s", lead.get("_id"))
     # Running the Business: the lead goes into Employz.ai.
     if plans.has(owner, "crm_sync"):
         await sync_later(owner, {**lead, **patch})

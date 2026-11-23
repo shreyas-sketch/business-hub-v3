@@ -57,6 +57,12 @@ class PlanPatch(BaseModel):
     images: int | None = Field(default=None, ge=0, le=10_000)
     extra_runs: int | None = Field(default=None, ge=0, le=100_000)
     price_year_minor: int | None = Field(default=None, ge=0, le=10_000_000_000)
+    # v2.4: the growth features' limits (monthly, except first messages a day)
+    prospect_searches: int | None = Field(default=None, ge=0, le=10_000)
+    prospects_kept: int | None = Field(default=None, ge=0, le=100_000)
+    outreach_per_day: int | None = Field(default=None, ge=0, le=1_000)
+    briefs: int | None = Field(default=None, ge=0, le=100_000)
+    calls_scored: int | None = Field(default=None, ge=0, le=10_000)
 
 
 class GrantIn(BaseModel):
@@ -199,6 +205,22 @@ async def apply_v23(admin: dict = Depends(require_admin)):
     from .. import v23
     out = await v23.apply(admin["_id"], admin.get("phone", ""))
     await track("preset_v23", admin["_id"], changed=out["features_changed"])
+    return out
+
+
+@router.get("/presets/v24")
+async def v24_state():
+    from .. import v24
+    return await v24.state()
+
+
+@router.post("/presets/v24")
+async def apply_v24(admin: dict = Depends(require_admin)):
+    """The OwnerDesk v2.4 setup: the growth features (Find new customers, Call coach, AI team and the ones behind other pages).
+    Only touches its own features. Safe to run again."""
+    from .. import v24
+    out = await v24.apply(admin["_id"], admin.get("phone", ""))
+    await track("preset_v24", admin["_id"], changed=out["features_changed"])
     return out
 
 
