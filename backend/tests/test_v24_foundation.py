@@ -18,8 +18,9 @@ async def test_the_v24_setup_adds_its_pages_and_leaves_the_v23_menu_alone(client
     by_group = {g["group"]: [i["label"] for i in g["items"]] for g in me["menu"]}
     assert by_group["Start"] == ["Knowledge Hub", "Engine Audit", "AI team"]
     assert by_group["Lead engine"] == ["Website", "Lead magnet", "Find new customers"]
-    assert by_group["Sales engine"] == ["Revenue Multiplier", "Ways to get more leads", "Invoicing", "Call coach"]
-    assert by_group["Conversion engine"] == ["Inquiries", "CRM", "Pipeline & Opportunities"]
+    # main's v2.3 setup keeps Win-Back, Lead Response and WhatsApp chats in the menu (533a693); v2.4 leaves them where they are
+    assert by_group["Sales engine"] == ["Revenue Multiplier", "Ways to get more leads", "Invoicing", "Call coach", "Win-Back"]
+    assert by_group["Conversion engine"] == ["Inquiries", "CRM", "Pipeline & Opportunities", "Lead Response", "WhatsApp chats"]
     for k in plans.V24_NEW:
         assert plans.META[k]["on"], k
     assert not plans.META["lead_brief"]["show"] and not plans.META["quick_answers"]["show"]

@@ -469,12 +469,11 @@ async def test_whatsapp_chats_are_filed_once_a_day_per_chat_and_never_answered(c
     await db().wa_threads.update_one({"_id": msg["_id"]}, {"$set": {"last_in_at": next_day - timedelta(hours=2)}})
     assert await deal_fill.file_chats(owner, next_day) == 1
     assert await db().deal_updates.count_documents({"ws": uid, "source": "whatsapp"}) == 2
-    # it only read: no message to any customer, from any number, and the WhatsApp AI is still not in the plan
+    # it only read: no message to any customer, from any number. (On main the Membership includes WhatsApp chats, so the
+    # WhatsApp AI being in the plan doesn't matter here: filing a chat never answers it.)
     assert await db().wa_messages.count_documents({"ws": uid, "dir": "out"}) == out_before
     owner_phone = owner["phone"]
     assert not await db().outbox.count_documents({"channel": "whatsapp", "kind": {"$ne": "otp"}, "to": {"$ne": owner_phone}})
-    from app import plans
-    assert not plans.has(await db().users.find_one({"_id": uid}), "whatsapp_ai")
 
 
 async def test_the_evening_agent_runs_once_a_day_for_owners_with_chats(client):
