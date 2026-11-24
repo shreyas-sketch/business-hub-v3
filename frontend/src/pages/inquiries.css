@@ -7,3 +7,10 @@
 .ok-text { color: var(--aqua); font-weight: 500; }
 @media (max-width: 640px) { .inq-grid { grid-template-columns: 1fr; } }
 .inq-reply { border-left: 2px solid var(--aqua-deep); padding: 4px 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
+/* v2.4 Lead research: the brief on an inquiry */
+.inq-brief { border-left: 2px solid var(--teal, var(--aqua)); padding: 4px 10px; }
+.inq-brief p { margin: 2px 0 0; overflow-wrap: anywhere; }
+.inq-brief a { display: block; color: var(--teal, var(--aqua)); overflow-wrap: anywhere; }
+.inq-brief ol { margin: 4px 0 0; padding-left: 20px; display: grid; gap: 3px; }
+.inq-by { display: inline-flex; padding: 1px 7px; border-radius: 999px; background: var(--teal-wash, rgba(46,211,183,.12)); color: var(--teal, var(--aqua));
+  font: 700 10.5px/1.5 var(--body); letter-spacing: .04em; white-space: nowrap; }

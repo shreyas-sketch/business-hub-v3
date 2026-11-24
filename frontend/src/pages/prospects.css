@@ -1,0 +1,90 @@
+/* v2.4 Find new customers. Phone-first: every row is a grid with minmax(0, …) columns, long names and addresses wrap,
+   nothing scrolls sideways at 390 px. */
+
+.pr-rule { border-left: 3px solid var(--gold); background: var(--gold-wash); border-radius: 0 10px 10px 0; padding: 10px 14px; color: var(--ivory); }
+.pr-fit { width: fit-content; max-width: 100%; }
+.pr-link { background: none; border: 0; padding: 0; color: var(--gold); font: inherit; cursor: pointer; text-decoration: underline; }
+
+/* Google's attribution: the words "Google Maps", unchanged and untranslated */
+.pr-attr { font-size: 11px; color: var(--ivory-70); }
+.pr-gm { font-family: Roboto, Arial, sans-serif; font-weight: 500; color: var(--ivory); letter-spacing: 0; white-space: nowrap; }
+
+/* chips: kinds of business, list filters */
+.pr-chips { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.pr-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; border: 1px solid var(--gold-deep); color: var(--ivory); background: var(--gold-wash);
+  border-radius: 999px; padding: 7px 8px 7px 13px; font: 600 13px/1.25 var(--body); overflow-wrap: anywhere; }
+.pr-chip button { background: none; border: 0; color: var(--ivory-70); cursor: pointer; font-size: 16px; line-height: 1; padding: 0 4px; min-width: 24px; min-height: 24px; }
+.pr-chip button:hover { color: var(--ivory); }
+.pr-chip.f { border-color: var(--hairline); background: transparent; color: var(--ivory-70); padding: 8px 13px; cursor: pointer; min-height: 36px; }
+.pr-chip.f:hover { border-color: var(--ivory-35); color: var(--ivory); }
+.pr-chip.f.on { border-color: var(--gold); color: var(--gold); background: var(--gold-wash); }
+.pr-kind { color: var(--teal); font-weight: 600; }
+
+.pr-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.pr-seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--hairline); border-radius: 14px; overflow: hidden; width: fit-content; max-width: 100%; }
+.pr-seg button { background: none; border: 0; color: var(--ivory-70); padding: 9px 16px; font: 600 13px var(--body); cursor: pointer; min-height: 38px; }
+.pr-seg button.on { background: var(--gold); color: #14151A; }
+.pr-km { width: auto; min-width: 96px; }
+
+.pr-best { border-top: 1px solid var(--hairline); padding-top: 12px; }
+.pr-best-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 10px; align-items: center; }
+.pr-best-row b { overflow-wrap: anywhere; }
+
+/* rows: search results and the kept list */
+.pr-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; min-width: 0; }
+.pr-rows { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; min-width: 0; }
+.pr-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 12px 14px; border: 1px solid var(--hairline);
+  border-radius: 12px; background: var(--panel); min-width: 0; }
+label.pr-row { cursor: pointer; }
+.pr-row:hover { border-color: var(--ivory-35); }
+.pr-row.done { opacity: .78; }
+.pr-row input[type="checkbox"] { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--gold); }
+.pr-who { display: grid; gap: 3px; min-width: 0; text-align: left; }
+.pr-who b, .pr-who span { overflow-wrap: anywhere; }
+.pr-open { background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; }
+.pr-open:hover b { color: var(--gold); }
+.pr-state { align-self: center; text-decoration: none; }
+.pr-acts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; }
+.pr-pick { display: grid; gap: 3px; text-align: left; padding: 12px 14px; border: 1px solid var(--hairline); border-radius: 12px; background: var(--panel); color: inherit;
+  font: inherit; cursor: pointer; min-width: 0; }
+.pr-pick:hover { border-color: var(--gold); }
+.pr-pick b, .pr-pick span { overflow-wrap: anywhere; }
+
+.pr-more { position: relative; }
+.pr-more > summary { list-style: none; }
+.pr-more > summary::-webkit-details-marker { display: none; }
+.pr-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; min-width: 170px; background: var(--panel-raised); border: 1px solid var(--hairline);
+  border-radius: 12px; padding: 6px; display: grid; box-shadow: var(--shadow-float); }
+.pr-menu button { background: none; border: 0; color: var(--ivory); text-align: left; padding: 10px 12px; border-radius: 8px; font: 600 13px var(--body); cursor: pointer; }
+.pr-menu button:hover { background: var(--gold-wash); }
+
+.pr-keepbar, .pr-draftbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.pr-pager { justify-content: center; }
+
+/* one business */
+.pr-side { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.pr-dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 14px; margin: 0; font-size: 14px; }
+.pr-dl dt { color: var(--ivory-70); font-size: 12px; padding-top: 2px; }
+.pr-dl dd { margin: 0; overflow-wrap: anywhere; }
+.pr-msg { border: 1px solid var(--hairline); border-radius: 12px; padding: 12px; background: var(--bg); }
+.pr-sent { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; color: var(--ivory-70); }
+.pr-dnc { border-color: rgba(224, 83, 61, .5); color: var(--ivory); }
+.pr-dnc:hover { border-color: var(--alert); background: rgba(224, 83, 61, .08); }
+
+@media (max-width: 760px) {
+  .pr-side { grid-template-columns: minmax(0, 1fr); }
+  .pr-row { grid-template-columns: 22px minmax(0, 1fr); }
+  .pr-row > .pr-acts, .pr-row > .pr-state { grid-column: 2; justify-content: flex-start; }
+}
+@media (max-width: 520px) {
+  /* the filters scroll inside their own row, never the page */
+  .pr-filters { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; padding-bottom: 2px; }
+  .pr-filters::-webkit-scrollbar { display: none; }
+  .pr-filters .pr-chip { flex: none; }
+  .pr-bar { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .pr-bar > .btn { width: fit-content; }
+  .pr-best-row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .pr-seg { border-radius: 12px; }
+  .pr-seg button { flex: 1 1 auto; padding: 9px 12px; }
+  .pr-menu { right: auto; left: 0; }
+}

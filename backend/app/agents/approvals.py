@@ -26,8 +26,12 @@ from ..services import new_id, track
 from ..text import greeting_name
 from .jobs import claim, get_settings, may_act, release
 
-KINDS = ("followup", "review", "reminder", "office", "customer", "quote")
+KINDS = ("followup", "review", "reminder", "office", "customer", "quote", "outreach")
 MONEY = {"reminder", "quote"}                 # money messages always wait for a person
+# v2.4: a first message (or follow-up) to a business that never contacted the owner. The hub NEVER sends it — not from the
+# hub's number, not from the owner's connected WhatsApp tool, not on any plan, whatever the owner's autonomy setting. It only
+# opens the owner's own WhatsApp with the message typed ("own"), and the owner presses send himself.
+OWN_ONLY = {"outreach"}
 CORE = {"_id", "ws", "agent", "kind", "title", "to_name", "to_phone", "text", "params", "status", "via", "created_at", "decided_at", "decided_by"}
 TEMPLATE = {"followup": "tpl_followup", "office": "tpl_followup", "quote": "tpl_followup", "review": "tpl_review",
             "reminder": "tpl_reminder", "customer": "tpl_customer"}
@@ -55,6 +59,8 @@ async def in_window(ws: str, phone: str) -> bool:
 
 async def deliver(approval: dict, owner: dict | None = None) -> dict:
     """Sends from the owner's own WhatsApp number. Never raises; {"sent": False, "error": ...} when it can't."""
+    if approval.get("kind") in OWN_ONLY:   # v2.4: outreach goes only from the owner's own phone (OWN_ONLY)
+        return {"sent": False, "via": "own-only", "error": "This message goes from your own WhatsApp. Tap Send on WhatsApp."}
     ws = approval["ws"]
     conn = await owner_whatsapp(ws, owner)
     if not conn:
@@ -84,6 +90,10 @@ async def after_sent(approval: dict, at=None) -> None:
     """What sending changes elsewhere: a followed-up lead counts as contacted; a won customer has been asked for a review."""
     at = at or now()
     lead_id = approval.get("lead_id")
+    if approval["kind"] == "outreach" and approval.get("prospect_id"):   # v2.4: the business counts as contacted (follow-ups start)
+        from .. import prospecting
+        await prospecting.on_outreach_sent(approval, at)
+        return
     if approval["kind"] == "quote" and approval.get("quote_id"):
         await db().quotes.update_one({"_id": approval["quote_id"]}, {"$set": {"last_followup_at": at}})   # the count is kept by the agent
     if not lead_id:
@@ -144,6 +154,8 @@ async def create_approval(owner: dict, ws: str, agent: str, kind: str, title: st
            "lead_id": None, "due_id": None, **{k: v for k, v in refs.items() if k not in CORE}}
     if kind in ("review", "reminder"):  # these go out as a fixed template; keep its wording to show what was really sent
         doc["template_text"] = doc["text"]
+    if kind in OWN_ONLY:
+        auto_send = allow_act = False
     money_ok = auto_send and kind == "reminder" and only_payment_links(doc["text"]) and plans.rank(plans.effective_plan(owner)) >= plans.rank("growth")
     if money_ok or (allow_act and kind not in MONEY and may_act(owner, await get_settings(ws, agent))):
         result = await deliver(doc, owner)
@@ -187,6 +199,9 @@ async def decide(ws: str, approval_id: str, actor: str, action: str) -> dict:
     if not await claim(key):
         raise HTTPException(409, "This message was already handled.")
     out: dict = {}
+    if action == "send" and approval.get("kind") in OWN_ONLY:
+        await release(key)
+        raise HTTPException(400, "This message goes from your own WhatsApp. Tap Send on WhatsApp.")
     if action == "send":
         result = await deliver(approval)
         if not result["sent"]:
@@ -197,7 +212,18 @@ async def decide(ws: str, approval_id: str, actor: str, action: str) -> dict:
         if result.get("mode") == "template" and approval.get("template_text") and approval.get("text") != approval["template_text"]:
             patch.update(text=approval["template_text"], edited_text=approval.get("text"))  # a fixed template went out, not the edit
     elif action == "own":
-        out["link"] = own_link(approval)
+        link_for = approval
+        if approval.get("kind") == "outreach":
+            # v2.4: a message to a business found in Find new customers — still allowed to be contacted, within the day's first
+            # messages, and with a mobile number. A Google business's number is looked up live and only put in the link (never
+            # saved on the approval: Google's details aren't stored).
+            from .. import prospecting
+            try:
+                link_for = {**approval, "to_phone": await prospecting.before_own(approval)}
+            except BaseException:
+                await release(key)
+                raise
+        out["link"] = own_link(link_for)
         patch = {"status": "sent", "via": "own"}
     else:
         patch = {"status": "skipped"}

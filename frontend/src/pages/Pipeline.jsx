@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useSearchParams } from "react-router-dom";
-import { ago, api, localPhone, rs, waLink } from "../api.js";
-import { Busy, Field, FormError, Modal, Sheet, useHub } from "../ui.jsx";
+import { ago, api, localPhone, rs, upload, waLink } from "../api.js";
+import { Busy, Copy, Field, FormError, Modal, Sheet, Switch, useHub } from "../ui.jsx";
 import { Loading, Tabs } from "../v2.jsx";
 import "./crm.css";
 import "./pipeline.css";
@@ -373,6 +373,268 @@ function List({ deals, stageOf, today, sort, onOpen }) {
   );
 }
 
+/* ───────────── v2.4: Pipeline fills itself, and Lead research ───────────── */
+const STATE_LABEL = { pending: "Waiting for you", applied: "Applied", dismissed: "Dismissed", done: "Filed" };
+
+/** OwnerDesk's suggestions from one conversation: tick what to apply. Stage, value, won/lost and a new deal never change by themselves. */
+function SuggestCard({ u, onDone }) {
+  const { toast } = useHub();
+  const [pick, setPick] = useState(() => Object.fromEntries(u.suggested.map((s) => [s.key, true])));
+  const [who, setWho] = useState({ name: "", phone: "" });
+  const [err, setErr] = useState("");
+  const needsName = u.suggested.some((s) => s.key === "new_deal" && s.needs_name);
+  const fields = u.suggested.filter((s) => pick[s.key]).map((s) => s.key);
+  const apply = async () => {
+    if (!fields.length) throw new Error("Tick at least one update, or press Dismiss.");
+    if (needsName && fields.includes("new_deal") && who.name.trim().length < 2) throw new Error("Type the customer's name first.");
+    const body = { fields, ...(needsName ? { name: who.name.trim(), phone: who.phone.trim() } : {}) };
+    const r = await api(`/crm/updates/${u.id}/apply`, { method: "POST", body });
+    toast(fields.includes("new_deal") ? "Added as a new opportunity" : "Applied. You can undo it from the history.");
+    onDone(r.update);
+  };
+  const dismiss = async () => {
+    const r = await api(`/crm/updates/${u.id}/dismiss`, { method: "POST" });
+    toast("Dismissed. Nothing on the deal changed.");
+    onDone(r.update);
+  };
+  return (
+    <div className="pp-suggest" role="region" aria-label="Suggested updates">
+      <div className="pp-suggest-head">
+        <span className="pp-by">By OwnerDesk</span><b>Suggested updates</b>
+        <small>{u.source_label} · {ago(u.at)}</small>
+      </div>
+      {u.summary?.[0] && <p className="small muted pp-suggest-sum">{u.summary[0]}</p>}
+      <div className="pp-suggest-list">
+        {u.suggested.map((s) => (
+          <label key={s.key} className="pp-suggest-item">
+            <input type="checkbox" checked={!!pick[s.key]} onChange={(e) => setPick({ ...pick, [s.key]: e.target.checked })} />
+            <span>{s.label}</span>
+          </label>
+        ))}
+      </div>
+      {needsName && pick.new_deal && (
+        <div className="crm-two">
+          <input className="input" value={who.name} maxLength={80} aria-label="Customer's name" placeholder="Customer's name" onChange={(e) => setWho({ ...who, name: e.target.value })} />
+          <input className="input" value={who.phone} maxLength={24} inputMode="tel" aria-label="Mobile (optional)" placeholder="Mobile (optional)" onChange={(e) => setWho({ ...who, phone: e.target.value })} />
+        </div>
+      )}
+      <FormError msg={err} />
+      <div className="row">
+        <Busy className="btn sm primary" onError={setErr} run={apply}>Apply</Busy>
+        <Busy className="btn sm ghost" onError={setErr} run={dismiss}>Dismiss</Busy>
+      </div>
+    </div>
+  );
+}
+
+/** One filed conversation in the deal's list, with Undo while OwnerDesk's changes are still there. */
+function Filed({ u, onUndo }) {
+  const done = [u.applied?.note && "a note", u.applied_follow_up && `follow-up on ${u.applied_follow_up}`, u.applied_stage && `moved to ${u.applied_stage}`].filter(Boolean);
+  return (
+    <div className="pp-filed">
+      <div className="row between" style={{ gap: 6 }}>
+        <span className="small"><span className="pp-by">By OwnerDesk</span> {u.source_label} · {ago(u.at)}</span>
+        <span className={`pp-filed-st ${u.undone_at ? "undone" : u.state}`}>{u.undone_at ? "Undone" : STATE_LABEL[u.state] || u.state}</span>
+      </div>
+      {(u.summary || []).map((l, i) => <p key={i} className="small">{l}</p>)}
+      {u.next_step && <p className="small muted">Next step: {u.next_step}</p>}
+      {done.length > 0 && !u.undone_at && <p className="small muted">Added by itself: {done.join(", ")}.</p>}
+      {u.written_by === "rules" && <p className="small muted">Read without AI (no token used).</p>}
+      {u.can_undo && <div><Busy className="btn sm ghost" run={() => onUndo(u)}>Undo</Busy></div>}
+    </div>
+  );
+}
+
+/** The voice recorder: the browser's own recorder (no app to install), up to 2 minutes. */
+function useRecorder(onDone) {
+  const [state, setState] = useState(null);   // null | {secs}
+  const ref = useRef(null);
+  const can = typeof window !== "undefined" && !!window.MediaRecorder && !!navigator.mediaDevices?.getUserMedia;
+  const stop = useCallback(() => { const r = ref.current; if (r && r.rec.state !== "inactive") r.rec.stop(); }, []);
+  useEffect(() => () => { const r = ref.current; if (r) { clearInterval(r.timer); r.cancelled = true; if (r.rec.state !== "inactive") r.rec.stop(); r.stream.getTracks().forEach((t) => t.stop()); } }, []);
+  const start = async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const rec = new MediaRecorder(stream);
+    const chunks = [];
+    const r = { rec, stream, chunks, secs: 0, cancelled: false };
+    rec.ondataavailable = (e) => { if (e.data?.size) chunks.push(e.data); };
+    rec.onstop = () => {
+      clearInterval(r.timer);
+      stream.getTracks().forEach((t) => t.stop());
+      ref.current = null;
+      setState(null);
+      if (r.cancelled || !chunks.length) return;
+      const type = rec.mimeType || chunks[0].type || "audio/webm";
+      const ext = type.includes("mp4") ? "m4a" : type.includes("ogg") ? "ogg" : "webm";
+      onDone(new File(chunks, `voice-note.${ext}`, { type: type.split(";")[0] }));
+    };
+    r.timer = setInterval(() => { r.secs += 1; setState({ secs: r.secs }); if (r.secs >= 120) stop(); }, 1000);
+    ref.current = r;
+    rec.start();
+    setState({ secs: 0 });
+  };
+  const cancel = () => { const r = ref.current; if (r) { r.cancelled = true; stop(); } };
+  return { can, state, start, stop, cancel };
+}
+
+/** "Conversation" tab: paste a chat or email, upload a WhatsApp export, or record a voice note after a call. */
+function TalkPanel({ deal, info, onFiled, onUndo, onSetting }) {
+  const { toast } = useHub();
+  const [mode, setMode] = useState("paste");
+  const [text, setText] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [heard, setHeard] = useState("");
+  const fileRef = useRef(null);
+  const voiceRef = useRef(null);
+  const sendFile = async (file) => {
+    if (!file) return;
+    setErr(""); setBusy(true); setHeard("");
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const r = await upload(`/crm/deals/${deal.id}/conversation/upload`, form);
+      if (r.transcript) setHeard(r.transcript);
+      onFiled(r.update);
+      toast("Filed into the deal");
+    } catch (e) { if (!e.handled) setErr(e.message); } finally { setBusy(false); if (fileRef.current) fileRef.current.value = ""; if (voiceRef.current) voiceRef.current.value = ""; }
+  };
+  const recorder = useRecorder(sendFile);
+  const paste = async () => {
+    const r = await api(`/crm/deals/${deal.id}/conversation`, { method: "POST", body: { text: text.trim(), source: "paste" } });
+    setText("");
+    onFiled(r.update);
+    toast("Filed into the deal");
+  };
+  const list = info?.updates || [];
+  return (
+    <div className="stack">
+      <p className="small muted">After a talk with the customer, add it here. OwnerDesk writes a short summary in the notes and sets the follow-up date when a day was said. A new stage or value waits for your tap. 1 AI token each.</p>
+      <div className="crm-seg" role="group" aria-label="How to add the conversation">
+        {[["paste", "Paste"], ["file", "Chat export"], ["voice", "Voice note"]].map(([k, l]) => (
+          <button type="button" key={k} className={mode === k ? "on" : ""} aria-pressed={mode === k} onClick={() => { setMode(k); setErr(""); }}>{l}</button>))}
+      </div>
+      {mode === "paste" && (
+        <>
+          <textarea className="textarea" rows={6} value={text} maxLength={60000} aria-label="The conversation" onChange={(e) => setText(e.target.value)}
+            placeholder="Paste the WhatsApp chat or the email thread here" />
+          <div><Busy className="btn sm primary ai" disabled={text.trim().length < 10} onError={setErr} run={paste}>File this conversation · 1 AI token</Busy></div>
+        </>
+      )}
+      {mode === "file" && (
+        <div className="stack" style={{ gap: 8 }}>
+          <span className="small muted">In WhatsApp, open the chat → ⋮ (or the name on iPhone) → Export chat → Without media. Save the file and choose it here (.txt or .zip). Only the chat text is read.</span>
+          <input ref={fileRef} className="pp-file" type="file" accept=".txt,.zip,text/plain,application/zip" aria-label="Chat export file" disabled={busy}
+            onChange={(e) => sendFile(e.target.files?.[0])} />
+        </div>
+      )}
+      {mode === "voice" && (
+        <div className="stack" style={{ gap: 8 }}>
+          {info && !info.voice ? <span className="small muted">Voice notes aren't switched on on this hub yet. Paste the conversation instead.</span> : (
+            <>
+              <span className="small muted">Speak for 30 seconds after the call: what they need, what you agreed, and when to follow up.</span>
+              {recorder.can && (recorder.state
+                ? <div className="row"><span className="pp-rec" aria-live="polite">● Recording {recorder.state.secs}s</span>
+                    <button type="button" className="btn sm primary" onClick={recorder.stop}>Stop and file it</button>
+                    <button type="button" className="btn sm ghost" onClick={recorder.cancel}>Cancel</button></div>
+                : <div><button type="button" className="btn sm" disabled={busy} onClick={() => recorder.start().catch(() => setErr("The microphone didn't open. Allow it for this site, or choose a recording below."))}>Record a voice note</button></div>)}
+              <span className="small muted">Or choose a recording from your phone:</span>
+              <input ref={voiceRef} className="pp-file" type="file" accept="audio/*,.m4a,.mp3,.ogg,.opus,.wav,.webm" aria-label="Voice note file" disabled={busy}
+                onChange={(e) => sendFile(e.target.files?.[0])} />
+            </>
+          )}
+        </div>
+      )}
+      {busy && <span className="small muted" aria-live="polite">Reading it… this takes a few seconds.</span>}
+      {heard && <p className="small muted pp-msg">Heard: “{heard}”</p>}
+      <FormError msg={err} />
+      {info?.can_change_settings && (
+        <div className="stack" style={{ gap: 4 }}>
+          <Switch checked={info.settings?.auto_forward} label="Move the stage forward by itself" onChange={onSetting} />
+          <span className="hint">Only to a later stage, never to the last step, Won or Lost, and it never changes the value.</span>
+        </div>
+      )}
+      {list.length > 0 && <span className="label">Conversations filed</span>}
+      {list.map((u) => <Filed key={u.id} u={u} onUndo={onUndo} />)}
+    </div>
+  );
+}
+
+/** The brief: who they are (from their own website, never a private person), what they asked, 3 questions, a first line. */
+function BriefBody({ brief }) {
+  if (brief.status === "failed") return <p className="small muted">The brief couldn't be written. Press the button to try again.</p>;
+  return (
+    <div className="stack pp-brief">
+      <div><span className="label">Who they are</span>{brief.who.split("\n").map((l, i) => <p key={i} className="small">{l}</p>)}
+        {(brief.sources || []).map((s) => <a key={s.url} className="small" href={s.url} target="_blank" rel="noopener noreferrer nofollow">{s.label}: {s.url.replace(/^https?:\/\//, "")}</a>)}
+        {brief.note && <p className="small muted">{brief.note}</p>}
+      </div>
+      {brief.status === "done" && <div><span className="label">What they're probably asking for</span>{brief.asking.split("\n").map((l, i) => <p key={i} className="small">{l}</p>)}</div>}
+      <div><span className="label">3 questions for the first call</span><ol className="pp-qs">{brief.questions.map((q) => <li key={q} className="small">{q}</li>)}</ol></div>
+      {brief.first_line && <div className="stack" style={{ gap: 6 }}><span className="label">A first line</span><p className="small prompt">{brief.first_line}</p>
+        <div><Copy text={brief.first_line} label="Copy" className="btn sm ghost" /></div></div>}
+      <span className="small muted"><span className="pp-by">By OwnerDesk</span> {brief.by === "auto" ? "Written by itself" : "Written when you asked"} · {ago(brief.at)}
+        {brief.status === "empty" ? " · nothing useful to add, so no token was used" : ""}</span>
+    </div>
+  );
+}
+
+function BriefPanel({ id, data, onBrief }) {
+  const { toast } = useHub();
+  const [err, setErr] = useState("");
+  if (!data) return <Loading />;
+  const b = data.brief;
+  return (
+    <div className="stack">
+      {b ? <BriefBody brief={b} /> : <p className="small muted">No brief yet. {data.auto_on ? "New inquiries get one by itself while this month's automatic briefs last." : "Automatic briefs are switched off."}</p>}
+      <FormError msg={err} />
+      {data.can_research && <div><Busy className="btn sm ai" onError={setErr} run={async () => {
+        const r = await api(`/leads/${id}/brief`, { method: "POST" });
+        onBrief(r);
+        toast(r.brief?.status === "done" ? "Brief written" : "Nothing useful to add: 3 questions are ready, no token used");
+      }}>{b ? "Research again" : "Research this lead"} · 1 AI token</Busy></div>}
+      <span className="small muted">Only their own business website is read, and only what they wrote. Nothing is looked up about a private person.</span>
+    </div>
+  );
+}
+
+/** A conversation with someone who has no opportunity yet (from the board). */
+function NewTalk({ onClose, onDone }) {
+  const [f, setF] = useState({ name: "", phone: "", text: "" });
+  const [err, setErr] = useState("");
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  return (
+    <Modal onClose={onClose}>
+      <span className="kicker">Opportunities</span>
+      <h2>A chat with someone <em>new</em>.</h2>
+      <div className="stack">
+        <p className="small muted">Paste the chat. OwnerDesk suggests a new contact and opportunity for one tap. If the number is already a customer with an open opportunity, it goes there. 1 AI token.</p>
+        <div className="crm-two">
+          <Field label="Their name (optional)"><input className="input" value={f.name} maxLength={80} onChange={set("name")} /></Field>
+          <Field label="Mobile (optional)"><input className="input" inputMode="tel" value={f.phone} maxLength={24} onChange={set("phone")} placeholder="98200 00000" /></Field>
+        </div>
+        <textarea className="textarea" rows={6} value={f.text} maxLength={60000} aria-label="The conversation" onChange={set("text")} placeholder="Paste the WhatsApp chat or the email here" />
+        <FormError msg={err} />
+        <div className="row">
+          <Busy className="btn primary ai" disabled={f.text.trim().length < 10} onError={setErr} run={async () => {
+            const r = await api("/crm/conversation", { method: "POST", body: { text: f.text.trim(), name: f.name.trim(), phone: f.phone.trim() } });
+            onDone(r.update);
+          }}>Read it · 1 AI token</Busy>
+          <button className="btn ghost" onClick={onClose}>Cancel</button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/** The form's values from a deal (the dialog's left half). */
+function formOf(x, board) {
+  const known = !x.lost_reason || (board.lost_reasons || []).includes(x.lost_reason);
+  return { name: x.name, company: x.company || "", value: x.value ?? "", pstage: x.pstage, status: isOpen(x) ? "open" : x.status,
+    lost_reason: known ? x.lost_reason || "" : "__other",
+    expected_close: x.expected_close || "", follow_up_on: x.follow_up_on || "", follow_up_note: x.follow_up_note || "", assignee_id: x.assignee_id || "" };
+}
+
 /* ───────────── edit an opportunity (the GHL-style dialog) ───────────── */
 function EditDeal({ id, focus, board, stages, onClose, onChanged }) {
   const { me, toast } = useHub();
@@ -383,17 +645,36 @@ function EditDeal({ id, focus, board, stages, onClose, onChanged }) {
   const [note, setNote] = useState("");
   const [kind, setKind] = useState("note");
   const [other, setOther] = useState("");
+  const [talk, setTalk] = useState(null);       // v2.4: conversations filed into this deal (Pipeline fills itself)
+  const [brief, setBrief] = useState(null);     // v2.4: the lead's brief (Lead research)
   const noteRef = useRef(null);
+  const fills = !!me.features?.deal_autofill;
+  const briefs = !!me.features?.lead_brief;
   useEffect(() => { const k = (e) => e.key === "Escape" && onClose(); window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [onClose]);
   const load = useCallback(() => api(`/crm/deals/${id}`).then((x) => {
     setD(x);
     const known = !x.lost_reason || (board.lost_reasons || []).includes(x.lost_reason);
     if (!known) setOther(x.lost_reason);
-    setF({ name: x.name, company: x.company || "", value: x.value ?? "", pstage: x.pstage, status: isOpen(x) ? "open" : x.status,
-      lost_reason: known ? x.lost_reason || "" : "__other",
-      expected_close: x.expected_close || "", follow_up_on: x.follow_up_on || "", follow_up_note: x.follow_up_note || "", assignee_id: x.assignee_id || "" });
+    setF(formOf(x, board));
   }).catch((e) => { if (!e.handled) toast(e.message, "err"); onClose(); }), [id]);  // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { load(); }, [load]);
+  const loadTalk = useCallback(() => (fills ? api(`/crm/deals/${id}/updates`).then(setTalk).catch(() => setTalk({ updates: [], pending: [] })) : Promise.resolve()), [id, fills]);
+  const loadBrief = useCallback(() => (briefs ? api(`/leads/${id}/brief`).then(setBrief).catch(() => setBrief({ brief: null })) : Promise.resolve()), [id, briefs]);
+  useEffect(() => { load(); loadTalk(); loadBrief(); }, [load, loadTalk, loadBrief]);
+  // OwnerDesk (or an Apply / Undo) changed the deal on the server: show it, and keep whatever was typed on the left
+  const refreshDeal = async () => {
+    const old = d;
+    const x = await api(`/crm/deals/${id}`);
+    const before = formOf(old, board), after = formOf(x, board);
+    setF((cur) => Object.fromEntries(Object.entries(cur).map(([k, v]) => [k, v === before[k] ? after[k] : v])));
+    setD(x);
+    onChanged(x);
+    loadTalk();
+  };
+  const undoUpdate = async (u) => {
+    const r = await api(`/crm/updates/${u.id}/undo`, { method: "POST" });
+    toast(r.kept?.length ? `Undone. Kept as you changed it: ${r.kept.join(", ")}.` : "Undone");
+    await refreshDeal();
+  };
   useEffect(() => { if (focus === "lost" && f && f.status !== "lost") setF((x) => ({ ...x, status: "lost" })); }, [focus, d]);  // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (focus === "notes" && d) noteRef.current?.focus(); }, [focus, d]);
   if (!d || !f) {
@@ -452,6 +733,8 @@ function EditDeal({ id, focus, board, stages, onClose, onChanged }) {
     onChanged(null);
   };
   const team = board.team || [];
+  const aiLine = Object.fromEntries((talk?.updates || []).flatMap((u) => (u.activity_ids || []).map((a) => [a, u])));
+  const sideTabs = [["notes", "Notes"], ...(fills ? [["talk", "Conversation"]] : []), ...(briefs ? [["brief", "Brief"]] : []), ["docs", "Quotation & invoice"]];
   return (
     <div className="pp-modal-wrap" role="dialog" aria-modal="true" aria-label={`Edit opportunity: ${d.name}`}>
       <div className="pp-scrim" onClick={onClose} />
@@ -473,6 +756,7 @@ function EditDeal({ id, focus, board, stages, onClose, onChanged }) {
         </header>
         <div className="pp-modal-body">
           <div className="pp-modal-main">
+            {(talk?.pending || []).map((u) => <SuggestCard key={u.id} u={u} onDone={() => refreshDeal()} />)}
             <span className="label">Contact</span>
             <div className="pp-contact">
               <span><b>{d.contact?.name || d.name}</b>{(d.phone || d.email) && <small>{[d.phone && localPhone(d.phone), d.email].filter(Boolean).join(" · ")}</small>}</span>
@@ -517,8 +801,13 @@ function EditDeal({ id, focus, board, stages, onClose, onChanged }) {
               <input className="input" value={f.follow_up_note} maxLength={300} onChange={set("follow_up_note")} placeholder="Send the revised quotation" /></Field>}
           </div>
           <aside className="pp-modal-side">
-            <Tabs value={tab} onChange={setTab} tabs={[["notes", "Notes"], ["docs", "Quotation & invoice"]]} />
-            {tab === "notes" ? (
+            <Tabs value={tab} onChange={setTab} tabs={sideTabs} />
+            {tab === "talk" && fills ? (
+              <TalkPanel deal={d} info={talk} onFiled={() => refreshDeal()} onUndo={undoUpdate}
+                onSetting={async (v) => { await api("/crm/dealfill/settings", { method: "PUT", body: { auto_forward: v } }); toast(v ? "Stages move forward by themselves" : "Stage changes wait for your tap"); loadTalk(); }} />
+            ) : tab === "brief" && briefs ? (
+              <BriefPanel id={d.id} data={brief} onBrief={setBrief} />
+            ) : tab === "notes" ? (
               <div className="stack">
                 {d.contact && me.features?.crm && (
                   <div className="crm-seg" role="group" aria-label="What happened">
@@ -529,11 +818,18 @@ function EditDeal({ id, focus, board, stages, onClose, onChanged }) {
                   placeholder={kind === "call" ? "What did you talk about?" : kind === "meeting" ? "What was decided?" : "Add a note…"} />
                 <div><Busy className="btn sm" disabled={note.trim().length < 2} run={logIt}>Add</Busy></div>
                 <div className="crm-timeline">
-                  {(d.activities || []).map((a) => (
-                    <div key={a.id} className={`crm-ev ${a.kind}`}><i />
-                      <div><p className="small">{a.text}</p><span className="small muted">{ago(a.at)}{a.by_name ? ` · ${a.by_name}` : ""}</span></div>
-                    </div>
-                  ))}
+                  {(d.activities || []).map((a) => {
+                    const u = aiLine[a.id];
+                    const ours = a.by_name === "OwnerDesk";
+                    return (
+                      <div key={a.id} className={`crm-ev ${a.kind} ${ours ? "by-od" : ""}`}><i />
+                        <div><p className="small">{a.text}</p>
+                          <span className="small muted">{ago(a.at)}{ours ? <> · <span className="pp-by">By OwnerDesk</span></> : a.by_name ? ` · ${a.by_name}` : ""}</span>
+                          {u?.can_undo && <Busy className="btn sm ghost pp-undo-line" run={() => undoUpdate(u)}>Undo</Busy>}
+                        </div>
+                      </div>
+                    );
+                  })}
                   {!(d.activities || []).length && <span className="small muted">Nothing yet.</span>}
                 </div>
               </div>
@@ -736,11 +1032,15 @@ export default function Pipeline() {
   const [showFilters, setShowFilters] = useState(false);
   const [undo, setUndo] = useState(null);             // {deal, from, to} for a few seconds after a move
   const undoTimer = useRef(null);
+  const [talkNew, setTalkNew] = useState(false);      // v2.4: a chat with someone who has no opportunity yet
+  const [newDeals, setNewDeals] = useState([]);       // v2.4: "add as a new opportunity" suggestions waiting for a tap
 
   const loadBoard = useCallback(() => api(pipe === "hub" ? "/crm/deals" : `/crm/deals?pipeline=${encodeURIComponent(pipe)}`).then(setBoard)
     .catch((e) => { if (pipe !== "hub" && e.status === 404) { setPipe("hub"); return; } throw e; }), [pipe]);
   const loadSetup = useCallback(() => api("/crm/pipeline").then(setSetup), []);
-  useEffect(() => { Promise.all([loadSetup(), loadBoard()]).catch((e) => { if (!e.handled) toast(e.message, "err"); }); }, [loadSetup, loadBoard]);  // eslint-disable-line react-hooks/exhaustive-deps
+  const fills = !!me?.features?.deal_autofill;
+  const loadNew = useCallback(() => (fills ? api("/crm/updates").then((r) => setNewDeals(r.pending || [])).catch(() => {}) : Promise.resolve()), [fills]);
+  useEffect(() => { Promise.all([loadSetup(), loadBoard(), loadNew()]).catch((e) => { if (!e.handled) toast(e.message, "err"); }); }, [loadSetup, loadBoard, loadNew]);  // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => clearTimeout(undoTimer.current), []);
 
   // first visit, before the stages exist: the 4 questions (Pipeline tab) come first for whoever can set them up
@@ -898,6 +1198,14 @@ export default function Pipeline() {
               {" "}· This week: {board.week.new} new, {board.week.won} won, {board.week.lost} lost</span>
           </div>
 
+          {fills && (
+            <div className="pp-ai-row">
+              <span className="small muted">Talked to someone who isn't on the board yet?</span>
+              <button type="button" className="btn sm ghost ai" onClick={() => setTalkNew(true)}>Paste a chat from someone new</button>
+            </div>
+          )}
+          {newDeals.map((u) => <SuggestCard key={u.id} u={u} onDone={() => { loadNew(); loadBoard(); }} />)}
+
           {view === "board"
             ? (deals.length ? <Board stages={stages} deals={filtered} today={today} sort={sort} onMove={move} onOpen={openDeal} onWon={won} onAddIn={(sid) => setAdding(sid)} readonly={ro} />
               : ro ? <div className="empty"><h2>No opportunities in this pipeline yet.</h2><p className="muted">Opportunities added in Employz.ai show here after the next sync.</p></div>
@@ -920,6 +1228,11 @@ export default function Pipeline() {
       {openId && !ro && !String(openId).startsWith("x:") && <EditDeal id={openId} focus={focus} board={board} stages={stages} onClose={() => { openDeal(null); loadBoard(); }} onChanged={merge} />}
       {adding !== null && <AddDeal board={board} stages={stages} stage={adding || undefined} onClose={() => setAdding(null)}
         onAdded={(d) => { setAdding(null); toast(`${d.name} added`); loadBoard(); }} />}
+      {talkNew && <NewTalk onClose={() => setTalkNew(false)} onDone={(u) => {
+        setTalkNew(false);
+        if (u.lead_id) { toast("They already have an open opportunity: filed into it."); loadBoard(); openDeal(u.lead_id); }
+        else { toast("Read. Check the suggestion and tap Apply."); loadNew(); }
+      }} />}
     </Sheet>
   );
 }

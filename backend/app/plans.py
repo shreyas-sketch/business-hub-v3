@@ -75,8 +75,15 @@ DEFAULT_PLANS = {
 }
 for _t, _p in DEFAULT_PLANS.items():   # v2.3: social media images a month, extra AI tokens a month for paying members, a yearly price
     _p.update(images=EVENT_IMAGES_DEFAULT if _t == "free" else 30, extra_runs=0, price_year_minor=0)
+# v2.4: the growth features' limits. Monthly unless named "per_day". Starting values, not measured: measure the real cost on a
+# few members before raising them (Admin → Features & plans → Plans).
+GROWTH_LIMITS = {"prospect_searches": 10, "prospects_kept": 100, "outreach_per_day": 20, "briefs": 40, "calls_scored": 20}
+GROWTH_LIMIT_SCALE = {"free": 0, "lite": 1, "program": 1, "running": 2, "growth": 4, "office": 10}
+for _t, _p in DEFAULT_PLANS.items():
+    _p.update({k: v * GROWTH_LIMIT_SCALE[_t] for k, v in GROWTH_LIMITS.items()})
 PLAN_EDITABLE = {"name": str, "short": str, "price_minor": int, "runs": int, "team_size": int, "access_days": int, "pitch": str, "promise": str,
-                 "razorpay_plan_id": str, "images": int, "extra_runs": int, "price_year_minor": int}
+                 "razorpay_plan_id": str, "images": int, "extra_runs": int, "price_year_minor": int,
+                 "prospect_searches": int, "prospects_kept": int, "outreach_per_day": int, "briefs": int, "calls_scored": int}
 
 
 def F(tier, group, label, what, path=None, role="staff", core=False):
@@ -200,6 +207,14 @@ DEFAULT_FEATURES: dict[str, dict] = {
     "whatsapp_tool":   F("growth", "Systems", "WhatsApp tool", "Connect your own WhatsApp number through the WhatsApp service you use, so messages go from your number", None, "owner"),
     "key_person":      F("lite", "Structure", "Key-person knowledge", "What your key employee knows, written down as an AI agent skill, a role card and SOPs — so the business doesn't depend on one person", "/key-person", "owner"),
     "tender_finder":   F("lite", "Grow", "Tender finder", "Open government tenders on GeM that fit your business, with a link to apply and help to apply for each one", "/tenders", "manager"),
+    # ───────── v2.4: the growth features (off until the v2.4 setup switches them on) ─────────
+    "prospects":       F("lite", "Scale", "Find new customers", "Businesses near you that fit, a first message drafted for each — you send it from your own WhatsApp", "/prospects", "manager"),
+    "lead_brief":      F("lite", "Systems", "Lead research", "A short brief on every new inquiry: who they are, what they want and 3 questions for the first call"),
+    "deal_autofill":   F("lite", "Systems", "Pipeline fills itself", "Paste a chat, upload a WhatsApp export or speak a voice note: the deal gets its note, next step and follow-up date"),
+    "call_coach":      F("lite", "Scale", "Call coach", "Upload a call or paste it: a score out of 10 and 3 fixes, for each person on your team", "/call-coach", "manager"),
+    "ai_team":         F("lite", "AI team", "AI team", "Every AI role, what it did today and this month, counted from your own records", "/ai-team", "manager"),
+    "growth_weekly":   F("lite", "AI team", "Weekly growth line", "Every Monday, one WhatsApp line: businesses found, messages you sent, replies and new deals", None, "owner"),
+    "quick_answers":   F("lite", "Start", "Quick answers", "Tap a question — which deals are stuck, who owes the most — and get the answer from your own records", None, "manager"),
 }
 # The L0 starter set: what the free 2-day webinar shows. When new signups get only these (Admin → Onboarding), every other
 # menu page stays locked until they join. The admin can add or take out any feature (Admin → Features & plans → Edit).
@@ -212,7 +227,8 @@ THREEDAY = ("home", "business_brain", "engine_audit", "website", "sop_library", 
             "money_owed", "quotations", "inquiry_desk", "smart_dashboard", "expenses", "plans_billing")
 # What an owner's signup access can be limited to (user.welcome.only), and the feature flag that says a page is in that set
 SIGNUP_SETS = {"starter": "starter", "threeday": "threeday"}
-V23_NEW =("engine_audit", "lead_ideas", "crm", "social_media", "brochures", "key_person")
+V23_NEW = ("engine_audit", "lead_ideas", "crm", "social_media", "brochures", "key_person")
+V24_NEW = ("prospects", "lead_brief", "deal_autofill", "call_coach", "ai_team", "growth_weekly", "quick_answers")
 # Each feature's engine. Anything not listed here sits under "More" (only seen when the admin switches it on).
 DEFAULT_ENGINE = {
     "home": "start", "business_brain": "start", "engine_audit": "start",
@@ -227,11 +243,13 @@ DEFAULT_ENGINE = {
     "brand_kit": "brand", "brand_message": "brand", "social_media": "brand", "content_calendar": "brand", "brochures": "brand",
     "launch_kit": "brand", "competitor_watch": "brand",
     "key_person": "data", "expenses": "data", "tender_finder": "data", "bank_reader": "data", "gst_setaside": "data", "customer_risk": "data", "getting_paid": "data",
+    "prospects": "lead", "lead_brief": "conversion", "deal_autofill": "conversion", "call_coach": "sales", "ai_team": "start",
+    "growth_weekly": "start", "quick_answers": "start",
     "whatsapp_tool": "account", "plans_billing": "account", "connections": "account", "recordings": "account", "member_call": "account", "invite": "account",
     "team_logins": "account",
 }
 for _i, (_k, _f) in enumerate(DEFAULT_FEATURES.items()):
-    _f.update(key=_k, order=_i * 10, on=_k not in V23_NEW, teaser=True, sub="", engine=DEFAULT_ENGINE.get(_k, "more"), show=True,
+    _f.update(key=_k, order=_i * 10, on=_k not in V23_NEW + V24_NEW, teaser=True, sub="", engine=DEFAULT_ENGINE.get(_k, "more"), show=True,
               paid_only=False, grants_only=False, day=-1, starter=_k in STARTER, threeday=_k in THREEDAY)   # day -1: the engine's own day
 DEFAULT_FEATURES["business_brain"]["sub"] = "Business Brain"
 # The tender finder is being tried out with one account: open only where the admin grants it (Admin → grants).
@@ -245,6 +263,7 @@ FEATURE_EDITABLE = {"tier": str, "group": str, "label": str, "what": str, "order
 
 # Hub-wide settings outside the registry (the v2.3 setup turns the engine menu on; the admin edits the account links).
 DEFAULT_UI = {"menu": "groups", "community_link": "", "support_email": "", "pay_monthly_link": "", "pay_yearly_link": "", "v23": None,
+              "v24": None,
               "welcome_full_hub": settings.welcome_full_hub,   # new signups get the whole hub (see welcome_active)
               "welcome_starter": False,   # ...or only the L0 starter set (see starter_only); wins over the full hub
               "welcome_threeday": False,  # ...or only the 3-Day set (see threeday_only); wins over both
@@ -341,6 +360,8 @@ def apply_ui(doc: dict | None) -> None:
             UI[field] = v
     if (doc or {}).get("v23"):
         UI["v23"] = doc["v23"]
+    if (doc or {}).get("v24"):
+        UI["v24"] = doc["v24"]
 
 
 def engines_on() -> bool:
@@ -537,6 +558,15 @@ def monthly_images(user: dict) -> int:
     if not is_paid(user):
         return int(PLANS["free"].get("images", EVENT_IMAGES_DEFAULT))
     return int(PLANS[effective_plan(user)].get("images", 30))
+
+
+def growth_limit(user: dict, key: str) -> int:
+    """v2.4: one of the growth features' limits (GROWTH_LIMITS) for this owner's plan. Event and free accounts get the free
+    plan's number (0 by default) until the member pays."""
+    if key not in GROWTH_LIMITS:
+        raise KeyError(key)
+    tier = effective_plan(user) if is_paid(user) else "free"
+    return int(PLANS[tier].get(key, 0))
 
 
 def team_size(user: dict) -> int:

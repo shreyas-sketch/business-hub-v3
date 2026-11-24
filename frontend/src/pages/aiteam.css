@@ -1,0 +1,92 @@
+/* v2.4 AI team. Cards on the dark sheet: teal only for a role that is really working, gold for ₹ and for what waits for
+   the owner. Phones (390 px): one column, nothing wider than the screen. */
+
+.at-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* last week's line */
+.at-weekly { gap: 10px; }
+.at-weekly-line { margin: 0; font: 700 17px/1.45 var(--head); color: var(--ivory); overflow-wrap: anywhere; }
+
+/* this month, across the top */
+.at-strip { display: grid; gap: 10px; }
+.at-strip-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.at-cell { background: var(--panel); border: 1px solid var(--hairline); border-radius: var(--radius-card); padding: 14px; display: grid; gap: 4px;
+  min-width: 0; align-content: start; }
+.at-num { font: 800 26px/1.1 var(--head); color: var(--ivory); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.at-num .money { color: var(--gold); }
+
+/* the role cards */
+.at-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; align-items: start; }
+.at-card { background: var(--panel); border: 1px solid var(--hairline); border-radius: var(--radius-card); padding: 18px; display: grid; gap: 12px;
+  min-width: 0; align-content: start; }
+.at-card.s-working { border-color: var(--teal-line); box-shadow: var(--glow-teal); }
+.at-card.s-waiting { border-color: var(--gold-deep); }
+.at-card.s-off { background: transparent; }
+.at-card.s-off .at-counts td { color: var(--ivory-70); }
+.at-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.at-who { min-width: 0; display: grid; gap: 4px; }
+.at-who h3 { margin: 0; font: 800 17px/1.25 var(--head); }
+.at-who p { margin: 0; }
+.at-state { flex: none; }
+.at-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); display: inline-block; }
+.at-card.s-working .at-dot { animation: at-live 1.6s ease-in-out infinite; }   /* only while a job really runs */
+@keyframes at-live { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .at-card.s-working .at-dot { animation: none; } }
+
+.at-wait { display: flex; justify-content: space-between; gap: 10px; padding: 9px 12px; border: 1px solid var(--gold-deep); border-radius: 10px;
+  color: var(--gold-light); font-size: 13px; background: var(--gold-wash); overflow-wrap: anywhere; }
+.at-wait:hover { text-decoration: none; border-color: var(--gold); }
+.at-setup { margin: 0; padding: 9px 12px; border: 1px dashed var(--gold-deep); border-radius: 10px; color: var(--gold-light); }
+
+.at-counts, .at-min { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+.at-counts th, .at-counts td, .at-min th, .at-min td { padding: 7px 0; border-top: 1px solid var(--hairline); text-align: right;
+  font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.at-counts thead th, .at-min thead th { border-top: 0; font: 500 10.5px/1.2 var(--body); letter-spacing: .1em; text-transform: uppercase;
+  color: var(--ivory-70); padding-top: 0; }
+.at-counts tbody th, .at-min tbody th { text-align: left; font-weight: 500; color: var(--ivory-70); padding-right: 8px; }
+.at-counts td { color: var(--ivory); font-weight: 700; font-size: 15px; }
+.at-counts th:first-child { width: 46%; }
+.at-min thead th:first-child { text-align: left; }
+.at-counts .money { color: var(--gold); }
+.at-next { margin: 0; }
+.at-last { overflow-wrap: anywhere; }
+.at-last time { white-space: nowrap; }
+.at-card-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding-top: 4px;
+  border-top: 1px solid var(--hairline); }
+.at-card-foot .switch { padding-top: 8px; }
+.at-card-foot > a { padding-top: 8px; }
+
+/* hours saved (estimated) */
+.at-hours { gap: 12px; }
+.at-big { font: 800 30px/1.05 var(--head); color: var(--ivory); font-variant-numeric: tabular-nums; }
+.at-min th:first-child { width: 58%; }
+.at-min td { color: var(--ivory); }
+
+/* the feed */
+.at-feed { display: grid; gap: 10px; }
+.at-feed-list { list-style: none; margin: 0; padding: 0; display: grid; border: 1px solid var(--hairline); border-radius: var(--radius-card);
+  background: var(--panel); }
+.at-feed-list li { display: grid; grid-template-columns: 90px 150px minmax(0, 1fr) auto; gap: 12px; align-items: baseline; padding: 11px 16px;
+  border-top: 1px solid var(--hairline); font-size: 13.5px; }
+.at-feed-list li:first-child { border-top: 0; }
+.at-feed-list time { color: var(--ivory-70); white-space: nowrap; font-size: 12.5px; }
+.at-feed-role { color: var(--ivory-70); font-weight: 600; overflow-wrap: anywhere; }
+.at-feed-text { color: var(--ivory); overflow-wrap: anywhere; min-width: 0; }
+.at-feed-list li.not-done .at-feed-text { color: var(--ivory-70); }
+
+@media (max-width: 1000px) {
+  .at-strip-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .at-strip-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .at-strip-grid .at-cell:last-child { grid-column: 1 / -1; }
+  .at-num { font-size: 22px; }
+  .at-grid { grid-template-columns: minmax(0, 1fr); }
+  .at-card { padding: 16px; }
+  .at-feed-list li { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; padding: 10px 14px; }
+  .at-feed-list time { grid-column: 1; grid-row: 1; }
+  .at-feed-role { grid-column: 2; grid-row: 1; text-align: right; }
+  .at-feed-text { grid-column: 1 / -1; }
+  .at-feed-list li .pill { grid-column: 1 / -1; justify-self: start; }
+  .at-min th:first-child { width: 50%; }
+}

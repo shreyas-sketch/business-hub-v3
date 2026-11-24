@@ -551,6 +551,9 @@ async def inquiry_in(handle: str, mail: dict, verified: bool) -> str:
         (name, sender), text = fwd, inbound.forwarded_body(mail["full_text"])
     if not mailer.valid(sender):
         return "no_sender"
+    filed = await inbound.into_open_deal(owner, mail, name, sender, text, verified)   # v2.4: a known contact's email goes into their open deal
+    if filed:
+        return filed
     hour = now() - timedelta(hours=1)
     if await db().leads.count_documents({"owner_id": ws, "source": "email", "created_at": {"$gte": hour}}) >= EMAIL_LEADS_PER_HOUR:
         return "hourly_cap"

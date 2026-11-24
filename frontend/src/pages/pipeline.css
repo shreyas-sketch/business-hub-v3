@@ -229,3 +229,38 @@
 .pp-ro dd { margin: 0; overflow-wrap: anywhere; }
 .pp-modal-body.pp-modal-one { grid-template-columns: minmax(0, 1fr); }
 .pp-modal-one .pp-modal-main { max-width: 720px; }
+/* v2.4 Pipeline fills itself and Lead research: OwnerDesk's suggestions, the Conversation and Brief tabs */
+/* each part of the dialog keeps its own height: when a long history makes a half scroll, the tabs don't squash to nothing */
+.pp-modal-main, .pp-modal-side { grid-auto-rows: max-content; }
+.pp-by { display: inline-flex; align-items: center; padding: 1px 7px; border-radius: 999px; background: var(--teal-wash); color: var(--teal);
+  font: 700 10.5px/1.5 var(--body); letter-spacing: .04em; white-space: nowrap; vertical-align: 1px; }
+.pp-suggest { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--gold); border-radius: 12px; background: var(--gold-wash); min-width: 0; }
+.pp-suggest-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.pp-suggest-head b { font-size: 14px; }
+.pp-suggest-head small { color: var(--ivory-70); font-size: 12px; margin-left: auto; }
+.pp-suggest-sum { margin: 0; overflow-wrap: anywhere; }
+.pp-suggest-list { display: grid; gap: 6px; }
+.pp-suggest-item { display: flex; align-items: flex-start; gap: 9px; font-size: 13.5px; line-height: 1.35; cursor: pointer; overflow-wrap: anywhere; }
+.pp-suggest-item input { margin-top: 2px; flex: none; accent-color: var(--gold); width: 16px; height: 16px; }
+.pp-ai-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 10px 12px;
+  border: 1px dashed var(--hairline); border-radius: 12px; }
+.pp-filed { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--hairline); border-radius: 10px; background: var(--panel); min-width: 0; }
+.pp-filed p { margin: 0; overflow-wrap: anywhere; }
+.pp-filed-st { font: 700 10.5px/1.4 var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--ivory-70); white-space: nowrap; }
+.pp-filed-st.pending { color: var(--gold); }
+.pp-filed-st.applied { color: var(--teal); }
+.pp-filed-st.undone { color: var(--alert); }
+.pp-file { width: 100%; max-width: 100%; font-size: 13px; color: var(--ivory-70); }
+.pp-file::file-selector-button { margin-right: 10px; padding: 7px 12px; border: 1px solid var(--hairline); border-radius: 8px; background: var(--panel);
+  color: var(--ivory); font: 600 13px var(--body); cursor: pointer; }
+.pp-rec { color: var(--alert); font: 700 13px/1.2 var(--body); }
+.pp-brief p { margin: 2px 0 0; overflow-wrap: anywhere; }
+.pp-brief a { display: block; margin-top: 4px; color: var(--teal); overflow-wrap: anywhere; }
+.pp-qs { margin: 4px 0 0; padding-left: 20px; display: grid; gap: 4px; }
+.crm-ev.by-od i { background: var(--teal); }
+.crm-ev.by-od p { white-space: pre-line; }
+.pp-undo-line { margin-top: 6px; }
+@media (max-width: 640px) {
+  .pp-suggest-head small { margin-left: 0; flex-basis: 100%; }
+  .pp-ai-row .btn { flex: 1 1 100%; }
+}

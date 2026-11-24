@@ -90,6 +90,10 @@ const KeyPersonForm = lazy(() => import("./pages/KeyPersonForm.jsx"));
 const Tenders = lazy(() => import("./pages/Tenders.jsx"));
 const Engine = lazy(() => import("./pages/Engine.jsx"));
 const AdminOnboarding = lazy(() => import("./pages/AdminOnboarding.jsx"));
+// v2.4: the growth features
+const Prospects = lazy(() => import("./pages/Prospects.jsx"));
+const CallCoach = lazy(() => import("./pages/CallCoach.jsx"));
+const AiTeam = lazy(() => import("./pages/AiTeam.jsx"));
 const kit = (name) => lazy(() => import("./pages/Kits.jsx").then((m) => ({ default: m[name] })));
 const [Competence, Culture, Decisions, Hiring, Reviews, Roles, Sops] = ["Competence", "Culture", "Decisions", "Hiring", "Reviews", "Roles", "Sops"].map(kit);
 
@@ -126,6 +130,9 @@ const PAGES = [
   ["/lead-ideas", LeadIdeas, "lead_ideas", "manager"], ["/social", Social, "social_media", "staff"], ["/key-person", KeyPerson, "key_person", "owner"],
   ["/tenders", Tenders, "tender_finder", "manager"],
   ["/engine/:key", Engine, null, "staff"],
+  // v2.4: the growth features
+  ["/prospects", Prospects, "prospects", "manager"], ["/prospects/:id", Prospects, "prospects", "manager"],
+  ["/call-coach", CallCoach, "call_coach", "manager"], ["/ai-team", AiTeam, "ai_team", "manager"],
 ];
 
 const NAV_KEY = "ah_nav_open";
