@@ -18,6 +18,7 @@ from .routers import audit, brochures, crm, employz as employz_router, expenseai
 from .routers import aiteam, callcoach, dealfill, leadbrief, prospects
 from . import growth_core
 from .sites import rewrite_to_site, slug_from_host
+from .security import optional_user
 
 FEATURE_ROUTERS = (kits, membership, team, billing, agents, money, office, recordings, admin_config, onboard, tools, rhythm,
                    program, desk, growth, hooks, workforce, domains, day1, knowledge, compliance, cashflow, followups, brandkit, sopset, social, leadideas, dashboard, inquiries, gateway, sitemagnets, event, expenses, moneyinsights, gstsetaside, bankreader, competitors, reputation, winback, leadresponse)
@@ -142,6 +143,16 @@ async def overview_page():
     if page.exists():
         return FileResponse(page, headers={"Cache-Control": "no-cache"})
     return JSONResponse({"detail": "Frontend not built. Run: cd frontend && npm install && npm run build"}, status_code=503)
+
+
+@app.get("/", include_in_schema=False)
+async def home_page(request: Request):
+    """ownerdesk.io itself: the marketing page (frontend/public/overview.html) for visitors. Anyone signed in, and anyone
+    arriving on an attribution link (?ref= / ?src= / ?c=, which the app's landing page remembers), gets the app as before."""
+    page = DIST / "overview.html"
+    if page.exists() and not ({"ref", "src", "c"} & set(request.query_params)) and not await optional_user(request):
+        return FileResponse(page, headers={"Cache-Control": "no-cache"})
+    return await spa("")
 
 
 @app.get("/{path:path}", include_in_schema=False)

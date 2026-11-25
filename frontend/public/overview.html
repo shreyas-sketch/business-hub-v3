@@ -77,9 +77,13 @@ p{margin:0}
 .top .logo img{height:44px;width:auto}
 @media (max-width:520px){.top .logo img{height:36px}}
 .top nav{display:flex;gap:22px;margin-left:auto}
-.top nav a{text-decoration:none;color:var(--ivory-70);font-weight:500;font-size:15px}
+.top nav a{padding:12px 0;text-decoration:none;color:var(--ivory-70);font-weight:500;font-size:15px}
 .top nav a:hover{color:var(--ivory)}
-@media (max-width:860px){.top nav{display:none}.top .btn{margin-left:auto}}
+.top .login{text-decoration:none;color:var(--ivory);font-weight:700;font-size:15px;padding:12px 2px;white-space:nowrap}
+.top .login:hover{color:var(--gold-light)}
+.top .btn{white-space:nowrap;flex:none}
+@media (max-width:860px){.top nav{display:none}.top .login{margin-left:auto}}
+@media (max-width:420px){.top .wrap{gap:14px}}
 
 /* hero */
 .hero{padding:clamp(48px,8vw,104px) 0 clamp(56px,8vw,96px)}
@@ -362,7 +366,8 @@ footer{border-top:1px solid var(--gold-deep);padding:64px 0 0;background:linear-
       <a href="#coach">Call coach</a>
       <a href="#faq">Questions</a>
     </nav>
-    <a class="btn btn-gold btn-sm" href="/">Get started</a>
+    <a class="login" href="/login">Log in</a>
+    <a class="btn btn-gold btn-sm" href="/login">Get started</a>
   </div>
 </header>
 
@@ -374,7 +379,7 @@ footer{border-top:1px solid var(--gold-deep);padding:64px 0 0;background:linear-
         <h1><span class="row">Run the whole</span><span class="row">business<span class="switch bigswitch" id="heroSwitch" aria-hidden="true"></span></span><span class="row">from one desk.</span></h1>
         <p class="sub">Every inquiry answered in minutes. Every follow-up remembered. Every rupee you're owed, chased. OwnerDesk takes the routine off your plate, so your day goes to the work only you can do.</p>
         <div class="ctas">
-          <a class="btn btn-gold" href="/">Get started</a>
+          <a class="btn btn-gold" href="/login">Get started</a>
           <a class="btn btn-line" href="#gaps">See how it helps</a>
         </div>
         <p class="note">Made for owner-run businesses in India. GST invoices, WhatsApp and rupees from day one.</p>
@@ -619,7 +624,7 @@ footer{border-top:1px solid var(--gold-deep);padding:64px 0 0;background:linear-
       <h2 id="close-h">Stop running the business from memory.</h2>
       <p class="sub">Tell OwnerDesk about your business once, take the Engine Audit, and switch on the fix that saves you the most time. The rest of the desk is ready when you are.</p>
       <div class="ctas">
-        <a class="btn btn-gold" href="/">Get started</a>
+        <a class="btn btn-gold" href="/login">Get started</a>
         <a class="btn btn-line" href="#gaps">See the six gaps again</a>
       </div>
     </div>
@@ -632,7 +637,7 @@ footer{border-top:1px solid var(--gold-deep);padding:64px 0 0;background:linear-
       <div class="foot-brand">
         <img src="/brand/ownerdesk-logo.svg" alt="OwnerDesk" width="229" height="64">
         <p>The business hub for owner-run businesses in India. Inquiries, follow-ups, invoices, payments, posts and filings, all run from one desk.</p>
-        <a class="btn btn-gold btn-sm" href="/">Get started</a>
+        <a class="btn btn-gold btn-sm" href="/login">Get started</a>
       </div>
       <nav class="foot-col" aria-labelledby="f-eng">
         <h2 id="f-eng">The six engines</h2>
@@ -660,7 +665,6 @@ footer{border-top:1px solid var(--gold-deep);padding:64px 0 0;background:linear-
       <nav class="foot-col" aria-labelledby="f-start">
         <h2 id="f-start">Start</h2>
         <ul>
-          <li><a href="/">Get started</a></li>
           <li><a href="/login">Log in</a></li>
           <li><a href="#start">How to begin</a></li>
         </ul>
