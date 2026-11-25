@@ -1,0 +1,976 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OwnerDesk: your whole business on one desk</title>
+<meta name="description" content="OwnerDesk runs the routine of a small business: inquiries, follow-ups, quotations, payments, posts and filings, across the six engines of your business.">
+<meta name="theme-color" content="#14151A">
+<meta property="og:title" content="OwnerDesk: your whole business on one desk">
+<meta property="og:description" content="Inquiries, follow-ups, quotations, payments, posts and filings, run from one hub. The six engines of your business, switched on.">
+<link rel="icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#14151A; --lift:#1E2027; --panel:#191B21; --panel-2:#22252D;
+  --ivory:#F2EEE6; --ivory-70:rgba(242,238,230,.70); --ivory-50:rgba(242,238,230,.50); --ivory-35:rgba(242,238,230,.35);
+  --line:rgba(242,238,230,.10); --line-2:rgba(242,238,230,.16);
+  --gold:#C9A84C; --gold-light:#E3CB82; --gold-deep:#8F7432; --gold-glow:rgba(201,168,76,.28);
+  --teal:#2ED3B7; --teal-soft:rgba(46,211,183,.12);
+  --font:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r-card:14px; --r-frame:18px; --r-input:12px;
+  --wrap:1200px; --gutter:clamp(16px,4vw,40px);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:80px;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ivory);font-family:var(--font);font-size:17px;line-height:1.6;font-weight:400;overflow-x:hidden;
+  background-image:
+    radial-gradient(1200px 700px at 70% -10%, #1E2027 0%, transparent 70%),
+    radial-gradient(900px 600px at 105% 110%, rgba(201,168,76,.07) 0%, transparent 60%);
+  background-attachment:fixed}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(242,238,230,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(242,238,230,.05) 1px,transparent 1px);
+  background-size:48px 48px;
+  -webkit-mask-image:linear-gradient(180deg,#000 0%,transparent 55%);mask-image:linear-gradient(180deg,#000 0%,transparent 55%)}
+main,header,footer{position:relative;z-index:1}
+a{color:inherit}
+img{max-width:100%;display:block}
+.wrap{max-width:var(--wrap);margin:0 auto;padding:0 var(--gutter)}
+:focus-visible{outline:2px solid var(--gold-light);outline-offset:3px;border-radius:6px}
+.skip{position:absolute;left:-999px;top:8px;background:var(--gold);color:var(--bg);padding:8px 14px;border-radius:999px;font-weight:800;z-index:10}
+.skip:focus{left:16px}
+
+/* type */
+h1,h2,h3{margin:0;font-weight:800;letter-spacing:-0.02em;line-height:1.05}
+h1{font-size:clamp(38px,5vw,78px);letter-spacing:-0.035em;line-height:.98}
+h2{font-size:clamp(32px,4.2vw,54px);letter-spacing:-0.03em}
+h3{font-size:21px;line-height:1.25;letter-spacing:-0.01em}
+.sub{font-weight:300;font-size:clamp(19px,1.7vw,22px);line-height:1.5;color:var(--ivory-70);max-width:34em;margin:22px 0 0}
+p{margin:0}
+.muted{color:var(--ivory-70)}
+.small{font-size:14px;line-height:1.5}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 24px;border-radius:999px;font:inherit;font-weight:800;font-size:16px;text-decoration:none;cursor:pointer;border:1px solid transparent;transition:background-color .2s,border-color .2s,color .2s}
+.btn-gold{background:var(--gold);color:var(--bg)}
+.btn-gold:hover{background:var(--gold-light)}
+.btn-line{border-color:var(--gold-deep);color:var(--ivory);background:transparent}
+.btn-line:hover{border-color:var(--gold)}
+.btn-ai{border-color:var(--teal);color:var(--teal);background:transparent}
+.btn-ai.solid{background:var(--teal);color:var(--bg)}
+.btn-ai.solid:hover{background:#5FE0CA}
+.btn-sm{min-height:36px;padding:0 16px;font-size:14px}
+.spark{font-size:.95em}
+
+/* the switch: the OwnerDesk mark, gold track and ivory knob */
+.switch{--w:44px;--h:24px;position:relative;display:inline-block;flex:none;width:var(--w);height:var(--h);border-radius:999px;background:var(--panel-2);box-shadow:inset 0 0 0 1px var(--line-2);transition:background-color .45s cubic-bezier(.2,.7,.2,1),box-shadow .45s}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:calc(var(--h) - 6px);height:calc(var(--h) - 6px);border-radius:50%;background:var(--ivory-50);transition:transform .45s cubic-bezier(.2,.7,.2,1),background-color .45s}
+.switch.on{background:var(--gold);box-shadow:0 0 18px var(--gold-glow)}
+.switch.on::after{transform:translateX(calc(var(--w) - var(--h)));background:var(--ivory)}
+
+/* header */
+.top{position:sticky;top:0;z-index:5;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);background:rgba(20,21,26,.72);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:24px;height:80px}
+.top .logo img{height:44px;width:auto}
+@media (max-width:520px){.top .logo img{height:36px}}
+.top nav{display:flex;gap:22px;margin-left:auto}
+.top nav a{text-decoration:none;color:var(--ivory-70);font-weight:500;font-size:15px}
+.top nav a:hover{color:var(--ivory)}
+@media (max-width:860px){.top nav{display:none}.top .btn{margin-left:auto}}
+
+/* hero */
+.hero{padding:clamp(48px,8vw,104px) 0 clamp(56px,8vw,96px)}
+.hero .wrap{display:grid;grid-template-columns:1.02fr 1fr;gap:clamp(32px,5vw,72px);align-items:center}
+@media (max-width:980px){.hero .wrap{grid-template-columns:1fr}}
+.hero h1 .row{display:block;white-space:nowrap}
+.hero h1 .bigswitch{--w:1.55em;--h:.82em;vertical-align:.04em;margin-left:.18em}
+.hero h1 .bigswitch::after{top:.09em;left:.09em;width:calc(var(--h) - .18em);height:calc(var(--h) - .18em)}
+.hero h1 .bigswitch.on::after{transform:translateX(calc(var(--w) - var(--h)))}
+.hero .ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:34px}
+.hero .note{margin-top:18px;color:var(--ivory-50);font-size:14px}
+
+/* the live desk */
+.desk{background:linear-gradient(180deg,var(--lift),var(--panel));border:1px solid var(--line-2);border-radius:var(--r-frame);box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden;opacity:.45;filter:saturate(.3);transition:opacity .9s ease,filter .9s ease}
+.desk.awake{opacity:1;filter:none}
+.desk-bar{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.desk-bar .name{font-weight:700;font-size:15px;white-space:nowrap}
+.desk-bar .tag,.desk-bar .clock{white-space:nowrap}
+@media (max-width:520px){.desk-bar{flex-wrap:wrap;row-gap:6px}.clock{margin-left:0;width:100%}}
+.tag{font-size:12px;font-weight:600;color:var(--ivory-50);border:1px solid var(--line-2);padding:2px 9px;border-radius:999px}
+.clock{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ivory-70);font-variant-numeric:tabular-nums}
+.pulse{width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 0 var(--gold-glow);animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(201,168,76,.55)}70%{box-shadow:0 0 0 9px rgba(201,168,76,0)}100%{box-shadow:0 0 0 0 rgba(201,168,76,0)}}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}
+.tile{padding:14px 16px;border-right:1px solid var(--line)}
+.tile:last-child{border-right:0}
+.tile b{display:block;font-size:24px;font-weight:800;color:var(--gold);letter-spacing:-0.02em;font-variant-numeric:tabular-nums;transition:color .3s}
+.tile b.bump{color:var(--gold-light)}
+.tile span{font-size:12px;color:var(--ivory-50);line-height:1.3;display:block}
+@media (max-width:520px){.tiles{grid-template-columns:repeat(2,1fr)}.tile:nth-child(2){border-right:0}.tile:nth-child(-n+2){border-bottom:1px solid var(--line)}}
+.feed{list-style:none;margin:0;padding:6px 0;min-height:350px}
+.feed li{display:grid;grid-template-columns:22px 1fr auto;gap:10px;padding:11px 18px;align-items:start;animation:drop .6s cubic-bezier(.2,.7,.2,1)}
+.feed li + li{border-top:1px solid var(--line)}
+.feed .ic{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;margin-top:1px;background:rgba(201,168,76,.14);color:var(--gold)}
+.feed li.ai .ic{background:var(--teal-soft);color:var(--teal)}
+.feed .t{font-weight:700;font-size:14.5px;line-height:1.35}
+.feed li.ai .t{color:var(--teal)}
+.feed .d{font-size:13.5px;color:var(--ivory-70);line-height:1.4;margin-top:2px}
+.feed time{font-size:12px;color:var(--ivory-35);font-variant-numeric:tabular-nums;margin-top:2px}
+.feed li:nth-child(n+5){opacity:.55}
+.feed li:nth-child(n+6){display:none}
+@keyframes drop{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+.desk-foot{padding:10px 18px;border-top:1px solid var(--line);font-size:12px;color:var(--ivory-35);display:flex;gap:16px;flex-wrap:wrap}
+.desk-foot i{font-style:normal;display:inline-flex;align-items:center;gap:6px}
+.desk-foot i::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--gold)}
+.desk-foot i.ai::before{background:var(--teal)}
+
+/* sections */
+section{padding:clamp(72px,10vw,128px) 0}
+.head{max-width:760px}
+.head .sub{margin-top:18px}
+.rule{border:0;border-top:1px solid var(--line);margin:0}
+
+/* engines */
+.engines{display:grid;grid-template-columns:minmax(280px,.9fr) 1.3fr;gap:clamp(24px,4vw,56px);margin-top:56px;align-items:start}
+@media (max-width:900px){.engines{grid-template-columns:1fr}}
+.rail{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.rail button{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:44px 1fr;gap:16px;align-items:center;padding:18px 4px;border-bottom:1px solid var(--line);position:relative}
+.rail button .nm{font-weight:800;font-size:20px;letter-spacing:-0.01em;color:var(--ivory-70);transition:color .3s}
+.rail button .bl{display:block;font-size:14px;color:var(--ivory-50);font-weight:400;line-height:1.4;margin-top:2px}
+.rail button[aria-selected="true"] .nm{color:var(--ivory)}
+.rail button:hover .nm{color:var(--ivory)}
+.rail button .prog{position:absolute;left:0;bottom:-1px;height:2px;width:0;background:var(--gold)}
+.rail button[aria-selected="true"] .prog.run{animation:prog var(--dur,7s) linear forwards}
+@keyframes prog{to{width:100%}}
+.panel{scroll-margin-top:96px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-frame);padding:clamp(24px,3vw,36px);min-height:100%}
+.panel h3{font-size:clamp(26px,2.6vw,34px);letter-spacing:-0.02em}
+.panel .lede{color:var(--ivory-70);font-weight:300;font-size:19px;margin-top:10px;max-width:32em}
+.feats{list-style:none;margin:28px 0 0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:0 32px}
+@media (max-width:600px){.feats{grid-template-columns:1fr}}
+.feats li{padding:16px 0;border-top:1px solid var(--line)}
+.feats b{display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px}
+.feats b .aitag{font-size:11px;font-weight:700;color:var(--teal);border:1px solid rgba(46,211,183,.4);border-radius:999px;padding:1px 7px}
+.feats span{display:block;font-size:14.5px;color:var(--ivory-70);line-height:1.5;margin-top:4px}
+.panel.swap .feats li{animation:rise .45s cubic-bezier(.2,.7,.2,1) both}
+.panel.swap .feats li:nth-child(2){animation-delay:.04s}.panel.swap .feats li:nth-child(3){animation-delay:.08s}
+.panel.swap .feats li:nth-child(4){animation-delay:.12s}.panel.swap .feats li:nth-child(5){animation-delay:.16s}
+.panel.swap .feats li:nth-child(6){animation-delay:.2s}.panel.swap .feats li:nth-child(7){animation-delay:.24s}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* start steps (a real sequence) */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(20px,3vw,40px);margin-top:48px;counter-reset:s}
+@media (max-width:820px){.steps{grid-template-columns:1fr}}
+.steps li{list-style:none;border-top:2px solid var(--gold-deep);padding-top:20px;counter-increment:s}
+.steps li::before{content:counter(s);display:block;font-weight:800;font-size:44px;line-height:1;color:var(--gold);letter-spacing:-0.03em;margin-bottom:14px}
+.steps h3{margin-bottom:8px}
+ol.steps{padding:0;margin-bottom:0}
+
+/* the day */
+.day{display:grid;grid-template-columns:1fr 1.25fr;gap:clamp(28px,5vw,72px);align-items:start}
+@media (max-width:900px){.day{grid-template-columns:1fr}}
+.day > div:first-child{position:sticky;top:120px}
+@media (max-width:900px){.day > div:first-child{position:static}}
+.now{margin-top:30px;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.now b{font-size:clamp(44px,5vw,64px);font-weight:800;letter-spacing:-0.03em;color:var(--gold);font-variant-numeric:tabular-nums;line-height:1}
+.now span{color:var(--ivory-70)}
+.sched{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.sched li{display:grid;grid-template-columns:120px 1fr auto;gap:18px;padding:20px 0;border-bottom:1px solid var(--line);align-items:start}
+@media (max-width:560px){.sched li{grid-template-columns:1fr;gap:6px}}
+.sched .when{font-weight:700;color:var(--ivory-70);font-variant-numeric:tabular-nums}
+.sched .what b{display:block;font-weight:700}
+.sched .what span{display:block;font-size:14.5px;color:var(--ivory-70);margin-top:3px}
+.state{font-size:13px;font-weight:600;white-space:nowrap;padding:3px 10px;border-radius:999px;border:1px solid var(--line-2);color:var(--ivory-70);font-variant-numeric:tabular-nums}
+.state.done{border-color:var(--gold-deep);color:var(--gold-light)}
+.state.soon{border-color:var(--gold);color:var(--bg);background:var(--gold)}
+.state.always{border-color:rgba(46,211,183,.45);color:var(--teal)}
+@media (max-width:560px){.state{justify-self:start}}
+
+/* pipeline demo */
+.demo{display:grid;grid-template-columns:1fr 1.1fr;gap:clamp(20px,3vw,32px);margin-top:52px;align-items:stretch}
+@media (max-width:900px){.demo{grid-template-columns:1fr}}
+.frame{background:var(--panel);border:1px solid var(--line-2);border-radius:var(--r-frame);overflow:hidden;display:flex;flex-direction:column}
+.frame-h{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);font-weight:700;font-size:15px}
+.frame-h .tag{margin-left:auto}
+.chat{padding:18px;display:flex;flex-direction:column;gap:10px;flex:1}
+.bub{max-width:84%;padding:10px 14px;border-radius:14px;font-size:14.5px;line-height:1.45}
+.bub.them{background:var(--panel-2);border-top-left-radius:4px}
+.bub.me{background:rgba(201,168,76,.13);border-top-right-radius:4px;align-self:flex-end}
+.bub small{display:block;font-size:11.5px;color:var(--ivory-35);margin-top:4px}
+.chat-foot{padding:14px 18px;border-top:1px solid var(--line);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.chat-foot .small{color:var(--ivory-50)}
+.btn-ai.busy{pointer-events:none}
+.dots{display:none;gap:4px}
+.busy .dots{display:inline-flex}
+.busy .lbl{display:none}
+.dots i{width:6px;height:6px;border-radius:50%;background:currentColor;animation:dot 1s infinite}
+.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+@keyframes dot{0%,100%{opacity:.25}50%{opacity:1}}
+.deal{padding:6px 18px 18px;flex:1}
+.fld{display:grid;grid-template-columns:120px 1fr;gap:14px;padding:13px 0;border-bottom:1px solid var(--line);align-items:start;min-height:52px}
+@media (max-width:480px){.fld{grid-template-columns:1fr;gap:4px}}
+.fld dt{font-size:13.5px;color:var(--ivory-50);font-weight:600;padding-top:1px}
+.fld dd{margin:0;font-size:15px;line-height:1.45;min-height:22px}
+.fld dd .ok{color:var(--teal);font-weight:700;margin-left:6px;font-size:13px;opacity:0;transition:opacity .3s}
+.fld.filled dd .ok{opacity:1}
+.fld .typed{color:var(--ivory)}
+.caret{display:inline-block;width:2px;height:1em;background:var(--teal);vertical-align:-2px;margin-left:1px;animation:dot .8s infinite}
+.wait{display:none;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px}
+.fld.waiting .wait{display:flex}
+.wait span{font-size:13.5px;color:var(--gold-light)}
+.stages{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:4px}
+.stages div{font-size:11.5px;line-height:1.25;padding:8px 6px 0;border-top:3px solid var(--panel-2);color:var(--ivory-35);transition:border-color .5s,color .5s}
+.stages div.at{border-top-color:var(--gold);color:var(--ivory)}
+.stages div.past{border-top-color:var(--gold-deep);color:var(--ivory-50)}
+.demo-note{margin-top:22px;color:var(--ivory-50);font-size:14.5px;max-width:60em}
+.replay{background:none;border:0;color:var(--gold-light);font:inherit;font-weight:700;font-size:14px;cursor:pointer;padding:4px 0;text-decoration:underline;text-underline-offset:3px}
+
+/* in charge */
+.rules{display:grid;grid-template-columns:repeat(2,1fr);gap:0 clamp(24px,4vw,64px);margin-top:48px}
+@media (max-width:760px){.rules{grid-template-columns:1fr}}
+.rules > div{padding:22px 0;border-top:1px solid var(--line);display:grid;grid-template-columns:44px 1fr;gap:16px}
+.rules h3{font-size:18px;margin-bottom:6px}
+.rules p{color:var(--ivory-70);font-size:15.5px}
+.lock{width:44px;height:24px;border-radius:999px;background:var(--panel-2);box-shadow:inset 0 0 0 1px var(--gold-deep);position:relative;margin-top:2px}
+.lock::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--gold)}
+
+/* quick answers */
+.qa{display:grid;grid-template-columns:minmax(260px,.8fr) 1.3fr;gap:clamp(20px,3vw,40px);margin-top:52px;align-items:start}
+@media (max-width:900px){.qa{grid-template-columns:1fr}}
+.qs{display:flex;flex-direction:column;gap:8px}
+.qs button{all:unset;box-sizing:border-box;cursor:pointer;padding:13px 20px;border-radius:999px;border:1px solid var(--line-2);font-weight:600;font-size:15.5px;line-height:1.35;color:var(--ivory-70);transition:background-color .25s,border-color .25s,color .25s}
+.qs button:hover{border-color:var(--gold-deep);color:var(--ivory)}
+.qs button[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--bg)}
+.qs button:focus-visible{outline:2px solid var(--gold-light);outline-offset:3px}
+.ans{background:var(--panel);border:1px solid var(--line-2);border-radius:var(--r-frame);padding:clamp(22px,3vw,32px);min-height:420px}
+.ans .q{font-size:14px;color:var(--ivory-50);font-weight:600}
+.ans .line{font-size:clamp(22px,2.2vw,28px);font-weight:800;letter-spacing:-0.02em;line-height:1.2;margin-top:8px;max-width:26em}
+.ans ul{list-style:none;margin:22px 0 0;padding:0}
+.ans li{display:grid;grid-template-columns:1fr auto;gap:4px 16px;padding:13px 0;border-top:1px solid var(--line)}
+.ans li b{font-weight:700;font-size:15.5px}
+.ans li em{font-style:normal;font-weight:800;color:var(--gold);font-variant-numeric:tabular-nums;text-align:right}
+.ans li small{grid-column:1 / -1;font-size:13.5px;color:var(--ivory-50)}
+.ans li.grp{border-top:0;padding:16px 0 2px;color:var(--ivory-50);font-size:13px;font-weight:700}
+.ans .bar{grid-column:1 / -1;height:6px;border-radius:999px;background:var(--panel-2);overflow:hidden}
+.ans .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold-deep),var(--gold));box-shadow:0 0 12px var(--gold-glow);transition:width .9s cubic-bezier(.2,.7,.2,1)}
+.ans .foot{margin-top:18px;font-size:13.5px;color:var(--ivory-50)}
+.ans.swap li{animation:rise .45s cubic-bezier(.2,.7,.2,1) both}
+
+/* call coach */
+.coach{display:grid;grid-template-columns:minmax(260px,.75fr) 1.3fr;gap:clamp(20px,3vw,32px);margin-top:52px;align-items:stretch}
+@media (max-width:900px){.coach{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line-2);border-radius:var(--r-frame);padding:clamp(22px,3vw,32px)}
+.who{font-weight:700}
+.who span{display:block;font-weight:400;font-size:14px;color:var(--ivory-50)}
+.dial{position:relative;width:180px;height:180px;margin:26px 0 8px}
+.dial svg{width:100%;height:100%;transform:rotate(-90deg)}
+.dial circle{fill:none;stroke-width:10}
+.dial .trk{stroke:var(--panel-2)}
+.dial .arc{stroke:var(--gold);stroke-linecap:round;stroke-dasharray:326.73;stroke-dashoffset:326.73;transition:stroke-dashoffset 1.6s cubic-bezier(.2,.7,.2,1);filter:drop-shadow(0 0 6px rgba(201,168,76,.45))}
+.dial b{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;font-size:64px;font-weight:800;letter-spacing:-0.04em;color:var(--gold);font-variant-numeric:tabular-nums}
+.dial b small{margin-top:6px;font-size:14px;font-weight:600;color:var(--ivory-50);letter-spacing:0}
+.trend{margin-top:22px}
+.trend p{font-size:13.5px;color:var(--ivory-50);font-weight:600}
+.bars{display:flex;align-items:flex-end;gap:10px;height:84px;margin-top:10px}
+.bars div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;height:100%}
+.bars i{display:block;width:100%;height:0;border-radius:6px 6px 2px 2px;background:var(--gold-deep);transition:height .9s cubic-bezier(.2,.7,.2,1)}
+.bars div:last-child i{background:var(--gold)}
+.bars span{font-size:12px;color:var(--ivory-50);font-variant-numeric:tabular-nums}
+.well{padding:14px 16px;border-radius:var(--r-input);background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.22)}
+.well b{display:block;font-size:13.5px;color:var(--gold-light)}
+.fixes{list-style:none;margin:18px 0 0;padding:0}
+.fixes li{padding:18px 0;border-top:1px solid var(--line);opacity:1;transition:opacity .5s,transform .5s}
+.fixes.pre li{opacity:0;transform:translateY(8px)}
+.fixes h3{font-size:17.5px;display:flex;gap:10px;align-items:center}
+.fixes h3 .aitag{font-size:11px;font-weight:700;color:var(--teal);border:1px solid rgba(46,211,183,.4);border-radius:999px;padding:1px 7px}
+.fixes blockquote{margin:10px 0 0;padding:2px 0 2px 14px;border-left:2px solid var(--gold-deep);color:var(--ivory-70);font-size:15px}
+.fixes blockquote small{display:block;color:var(--ivory-35);font-size:12.5px;margin-top:2px}
+
+/* closing */
+.closing{padding-bottom:clamp(88px,12vw,150px)}
+.closing h2{font-size:clamp(36px,5vw,68px);max-width:14em}
+.closing .ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:32px}
+
+/* footer */
+footer{border-top:1px solid var(--gold-deep);padding:64px 0 0;background:linear-gradient(180deg,rgba(30,32,39,.55),transparent 70%)}
+.foot-grid{display:grid;grid-template-columns:1.5fr repeat(3,1fr);gap:40px clamp(24px,4vw,56px);padding-bottom:56px}
+@media (max-width:900px){.foot-grid{grid-template-columns:1fr 1fr}.foot-brand{grid-column:1 / -1}}
+.foot-brand img{height:64px;width:auto}
+@media (max-width:520px){.foot-brand img{height:52px}}
+.foot-brand p{margin-top:18px;color:var(--ivory-70);font-size:15.5px;line-height:1.6;max-width:24em}
+.foot-brand .btn{margin-top:24px}
+.foot-col h2{font-size:15px;font-weight:700;letter-spacing:0;color:var(--ivory);margin:6px 0 16px}
+.foot-col ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:11px}
+.foot-col a{color:var(--ivory-50);text-decoration:none;font-size:15px;transition:color .2s}
+.foot-col a:hover{color:var(--gold-light)}
+.foot-copy{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between;align-items:center;border-top:1px solid var(--line);padding:22px 0 32px}
+.foot-copy p{color:var(--ivory-35);font-size:13.5px}
+.foot-copy a{color:var(--ivory-50);font-size:13.5px;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.foot-copy a:hover{color:var(--gold-light)}
+.foot-copy .switch{--w:28px;--h:16px}
+.foot-copy .switch::after{top:2px;left:2px}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+  html{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the content</a>
+
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="#top" aria-label="OwnerDesk, back to the top"><img src="/brand/ownerdesk-logo.svg" alt="OwnerDesk" width="158" height="44"></a>
+    <nav aria-label="Sections">
+      <a href="#engines">The six engines</a>
+      <a href="#day">Your day</a>
+      <a href="#pipeline">Pipeline</a>
+      <a href="#ask">Ask your desk</a>
+      <a href="#coach">Call coach</a>
+      <a href="#charge">You're in charge</a>
+    </nav>
+    <a class="btn btn-gold btn-sm" href="/">Get started</a>
+  </div>
+</header>
+
+<main id="main">
+  <!-- Hero: the headline's switch flips on, and the desk wakes up -->
+  <div class="hero" id="top">
+    <div class="wrap">
+      <div>
+        <h1><span class="row">Run the whole</span><span class="row">business<span class="switch bigswitch" id="heroSwitch" aria-hidden="true"></span></span><span class="row">from one desk.</span></h1>
+        <p class="sub">OwnerDesk handles the routine of a small business: every inquiry answered, every follow-up remembered, quotes turned into GST invoices, money chased and posts ready. You get your time back to run the business.</p>
+        <div class="ctas">
+          <a class="btn btn-gold" href="/">Get started</a>
+          <a class="btn btn-line" href="#engines">See what it does</a>
+        </div>
+        <p class="note">Made for owner-run businesses in India, with GST, WhatsApp and rupees built in.</p>
+      </div>
+
+      <div class="desk" id="desk" aria-label="A sample OwnerDesk, updating live">
+        <div class="desk-bar">
+          <img src="/brand/ownerdesk-mark.svg" alt="" width="34" height="24" style="height:20px;width:auto">
+          <span class="name">Kaveri Interiors</span>
+          <span class="tag">Sample desk</span>
+          <span class="clock"><span class="pulse" aria-hidden="true"></span><span id="deskClock">--:--</span> IST</span>
+        </div>
+        <div class="tiles">
+          <div class="tile"><b id="tInq">0</b><span>New inquiries today</span></div>
+          <div class="tile"><b id="tFu">0</b><span>Follow-ups due</span></div>
+          <div class="tile"><b id="tOwed">₹0</b><span>Overdue payments</span></div>
+          <div class="tile"><b id="tPosts">0</b><span>Posts ready</span></div>
+        </div>
+        <ul class="feed" id="feed" aria-live="off"></ul>
+        <div class="desk-foot"><i>Done for you</i><i class="ai">Written by AI, waits for you where money is involved</i></div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="rule">
+
+  <!-- The six engines -->
+  <section id="engines" aria-labelledby="engines-h">
+    <div class="wrap">
+      <div class="head">
+        <h2 id="engines-h">Six engines. One Business Brain.</h2>
+        <p class="sub">Every business runs on the same six engines. OwnerDesk gives each one its own tools, and they all work from one Business Brain, so you describe your business once.</p>
+      </div>
+      <div class="engines">
+        <div class="rail" role="tablist" aria-label="The six engines" id="rail"></div>
+        <div class="panel" role="tabpanel" id="enginePanel" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- How you start: a real sequence -->
+  <section aria-labelledby="start-h">
+    <div class="wrap">
+      <div class="head">
+        <h2 id="start-h">Up and running in an afternoon.</h2>
+        <p class="sub">You don't set up six tools. You tell OwnerDesk about your business once, and it shows you where to start.</p>
+      </div>
+      <ol class="steps">
+        <li><h3>Fill in your Knowledge Hub</h3><p class="muted">From your website, a voice note or a few typed lines: what you sell, your prices, your customers and your targets. Every page and every AI task uses it.</p></li>
+        <li><h3>Take the Engine Audit</h3><p class="muted">15 questions across the six engines. You see what each gap costs you in hours and rupees, and what fixing it unlocks.</p></li>
+        <li><h3>Switch on what matters first</h3><p class="muted">Start with the engine that costs you the most. The rest are waiting on the same desk, already filled in from your Knowledge Hub.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- The day: live against the time in India -->
+  <section id="day" aria-labelledby="day-h">
+    <div class="wrap day">
+      <div>
+        <h2 id="day-h">Your desk keeps working while you do.</h2>
+        <p class="sub">Some jobs run on the clock, others the moment something happens. This list follows the time in India right now.</p>
+        <div class="now"><b id="nowClock">--:--</b><span id="nowDay">in India</span></div>
+      </div>
+      <ul class="sched" id="sched"></ul>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- Pipeline fills itself -->
+  <section id="pipeline" aria-labelledby="pipe-h">
+    <div class="wrap">
+      <div class="head">
+        <h2 id="pipe-h">Paste the chat. The deal fills itself.</h2>
+        <p class="sub">Paste a WhatsApp chat, upload the export or speak a voice note. OwnerDesk files the note, the next step and the follow-up date on the deal. Anything bigger waits for your tap.</p>
+      </div>
+
+      <div class="demo" id="demo">
+        <div class="frame">
+          <div class="frame-h">WhatsApp chat with Neha R.<span class="tag">Sample</span></div>
+          <div class="chat">
+            <div class="bub them">Hi, I saw your kitchen work on Instagram. We need a modular kitchen for our 3BHK in Baner.<small>Neha, 11:42</small></div>
+            <div class="bub me">Thanks Neha, happy to help. When are you hoping to move in?<small>You, 11:44</small></div>
+            <div class="bub them">By 15 December. Our budget is around 2.5 lakh. Can you call me on Thursday after 6?<small>Neha, 11:47</small></div>
+            <div class="bub me">Sure, I'll call you on Thursday evening.<small>You, 11:48</small></div>
+          </div>
+          <div class="chat-foot">
+            <button class="btn btn-ai solid btn-sm" id="fileBtn" type="button"><span class="lbl"><span class="spark" aria-hidden="true">✦</span> File this conversation</span><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span></button>
+            <span class="small">Tap to see it file the chat</span>
+          </div>
+        </div>
+
+        <div class="frame">
+          <div class="frame-h">Deal: Neha R., modular kitchen<span class="tag" id="dealTag">Not filed yet</span></div>
+          <dl class="deal">
+            <div class="fld" data-k="note"><dt>Note</dt><dd><span class="typed"></span><span class="ok">Filed</span></dd></div>
+            <div class="fld" data-k="next"><dt>Next step</dt><dd><span class="typed"></span><span class="ok">Filed</span></dd></div>
+            <div class="fld" data-k="date"><dt>Follow-up</dt><dd><span class="typed"></span><span class="ok">Filed</span></dd></div>
+            <div class="fld" data-k="value"><dt>Value</dt><dd><span class="typed"></span>
+              <div class="wait"><span>₹2,50,000 was mentioned in the chat.</span><button class="btn btn-line btn-sm" type="button" id="setValue">Set the value</button></div></dd></div>
+            <div class="fld" data-k="stage"><dt>Stage</dt><dd>
+              <div class="stages" id="stages"><div class="at">Identification</div><div>Logic / reason</div><div>Pain / consequence</div><div>Solution / vision</div><div>Ask / close</div></div>
+              <div class="wait"><span>The chat suggests the next stage.</span><button class="btn btn-line btn-sm" type="button" id="moveStage">Move to Logic / reason</button></div></dd></div>
+          </dl>
+        </div>
+      </div>
+      <p class="demo-note">OwnerDesk never sets a value the chat didn't state, never marks a deal won or lost, and never moves it to the last stage on its own. Every change it makes can be undone. <button class="replay" type="button" id="replay">Play it again</button></p>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- Quick answers -->
+  <section id="ask" aria-labelledby="ask-h">
+    <div class="wrap">
+      <div class="head">
+        <h2 id="ask-h">Ask your desk. Get the answer from your own records.</h2>
+        <p class="sub">Tap a question and OwnerDesk answers it from your deals, payments and inquiries in a second. No AI involved, so the numbers are exactly what's in your records.</p>
+      </div>
+      <div class="qa">
+        <div class="qs" id="qs" role="group" aria-label="Questions"></div>
+        <div class="ans" id="ans" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- Call coach -->
+  <section id="coach" aria-labelledby="coach-h">
+    <div class="wrap">
+      <div class="head">
+        <h2 id="coach-h">Every sales call, coached.</h2>
+        <p class="sub">Upload a call recording or paste the conversation. You get a score out of 10 and 3 fixes, each pointing to the exact line in the call, for every person on your team.</p>
+      </div>
+      <div class="coach" id="coachDemo">
+        <div class="card">
+          <p class="who">Priya, sales<span>Call with Mr. Kulkarni about a wardrobe quote</span></p>
+          <div class="dial" aria-label="Score: 7 out of 10">
+            <svg viewBox="0 0 120 120" aria-hidden="true"><circle class="trk" cx="60" cy="60" r="52"/><circle class="arc" id="dialArc" cx="60" cy="60" r="52"/></svg>
+            <b><span id="dialNum">0</span><small>out of 10</small></b>
+          </div>
+          <div class="trend">
+            <p>Priya's last 5 calls</p>
+            <div class="bars" id="bars"><div><i data-v="5"></i><span>5</span></div><div><i data-v="6"></i><span>6</span></div><div><i data-v="5"></i><span>5</span></div><div><i data-v="6"></i><span>6</span></div><div><i data-v="7"></i><span>7</span></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="well"><b>What went well</b>Asked about the budget early and repeated it back, so the customer felt heard.</div>
+          <ul class="fixes pre" id="fixes">
+            <li><h3>Find out why they're calling now <span class="aitag">✦ AI</span></h3><blockquote>"So, what are you looking for?"<small>Priya, 0:42</small></blockquote></li>
+            <li><h3>Give a price range instead of "it depends" <span class="aitag">✦ AI</span></h3><blockquote>"Price depends on many things, sir."<small>Priya, 3:15</small></blockquote></li>
+            <li><h3>End with a next step and a date <span class="aitag">✦ AI</span></h3><blockquote>"Okay, I'll send you something."<small>Priya, 6:58</small></blockquote></li>
+          </ul>
+        </div>
+      </div>
+      <p class="demo-note">Recordings are never stored. Only the written-out call is kept, as a draft, until it's scored.</p>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- In charge -->
+  <section id="charge" aria-labelledby="charge-h">
+    <div class="wrap">
+      <div class="head">
+        <h2 id="charge-h">It does the routine. You make the calls.</h2>
+        <p class="sub">OwnerDesk is built so nothing important happens behind your back.</p>
+      </div>
+      <div class="rules">
+        <div><span class="lock" aria-hidden="true"></span><div><h3>Money waits for you</h3><p>Payment reminders and quotations are written for you and wait for your tap. Prices and quotes never go out on their own.</p></div></div>
+        <div><span class="lock" aria-hidden="true"></span><div><h3>New customers hear from you</h3><p>OwnerDesk finds businesses that fit and drafts the first message. You send each one from your own WhatsApp or email.</p></div></div>
+        <div><span class="lock" aria-hidden="true"></span><div><h3>Replies come from your number</h3><p>Customers get answers from your own WhatsApp, so the conversation stays yours. Your team sees every chat.</p></div></div>
+        <div><span class="lock" aria-hidden="true"></span><div><h3>Every number is counted</h3><p>What the AI did today and this month is counted from your own records. Hours saved is the only estimate, and it says so.</p></div></div>
+        <div><span class="lock" aria-hidden="true"></span><div><h3>Call recordings aren't kept</h3><p>The call coach writes out the call, scores it and deletes the draft within 7 days. The recording itself is never stored.</p></div></div>
+        <div><span class="lock" aria-hidden="true"></span><div><h3>Your know-how stays with you</h3><p>What your key person knows is written down as SOPs and a role card, so the business doesn't stop when one person is away.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- Closing -->
+  <section class="closing" id="start" aria-labelledby="close-h">
+    <div class="wrap">
+      <h2 id="close-h">Switch on the engines your business runs on.</h2>
+      <p class="sub">Tell OwnerDesk about your business once. The Engine Audit shows you which engine to start with, and the rest of the desk is ready when you are.</p>
+      <div class="ctas">
+        <a class="btn btn-gold" href="/">Get started</a>
+        <a class="btn btn-line" href="#engines">See the six engines again</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <img src="/brand/ownerdesk-logo.svg" alt="OwnerDesk" width="229" height="64">
+        <p>The business hub for owner-run businesses in India. Inquiries, follow-ups, invoices, payments, posts and filings, run from one desk.</p>
+        <a class="btn btn-gold btn-sm" href="/">Get started</a>
+      </div>
+      <nav class="foot-col" aria-labelledby="f-eng">
+        <h2 id="f-eng">The six engines</h2>
+        <ul>
+          <li><a href="#engines" data-engine="0">Lead</a></li>
+          <li><a href="#engines" data-engine="1">Sales</a></li>
+          <li><a href="#engines" data-engine="2">Conversion</a></li>
+          <li><a href="#engines" data-engine="3">Operations</a></li>
+          <li><a href="#engines" data-engine="4">Brand</a></li>
+          <li><a href="#engines" data-engine="5">Data</a></li>
+        </ul>
+      </nav>
+      <nav class="foot-col" aria-labelledby="f-desk">
+        <h2 id="f-desk">On your desk</h2>
+        <ul>
+          <li><a href="#day">Your day</a></li>
+          <li><a href="#pipeline">Pipeline fills itself</a></li>
+          <li><a href="#ask">Ask your desk</a></li>
+          <li><a href="#coach">Call coach</a></li>
+          <li><a href="#charge">You're in charge</a></li>
+        </ul>
+      </nav>
+      <nav class="foot-col" aria-labelledby="f-start">
+        <h2 id="f-start">Start</h2>
+        <ul>
+          <li><a href="/">Get started</a></li>
+          <li><a href="/login">Log in</a></li>
+          <li><a href="#start">How to begin</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="foot-copy">
+      <p>© 2026 OwnerDesk. All rights reserved.</p>
+      <a href="#top"><span class="switch on" aria-hidden="true"></span>Back to top</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var $ = function(id){ return document.getElementById(id); };
+  var inr = function(n){ return "₹" + Math.max(0, Math.round(n)).toLocaleString("en-IN"); };
+
+  // Time in India
+  function ist(){
+    var parts = new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit",weekday:"long",day:"numeric",month:"short",hour12:false}).formatToParts(new Date());
+    var o = {}; parts.forEach(function(p){ o[p.type] = p.value; });
+    var h = +o.hour % 24, m = +o.minute;
+    return {h:h, m:m, mins:h*60+m, hm:(h<10?"0":"")+h+":"+(m<10?"0":"")+m, weekday:o.weekday, day:o.day, month:o.month};
+  }
+
+  /* ───────── The live desk ───────── */
+  var state = {inq:3, fu:4, owed:118400, posts:5};
+  var shown = {inq:0, fu:0, owed:0, posts:0};
+  var tiles = {inq:$("tInq"), fu:$("tFu"), owed:$("tOwed"), posts:$("tPosts")};
+  function paint(k){ tiles[k].textContent = k === "owed" ? inr(shown[k]) : String(Math.round(shown[k])); }
+  var tid = {};
+  function tween(k, to, ms){
+    var from = shown[k], t0 = performance.now(), id = tid[k] = (tid[k] || 0) + 1;
+    if (reduce || ms === 0) { shown[k] = to; paint(k); return; }
+    tiles[k].classList.add("bump");
+    (function step(t){
+      if (id !== tid[k]) return;
+      var p = Math.min(1, (t - t0) / ms), e = 1 - Math.pow(1 - p, 3);
+      shown[k] = from + (to - from) * e; paint(k);
+      if (p < 1) requestAnimationFrame(step); else setTimeout(function(){ tiles[k].classList.remove("bump"); }, 400);
+    })(t0);
+  }
+  var events = [
+    {t:"New inquiry from your website", d:"Neha R. wants a modular kitchen for her 3BHK", fx:{inq:1, fu:1}},
+    {ai:1, t:"Lead brief ready", d:"Who she is, what she wants and 3 questions for the first call"},
+    {ai:1, t:"First reply sent from your WhatsApp", d:"Site visit booked for Saturday, 11:00. The price waits for you."},
+    {t:"Payment received", d:"₹21,240 from Desai Homes. Money owed is updated.", fx:{owed:-21240}},
+    {t:"Quotation became an invoice", d:"₹48,500 + GST for the Shah wardrobe, sent the same day"},
+    {ai:1, t:"Payment reminder written", d:"₹36,000 is 12 days overdue. Ready for you to send with one tap."},
+    {t:"Follow-up due today", d:"Call Arjun about the study-room quote", fx:{fu:1}},
+    {ai:1, t:"This week's posts are ready", d:"7 posts in your colours, each with a caption", fx:{posts:7}},
+    {t:"New inquiry on WhatsApp", d:"Rahul K. asks about a home-office fit-out", fx:{inq:1}},
+    {t:"Compliance reminder", d:"Your GST return is due on the 20th"},
+    {ai:1, t:"Deal filed from a chat", d:"Note, next step and follow-up date added to Arjun's deal"},
+    {t:"Follow-up done", d:"You marked the call with Arjun as done", fx:{fu:-1}}
+  ];
+  var feed = $("feed"), ei = 0;
+  function push(ev){
+    var li = document.createElement("li");
+    if (ev.ai) li.className = "ai";
+    li.innerHTML = '<span class="ic" aria-hidden="true">' + (ev.ai ? "✦" : "●") + '</span><div><div class="t"></div><div class="d"></div></div><time></time>';
+    li.querySelector(".t").textContent = ev.t;
+    li.querySelector(".d").textContent = ev.d;
+    li.querySelector("time").textContent = ist().hm;
+    feed.insertBefore(li, feed.firstChild);
+    while (feed.children.length > 6) feed.removeChild(feed.lastChild);
+    if (ev.fx) Object.keys(ev.fx).forEach(function(k){ state[k] = Math.max(0, state[k] + ev.fx[k]); tween(k, state[k], 900); });
+  }
+  function tick(){ push(events[ei % events.length]); ei++; }
+  function clocks(){
+    var n = ist();
+    $("deskClock").textContent = n.weekday.slice(0,3) + " " + n.hm;
+    $("nowClock").textContent = n.hm;
+    $("nowDay").textContent = "in India, " + n.weekday + " " + n.day + " " + n.month;
+  }
+  clocks(); setInterval(clocks, 15000);
+
+  // The page-load moment: the switch in the headline flips on, then the desk wakes
+  function wake(){
+    $("heroSwitch").classList.add("on");
+    setTimeout(function(){
+      $("desk").classList.add("awake");
+      Object.keys(state).forEach(function(k){ tween(k, state[k], reduce ? 0 : 1100); });
+      // first few lines arrive quickly, then the desk settles into a steady pace
+      tick(); setTimeout(tick, 500); setTimeout(tick, 1000); setTimeout(tick, 1500);
+      if (!reduce) setInterval(function(){ if (!document.hidden) tick(); }, 3400);
+    }, reduce ? 0 : 520);
+  }
+  if (reduce) wake(); else setTimeout(wake, 450);
+
+  /* ───────── The six engines ───────── */
+  var ENGINES = [
+    {k:"Lead", b:"Get found, and turn visitors into inquiries.", f:[
+      ["Website", "Your website with an inquiry form and a Chat on WhatsApp button. Change it by typing what you want."],
+      ["Inquiry alerts", "Every inquiry lands in one place, and you get a WhatsApp alert the moment it does."],
+      ["Lead magnet", "A guide written for your customers, published on your site with a form that captures their details.", 1],
+      ["Find new customers", "Businesses near you on Google Maps that fit, each with a first message drafted. You send it yourself.", 1],
+      ["More like my best customers", "OwnerDesk looks at your top customers and suggests who to look for next.", 1],
+      ["Reply helper", "Paste what a new business wrote back, and get a reply that moves it towards a deal.", 1]
+    ]},
+    {k:"Sales", b:"Grow revenue from the customers you can reach, and get invoices out the same day.", f:[
+      ["Revenue Multiplier", "Customers × average value × how often they buy: see which lever grows revenue fastest."],
+      ["Ways to get more leads", "Lead ideas that fit your kind of business, each with a first step and the tool that does it."],
+      ["Invoicing", "A voice note or a few lines becomes a GST quotation. Accepted quotes become invoices.", 1],
+      ["Quote follow-ups", "A follow-up for every open quotation, ready to send with one tap.", 1],
+      ["Automatic invoices", "Connect your payment gateway and every payment becomes a GST invoice."],
+      ["Win-Back", "Customers who haven't bought in 60 days get a personal message, written for you and sent when you tap.", 1],
+      ["Call coach", "Upload or paste a sales call: a score out of 10 and 3 fixes, for each person on your team.", 1]
+    ]},
+    {k:"Conversion", b:"Every inquiry caught, answered and tracked to a deal.", f:[
+      ["Inquiries", "Every inquiry from your website, email and WhatsApp in one place, answered with a proposal.", 1],
+      ["Lead Response", "A first reply within 2 minutes, day or night, from your own WhatsApp, with a call or visit booked.", 1],
+      ["Lead research", "A short brief on every new inquiry: who they are, what they want and 3 questions to ask.", 1],
+      ["Follow-ups on day 1, 3 and 7", "After every inquiry, follow-ups are written and waiting, so no lead goes cold.", 1],
+      ["CRM", "Every contact and company with their deals, calls, notes and follow-up dates. Import and export too."],
+      ["Pipeline", "Drag deals across your sales stages and see exactly where they stop."],
+      ["Pipeline fills itself", "Paste a chat or speak a voice note: the deal gets its note, next step and follow-up date.", 1],
+      ["Send list", "Every message your automations wrote, in one list, sent from your WhatsApp with one tap."],
+      ["WhatsApp chats", "Your own WhatsApp number, answered around the clock, with every chat visible to your team.", 1]
+    ]},
+    {k:"Operations", b:"The money, deadlines and know-how that keep the business running without you.", f:[
+      ["Dashboard", "Leads, money, posts, targets and what needs you today, on one screen."],
+      ["Payment follow-up", "Every payment a customer owes, what's overdue, and reminders ready to send."],
+      ["Automatic payment reminders", "Switch it on once and reminders go out by email as money falls due and goes overdue."],
+      ["Compliance calendar", "Every filing, licence, renewal and document expiry in one calendar, with reminders."],
+      ["GST set-aside", "GST on your sales minus GST on your bills: roughly what to keep aside for the next payment."],
+      ["Cash flow", "The next 30 days of money in and out, so you see a shortfall before it comes."],
+      ["Magic Number", "Your revenue target worked back to customers, inquiries and daily activity. It tracks itself."],
+      ["SOP Writer", "Step-by-step SOPs for your whole business, written with AI. Record a voice note and get a written SOP.", 1]
+    ]},
+    {k:"Brand", b:"One voice and one look everywhere, and a month of posts ready.", f:[
+      ["Brand kit", "Your brand message in every version, your colours and fonts, and ready designs."],
+      ["Brand message", "Your one-line brand message and a 30-second pitch, in your own words.", 1],
+      ["Social media", "Posts with images in your colours and a caption, ready to post.", 1],
+      ["Content calendar", "A month of posts planned around Indian festivals and occasions.", 1],
+      ["Content & company research", "Post ideas from what your competitors do, and a plan to find companies that fit your ideal customer.", 1],
+      ["Competitor Watch", "Every Monday: what changed on your competitors' websites and Google ratings."],
+      ["Brochures", "A business brochure and a products brochure, written from your brand kit.", 1]
+    ]},
+    {k:"Data", b:"Know where the money goes, and keep what your key people know.", f:[
+      ["Expenses", "Every company expense in one place: the bill, the GST you can claim back, and where the money went."],
+      ["Bank statement reader", "Upload a bank statement: money in and out, where it went, and the payments that repeat."],
+      ["Key-person knowledge", "What your key employee knows, written down as SOPs and a role card.", 1],
+      ["Quick answers", "Tap a question, like which deals are stuck or who owes the most, and get the answer from your records."],
+      ["AI team", "Every AI role, and what it did today and this month, counted from your own records."],
+      ["Weekly growth line", "Every Monday, one WhatsApp line: businesses found, messages sent, replies and new deals."]
+    ]}
+  ];
+  var rail = $("rail"), panel = $("enginePanel"), cur = 0, auto = !reduce, timer = null, DUR = 7000, inView = false;
+  ENGINES.forEach(function(e, i){
+    var b = document.createElement("button");
+    b.type = "button"; b.setAttribute("role","tab"); b.id = "eng-" + i; b.setAttribute("aria-controls","enginePanel");
+    b.innerHTML = '<span class="switch" aria-hidden="true"></span><span><span class="nm"></span><span class="bl"></span></span><span class="prog" aria-hidden="true"></span>';
+    b.querySelector(".nm").textContent = e.k;
+    b.querySelector(".bl").textContent = e.b;
+    b.addEventListener("click", function(){ stopAuto(); show(i, true);
+      if (window.matchMedia("(max-width:900px)").matches) panel.scrollIntoView({behavior: reduce ? "auto" : "smooth", block:"start"}); });
+    b.addEventListener("keydown", function(ev){
+      var n = ev.key === "ArrowDown" || ev.key === "ArrowRight" ? 1 : ev.key === "ArrowUp" || ev.key === "ArrowLeft" ? -1 : 0;
+      if (!n) return; ev.preventDefault(); stopAuto();
+      var j = (i + n + ENGINES.length) % ENGINES.length; show(j, true); rail.children[j].focus();
+    });
+    rail.appendChild(b);
+  });
+  function show(i, user){
+    cur = i;
+    Array.prototype.forEach.call(rail.children, function(b, j){
+      b.setAttribute("aria-selected", j === i ? "true" : "false");
+      b.tabIndex = j === i ? 0 : -1;
+      b.querySelector(".switch").classList.toggle("on", j === i);
+      var p = b.querySelector(".prog"); p.classList.remove("run"); void p.offsetWidth;
+      if (j === i && auto && inView) { p.style.setProperty("--dur", DUR + "ms"); p.classList.add("run"); }
+    });
+    var e = ENGINES[i];
+    panel.setAttribute("aria-labelledby", "eng-" + i);
+    var html = '<h3>' + e.k + ' engine</h3><p class="lede"></p><ul class="feats">';
+    e.f.forEach(function(){ html += '<li><b></b><span></span></li>'; });
+    panel.innerHTML = html + '</ul>';
+    panel.querySelector(".lede").textContent = e.b;
+    var lis = panel.querySelectorAll(".feats li");
+    e.f.forEach(function(f, j){
+      var b = lis[j].querySelector("b"); b.textContent = f[0];
+      if (f[2]) { var t = document.createElement("span"); t.className = "aitag"; t.textContent = "✦ AI"; b.appendChild(t); }
+      lis[j].querySelector("span:not(.aitag)").textContent = f[1];
+    });
+    Array.prototype.forEach.call(lis, function(li, j){ li.style.animationDelay = (j * 0.04) + "s"; });
+    panel.classList.remove("swap"); void panel.offsetWidth; if (!reduce) panel.classList.add("swap");
+    clearTimeout(timer);
+    if (auto && inView) timer = setTimeout(function(){ show((cur + 1) % ENGINES.length); }, DUR);
+  }
+  function stopAuto(){ auto = false; clearTimeout(timer); Array.prototype.forEach.call(rail.querySelectorAll(".prog"), function(p){ p.classList.remove("run"); }); }
+  show(0);
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(function(es){
+      inView = es[0].isIntersecting;
+      if (inView && auto) show(cur); else clearTimeout(timer);
+    }, {threshold:.35}).observe(rail);
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll("[data-engine]"), function(a){
+    a.addEventListener("click", function(){ stopAuto(); show(+a.getAttribute("data-engine")); });
+  });
+
+  /* ───────── The day, against the time in India ───────── */
+  var SCHED = [
+    {when:"Every morning", at:8*60, what:"Payment reminders are ready", sub:"Polite reminders for overdue money, ready to send with one tap."},
+    {when:"Monday 09:00", at:9*60, mon:1, what:"Your weekly growth line", sub:"One WhatsApp line: businesses found, messages sent, replies and new deals."},
+    {when:"Monday", at:9*60, mon:1, what:"Competitor Watch", sub:"What changed on your competitors' websites and Google ratings, and what it means for you."},
+    {when:"10:00", at:10*60, what:"Today's follow-ups reach you", sub:"On your Dashboard and on your WhatsApp, so no promised call slips."},
+    {when:"Any time", always:1, what:"An inquiry lands", sub:"A first reply from your WhatsApp within 2 minutes, and a brief with 3 questions for your first call."},
+    {when:"After a call", always:1, what:"The deal fills itself", sub:"Paste the chat or speak a voice note. The note, next step and follow-up date are filed."},
+    {when:"Same day", always:1, what:"Quotes become invoices", sub:"An accepted quotation becomes a GST invoice, and a payment through your gateway is invoiced on its own."}
+  ];
+  var sched = $("sched");
+  SCHED.forEach(function(s){
+    var li = document.createElement("li");
+    li.innerHTML = '<span class="when"></span><span class="what"><b></b><span></span></span><span class="state"></span>';
+    li.querySelector(".when").textContent = s.when;
+    li.querySelector(".what b").textContent = s.what;
+    li.querySelector(".what span").textContent = s.sub;
+    s.el = li.querySelector(".state");
+    sched.appendChild(li);
+  });
+  function dur(m){ var h = Math.floor(m/60), r = m % 60; return h ? h + " h " + (r ? r + " min" : "") : r + " min"; }
+  function schedPaint(){
+    var n = ist(), isMon = n.weekday === "Monday";
+    var dayIdx = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].indexOf(n.weekday);
+    var soonest = null;
+    SCHED.forEach(function(s){
+      var cls = "", txt = "";
+      if (s.always) { cls = "always"; txt = "Whenever it happens"; }
+      else if (s.mon && !isMon) { var d = (7 - dayIdx) % 7 || 7; txt = d === 1 ? "Tomorrow" : "In " + d + " days"; }
+      else if (n.mins >= s.at) { cls = "done"; txt = "Done today"; }
+      else { txt = "In " + dur(s.at - n.mins).trim(); if (!soonest || s.at < soonest.at) soonest = s; }
+      s.el.className = "state" + (cls ? " " + cls : ""); s.el.textContent = txt; s.cls = cls;
+    });
+    if (soonest) soonest.el.className = "state soon";
+  }
+  schedPaint(); setInterval(schedPaint, 30000);
+
+  /* ───────── Pipeline fills itself ───────── */
+  function nextThursday(){
+    var d = new Date(Date.now() + 5.5*3600*1000); // India date
+    var add = (4 - d.getUTCDay() + 7) % 7 || 7;
+    d.setUTCDate(d.getUTCDate() + add);
+    return d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short",timeZone:"UTC"});
+  }
+  var demo = $("demo"), fileBtn = $("fileBtn"), dealTag = $("dealTag"), running = false, played = false;
+  var flds = {}; Array.prototype.forEach.call(demo.querySelectorAll(".fld"), function(f){ flds[f.getAttribute("data-k")] = f; });
+  var stagesEl = $("stages").children;
+  function reset(){
+    Object.keys(flds).forEach(function(k){ flds[k].classList.remove("filled","waiting"); var t = flds[k].querySelector(".typed"); if (t) t.textContent = ""; });
+    Array.prototype.forEach.call(stagesEl, function(s, i){ s.className = i === 0 ? "at" : ""; });
+    $("moveStage").disabled = false; $("setValue").disabled = false;
+    dealTag.textContent = "Not filed yet";
+  }
+  function type(el, text, ms){
+    return new Promise(function(res){
+      if (reduce) { el.textContent = text; return res(); }
+      var i = 0, caret = document.createElement("span"); caret.className = "caret";
+      el.textContent = ""; el.parentNode.insertBefore(caret, el.nextSibling);
+      (function step(){
+        i += Math.max(1, Math.round(text.length / (ms / 16)));
+        el.textContent = text.slice(0, i);
+        if (i < text.length) requestAnimationFrame(step); else { caret.remove(); res(); }
+      })();
+    });
+  }
+  function wait(ms){ return new Promise(function(r){ setTimeout(r, reduce ? 0 : ms); }); }
+  function fill(k, text){ var f = flds[k]; return type(f.querySelector(".typed"), text, 700).then(function(){ f.classList.add("filled"); }); }
+  function run(){
+    if (running) return; running = true; played = true; reset();
+    fileBtn.classList.add("busy"); fileBtn.setAttribute("aria-busy","true");
+    wait(1300).then(function(){
+      fileBtn.classList.remove("busy"); fileBtn.removeAttribute("aria-busy");
+      dealTag.textContent = "Filed from the chat";
+      return fill("note", "Modular kitchen for a 3BHK in Baner. Wants it ready by 15 December.");
+    }).then(function(){ return wait(250); })
+      .then(function(){ return fill("next", "Call Neha on Thursday after 6 pm"); })
+      .then(function(){ return wait(250); })
+      .then(function(){ return fill("date", nextThursday()); })
+      .then(function(){ return wait(400); })
+      .then(function(){ flds.value.classList.add("waiting"); return wait(450); })
+      .then(function(){ flds.stage.classList.add("waiting"); running = false; });
+  }
+  fileBtn.addEventListener("click", run);
+  $("replay").addEventListener("click", function(){ if (!running) run(); });
+  $("setValue").addEventListener("click", function(){
+    flds.value.classList.remove("waiting");
+    type(flds.value.querySelector(".typed"), "₹2,50,000", 300).then(function(){ flds.value.classList.add("filled"); });
+  });
+  $("moveStage").addEventListener("click", function(){
+    flds.stage.classList.remove("waiting");
+    stagesEl[0].className = "past"; stagesEl[1].className = "at";
+  });
+  if ("IntersectionObserver" in window && !reduce) {
+    var io = new IntersectionObserver(function(es){ if (es[0].isIntersecting && !played) { io.disconnect(); setTimeout(run, 500); } }, {threshold:.5});
+    io.observe(demo);
+  }
+
+  /* ───────── Quick answers ───────── */
+  var QA = [
+    {q:"Which deals are stuck?", line:"3 deals have had nothing recorded for 10 days or more.", rows:[
+      ["Mehta family, 2BHK interiors", "₹3,20,000", "Nothing recorded for 14 days"],
+      ["Joshi & Co, office fit-out", "₹1,85,000", "Nothing recorded for 12 days"],
+      ["Kulkarni, wardrobe", "No value yet", "Nothing recorded for 11 days"]]},
+    {q:"Who owes me the most?", line:"₹97,160 is overdue from 4 customers. Desai Homes owes the most.", bars:1, rows:[
+      ["Desai Homes", "₹36,000", "12 days overdue", 36000],
+      ["Shah family", "₹28,500", "8 days overdue", 28500],
+      ["Patil Builders", "₹21,660", "5 days overdue", 21660],
+      ["Rao residence", "₹11,000", "2 days overdue", 11000]]},
+    {q:"Which source brings the most deals?", line:"Social media brought the most won deals in the last 90 days.", bars:1, rows:[
+      ["Social media", "6 won", "₹9,40,000", 6],
+      ["Website", "4 won", "₹6,10,000", 4],
+      ["Referral", "3 won", "₹4,25,000", 3],
+      ["Lead magnet", "1 won", "₹1,10,000", 1]]},
+    {q:"Who has gone quiet?", line:"2 regular customers haven't bought for a while.", rows:[
+      ["Bhatia Clinics", "about ₹1,20,000 a year", "Last bought 4 months ago"],
+      ["Nair Café", "about ₹80,000 a year", "Last bought 3 months ago"]]},
+    {q:"How fast do we reply to new inquiries?", line:"Half of last month's inquiries got a first reply within 4 minutes.", bars:1, rows:[
+      ["Within 1 hour", "21", "", 21],
+      ["Within a day", "4", "", 4],
+      ["Took longer than a day", "1", "", 1],
+      ["No reply recorded yet", "1", "", 1]]},
+    {q:"What is due this week?", line:"5 things are due in the next 7 days.", rows:[
+      {g:"Money due"},
+      ["Shah family", "₹28,500", "Due Friday"],
+      ["Iyer Interiors", "₹14,750", "Due Monday"],
+      {g:"Follow-ups"},
+      ["Neha R., modular kitchen", "Thursday", "Call after 6 pm"],
+      ["Arjun, study room", "Saturday", "Send the revised quote"],
+      ["Mehta family", "Sunday", "Check on the site visit"]]}
+  ];
+  var qs = $("qs"), ans = $("ans"), qi = 0, qAuto = !reduce, qTimer = null, qView = false;
+  QA.forEach(function(x, i){
+    var b = document.createElement("button"); b.type = "button"; b.textContent = x.q;
+    b.addEventListener("click", function(){ qAuto = false; clearTimeout(qTimer); ask(i); });
+    qs.appendChild(b);
+  });
+  function ask(i){
+    qi = i; var x = QA[i];
+    Array.prototype.forEach.call(qs.children, function(b, j){ b.setAttribute("aria-pressed", j === i ? "true" : "false"); });
+    ans.innerHTML = '<p class="q"></p><p class="line"></p><ul></ul><p class="foot">Counted from the sample business\'s records. No AI used.</p>';
+    ans.querySelector(".q").textContent = x.q;
+    ans.querySelector(".line").textContent = x.line;
+    var ul = ans.querySelector("ul"), max = 0;
+    x.rows.forEach(function(r){ if (r[3] > max) max = r[3]; });
+    x.rows.forEach(function(r, j){
+      var li = document.createElement("li"); li.style.animationDelay = (j * 0.06) + "s";
+      if (r.g) { li.className = "grp"; li.textContent = r.g; ul.appendChild(li); return; }
+      li.innerHTML = "<b></b><em></em>" + (r[2] ? "<small></small>" : "") + (x.bars ? '<span class="bar"><i></i></span>' : "");
+      li.querySelector("b").textContent = r[0]; li.querySelector("em").textContent = r[1];
+      if (r[2]) li.querySelector("small").textContent = r[2];
+      ul.appendChild(li);
+      if (x.bars) { var bar = li.querySelector(".bar i"); requestAnimationFrame(function(){ requestAnimationFrame(function(){ bar.style.width = (100 * r[3] / max) + "%"; }); }); }
+    });
+    ans.classList.remove("swap"); void ans.offsetWidth; if (!reduce) ans.classList.add("swap");
+    clearTimeout(qTimer);
+    if (qAuto && qView) qTimer = setTimeout(function(){ ask((qi + 1) % QA.length); }, 6000);
+  }
+  ask(0);
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(function(es){
+      qView = es[0].isIntersecting;
+      if (qView && qAuto) { clearTimeout(qTimer); qTimer = setTimeout(function(){ ask((qi + 1) % QA.length); }, 6000); } else clearTimeout(qTimer);
+    }, {threshold:.35}).observe(ans);
+  }
+
+  /* ───────── Call coach ───────── */
+  var coached = false;
+  function coach(){
+    if (coached) return; coached = true;
+    var score = 7, C = 326.73;
+    $("dialArc").style.strokeDashoffset = String(C * (1 - score / 10));
+    var t0 = performance.now();
+    (function step(t){
+      var p = reduce ? 1 : Math.min(1, (t - t0) / 1600);
+      $("dialNum").textContent = String(Math.round(score * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) requestAnimationFrame(step);
+    })(t0);
+    Array.prototype.forEach.call($("bars").querySelectorAll("i"), function(b, j){
+      setTimeout(function(){ b.style.height = (b.getAttribute("data-v") * 10) + "%"; }, reduce ? 0 : 200 + j * 120);
+    });
+    var lis = $("fixes").children;
+    Array.prototype.forEach.call(lis, function(li, j){ li.style.transitionDelay = reduce ? "0s" : (0.9 + j * 0.35) + "s"; });
+    $("fixes").classList.remove("pre");
+  }
+  if ("IntersectionObserver" in window && !reduce) {
+    var co = new IntersectionObserver(function(es){ if (es[0].isIntersecting) { co.disconnect(); coach(); } }, {threshold:.4});
+    co.observe($("coachDemo"));
+  } else coach();
+})();
+</script>
+</body>
+</html>
