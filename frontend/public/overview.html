@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>OwnerDesk: your whole business on one desk</title>
-<meta name="description" content="OwnerDesk runs the routine of a small business: inquiries, follow-ups, quotations, payments, posts and filings, across the six engines of your business.">
+<title>OwnerDesk: run your whole business from one desk</title>
+<meta name="description" content="OwnerDesk answers every inquiry in minutes, remembers every follow-up, chases the money you're owed and keeps your posts going. Made for owner-run businesses in India, with GST and WhatsApp built in.">
 <meta name="theme-color" content="#14151A">
-<meta property="og:title" content="OwnerDesk: your whole business on one desk">
-<meta property="og:description" content="Inquiries, follow-ups, quotations, payments, posts and filings, run from one hub. The six engines of your business, switched on.">
+<meta property="og:title" content="OwnerDesk: run your whole business from one desk">
+<meta property="og:description" content="Every inquiry answered, every follow-up remembered, every rupee owed chased. OwnerDesk takes the routine off an owner's plate.">
 <link rel="icon" href="/favicon.ico">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -233,14 +233,38 @@ ol.steps{padding:0;margin-bottom:0}
 .demo-note{margin-top:22px;color:var(--ivory-50);font-size:14.5px;max-width:60em}
 .replay{background:none;border:0;color:var(--gold-light);font:inherit;font-weight:700;font-size:14px;cursor:pointer;padding:12px 0;text-decoration:underline;text-underline-offset:3px}
 
+/* the six gaps: what slips, and the switch that closes it */
+.gaps-h{max-width:none}
+.gaps{list-style:none;margin:40px 0 0;padding:0;border-bottom:1px solid var(--line)}
+.gaps li{display:grid;grid-template-columns:1fr 1fr;gap:8px clamp(24px,4vw,56px);padding:16px 0;border-top:1px solid var(--line);align-items:center}
+.gaps p{display:grid;grid-template-columns:36px 1fr;gap:14px;align-items:center;font-size:16.5px;line-height:1.45}
+.gaps .pain{color:var(--ivory-50)}
+.gaps .fix{color:var(--ivory);font-weight:600}
+.gaps .switch{--w:36px;--h:20px}
+.gaps li.hd{border-top:0;padding:0 0 12px}
+.gaps li.hd p{font-size:14px;font-weight:700;color:var(--ivory-50)}
+.gaps li.hd p:last-child{color:var(--gold-light)}
+@media (max-width:640px){.gaps li{grid-template-columns:1fr}.gaps li.hd{display:none}}
+
+/* questions */
+.faq{display:grid;grid-template-columns:minmax(260px,.8fr) 1.3fr;gap:clamp(24px,4vw,64px);align-items:start}
+@media (max-width:900px){.faq{grid-template-columns:1fr}}
+.faq-list details{border-top:1px solid var(--line)}
+.faq-list details:last-child{border-bottom:1px solid var(--line)}
+.faq-list summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:20px 0;font-weight:700;font-size:18px;line-height:1.35}
+.faq-list summary::-webkit-details-marker{display:none}
+.faq-list summary::after{content:"";flex:none;width:12px;height:12px;border-right:2px solid var(--gold);border-bottom:2px solid var(--gold);transform:rotate(45deg) translate(-3px,-3px);transition:transform .3s}
+.faq-list details[open] summary::after{transform:rotate(225deg) translate(-3px,-3px)}
+.faq-list summary:hover{color:var(--gold-light)}
+.faq-list details p{color:var(--ivory-70);font-size:16px;line-height:1.6;padding:0 0 22px;max-width:40em}
+
 /* in charge */
 .rules{display:grid;grid-template-columns:repeat(2,1fr);gap:0 clamp(24px,4vw,64px);margin-top:48px}
 @media (max-width:760px){.rules{grid-template-columns:1fr}}
 .rules > div{padding:22px 0;border-top:1px solid var(--line);display:grid;grid-template-columns:44px 1fr;gap:16px}
 .rules h3{font-size:18px;margin-bottom:6px}
 .rules p{color:var(--ivory-70);font-size:15.5px}
-.lock{width:44px;height:24px;border-radius:999px;background:var(--panel-2);box-shadow:inset 0 0 0 1px var(--gold-deep);position:relative;margin-top:2px}
-.lock::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--gold)}
+.rules .switch{margin-top:2px}
 
 /* quick answers */
 .qa{display:grid;grid-template-columns:minmax(260px,.8fr) 1.3fr;gap:clamp(20px,3vw,40px);margin-top:52px;align-items:start}
@@ -331,12 +355,12 @@ footer{border-top:1px solid var(--gold-deep);padding:64px 0 0;background:linear-
   <div class="wrap">
     <a class="logo" href="#top" aria-label="OwnerDesk, back to the top"><img src="/brand/ownerdesk-logo.svg" alt="OwnerDesk" width="158" height="44"></a>
     <nav aria-label="Sections">
-      <a href="#engines">The six engines</a>
+      <a href="#gaps">Why OwnerDesk</a>
+      <a href="#engines">What it does</a>
       <a href="#day">Your day</a>
       <a href="#pipeline">Pipeline</a>
-      <a href="#ask">Ask your desk</a>
       <a href="#coach">Call coach</a>
-      <a href="#charge">You're in charge</a>
+      <a href="#faq">Questions</a>
     </nav>
     <a class="btn btn-gold btn-sm" href="/">Get started</a>
   </div>
@@ -348,12 +372,12 @@ footer{border-top:1px solid var(--gold-deep);padding:64px 0 0;background:linear-
     <div class="wrap">
       <div>
         <h1><span class="row">Run the whole</span><span class="row">business<span class="switch bigswitch" id="heroSwitch" aria-hidden="true"></span></span><span class="row">from one desk.</span></h1>
-        <p class="sub">OwnerDesk handles the routine of a small business: every inquiry answered, every follow-up remembered, quotes turned into GST invoices, money chased and posts ready. You get your time back to run the business.</p>
+        <p class="sub">Every inquiry answered in minutes. Every follow-up remembered. Every rupee you're owed, chased. OwnerDesk takes the routine off your plate, so your day goes to the work only you can do.</p>
         <div class="ctas">
           <a class="btn btn-gold" href="/">Get started</a>
-          <a class="btn btn-line" href="#engines">See what it does</a>
+          <a class="btn btn-line" href="#gaps">See how it helps</a>
         </div>
-        <p class="note">Made for owner-run businesses in India, with GST, WhatsApp and rupees built in.</p>
+        <p class="note">Made for owner-run businesses in India. GST invoices, WhatsApp and rupees from day one.</p>
       </div>
 
       <div class="desk" id="desk" aria-label="A sample OwnerDesk, updating live">
@@ -377,12 +401,39 @@ footer{border-top:1px solid var(--gold-deep);padding:64px 0 0;background:linear-
 
   <hr class="rule">
 
+  <!-- Why: the gaps business slips through, each with its switch flipped on -->
+  <section id="gaps" aria-labelledby="gaps-h">
+    <div class="wrap">
+      <div class="head gaps-h">
+        <h2 id="gaps-h">Six gaps that cost you business.</h2>
+        <p class="sub">Each one is just a busy day. OwnerDesk closes all six.</p>
+      </div>
+      <ul class="gaps">
+        <li class="hd" aria-hidden="true"><p><span></span>Without OwnerDesk</p><p><span></span>With OwnerDesk</p></li>
+        <li><p class="pain"><span class="switch" aria-hidden="true"></span><span>A 9 pm inquiry hears back next morning, too late.</span></p>
+          <p class="fix"><span class="switch on" aria-hidden="true"></span><span>A first reply from your WhatsApp in 2 minutes, day or night.</span></p></li>
+        <li><p class="pain"><span class="switch" aria-hidden="true"></span><span>"I'll call you on Thursday", and then Thursday gets busy.</span></p>
+          <p class="fix"><span class="switch on" aria-hidden="true"></span><span>The follow-up reaches your WhatsApp at 10 am that day.</span></p></li>
+        <li><p class="pain"><span class="switch" aria-hidden="true"></span><span>A quotation goes out, and the customer goes quiet.</span></p>
+          <p class="fix"><span class="switch on" aria-hidden="true"></span><span>A polite follow-up on day 2, 5 and 10, ready in one tap.</span></p></li>
+        <li><p class="pain"><span class="switch" aria-hidden="true"></span><span>Money owed for a month, because asking again feels awkward.</span></p>
+          <p class="fix"><span class="switch on" aria-hidden="true"></span><span>A polite reminder every few days, with how to pay you.</span></p></li>
+        <li><p class="pain"><span class="switch" aria-hidden="true"></span><span>Posts stop the moment work gets busy.</span></p>
+          <p class="fix"><span class="switch on" aria-hidden="true"></span><span>A month of festival posts, ready before the month starts.</span></p></li>
+        <li><p class="pain"><span class="switch" aria-hidden="true"></span><span>How the work gets done lives in one person's head.</span></p>
+          <p class="fix"><span class="switch on" aria-hidden="true"></span><span>Speak a voice note, get a written SOP your team can follow.</span></p></li>
+      </ul>
+    </div>
+  </section>
+
+  <hr class="rule">
+
   <!-- The six engines -->
   <section id="engines" aria-labelledby="engines-h">
     <div class="wrap">
       <div class="head">
-        <h2 id="engines-h">Six engines. One Business Brain.</h2>
-        <p class="sub">Every business runs on the same six engines. OwnerDesk gives each one its own tools, and they all work from one Business Brain, so you describe your business once.</p>
+        <h2 id="engines-h">Six engines. One desk.</h2>
+        <p class="sub">Every business runs on the same six engines: leads, sales, conversion, operations, brand and data. OwnerDesk gives each one its tools, and they all work from your Knowledge Hub, so you describe your business once.</p>
       </div>
       <div class="engines">
         <div class="rail" role="tablist" aria-label="The six engines" id="rail"></div>
@@ -397,13 +448,13 @@ footer{border-top:1px solid var(--gold-deep);padding:64px 0 0;background:linear-
   <section aria-labelledby="start-h">
     <div class="wrap">
       <div class="head">
-        <h2 id="start-h">Up and running in an afternoon.</h2>
+        <h2 id="start-h">Three steps to your first engine.</h2>
         <p class="sub">You don't set up six tools. You tell OwnerDesk about your business once, and it shows you where to start.</p>
       </div>
       <ol class="steps">
         <li><h3>Fill in your Knowledge Hub</h3><p class="muted">From your website, a voice note or a few typed lines: what you sell, your prices, your customers and your targets. Every page and every AI task uses it.</p></li>
-        <li><h3>Take the Engine Audit</h3><p class="muted">15 questions across the six engines. You see what each gap costs you in hours and rupees, and what fixing it unlocks.</p></li>
-        <li><h3>Switch on what matters first</h3><p class="muted">Start with the engine that costs you the most. The rest are waiting on the same desk, already filled in from your Knowledge Hub.</p></li>
+        <li><h3>Take the Engine Audit</h3><p class="muted">15 quick questions about how you get leads, sell, follow up, run the business and build your brand. Each gap shows the hours a week it typically costs, and the tool that fixes it.</p></li>
+        <li><h3>Switch on the biggest fix first</h3><p class="muted">Start where you lose the most time. The rest are waiting on the same desk, already filled in from your Knowledge Hub.</p></li>
       </ol>
     </div>
   </section>
@@ -414,8 +465,8 @@ footer{border-top:1px solid var(--gold-deep);padding:64px 0 0;background:linear-
   <section id="day" aria-labelledby="day-h">
     <div class="wrap day">
       <div>
-        <h2 id="day-h">Your desk keeps working while you do.</h2>
-        <p class="sub">Some jobs run on the clock, others the moment something happens. This list follows the time in India right now.</p>
+        <h2 id="day-h">You run the business. OwnerDesk runs the routine.</h2>
+        <p class="sub">While you're on site, on a call or off for the evening, the routine still gets done. Some jobs run at a set time, others the moment something happens. This is today, by the time in India.</p>
         <div class="now"><b id="nowClock">--:--</b><span id="nowDay">in India</span></div>
       </div>
       <ul class="sched" id="sched"></ul>
@@ -429,7 +480,7 @@ footer{border-top:1px solid var(--gold-deep);padding:64px 0 0;background:linear-
     <div class="wrap">
       <div class="head">
         <h2 id="pipe-h">Paste the chat. The deal fills itself.</h2>
-        <p class="sub">Paste a WhatsApp chat, upload the export or speak a voice note. OwnerDesk files the note, the next step and the follow-up date on the deal. Anything bigger waits for your tap.</p>
+        <p class="sub">No more typing up notes after every call. Paste a WhatsApp chat, upload the export or speak a voice note, and OwnerDesk files the note, the next step and the follow-up date on the deal. Anything bigger waits for your tap.</p>
       </div>
 
       <div class="demo" id="demo">
@@ -471,8 +522,8 @@ footer{border-top:1px solid var(--gold-deep);padding:64px 0 0;background:linear-
   <section id="ask" aria-labelledby="ask-h">
     <div class="wrap">
       <div class="head">
-        <h2 id="ask-h">Ask your desk. Get the answer from your own records.</h2>
-        <p class="sub">Tap a question and OwnerDesk answers it from your deals, payments and inquiries in a second. No AI involved, so the numbers are exactly what's in your records.</p>
+        <h2 id="ask-h">Know where you stand in one tap.</h2>
+        <p class="sub">Which deals are stuck, who owes you the most, which source brings in business. Tap a question and get the answer from your own deals, payments and inquiries in a second. No spreadsheets, and no AI guessing: the numbers are exactly what's in your records.</p>
       </div>
       <div class="qa">
         <div class="qs" id="qs" role="group" aria-label="Questions"></div>
@@ -487,8 +538,8 @@ footer{border-top:1px solid var(--gold-deep);padding:64px 0 0;background:linear-
   <section id="coach" aria-labelledby="coach-h">
     <div class="wrap">
       <div class="head">
-        <h2 id="coach-h">Every sales call, coached.</h2>
-        <p class="sub">Upload a call recording or paste the conversation. You get a score out of 10 and 3 fixes, each pointing to the exact line in the call, for every person on your team.</p>
+        <h2 id="coach-h">Make every sales call better than the last.</h2>
+        <p class="sub">Upload a call recording or paste the conversation. You get a score out of 10 and 3 fixes, each pointing to the exact line in the call. Do it for every person on your team and watch the scores climb.</p>
       </div>
       <div class="coach" id="coachDemo">
         <div class="card">
@@ -511,7 +562,7 @@ footer{border-top:1px solid var(--gold-deep);padding:64px 0 0;background:linear-
           </ul>
         </div>
       </div>
-      <p class="demo-note">Recordings are never stored. Only the written-out call is kept, as a draft, until it's scored.</p>
+      <p class="demo-note">The recording is never stored. Only the written-out call is kept.</p>
     </div>
   </section>
 
@@ -525,12 +576,37 @@ footer{border-top:1px solid var(--gold-deep);padding:64px 0 0;background:linear-
         <p class="sub">OwnerDesk is built so nothing important happens behind your back.</p>
       </div>
       <div class="rules">
-        <div><span class="lock" aria-hidden="true"></span><div><h3>Money waits for you</h3><p>Payment reminders and quotations are written for you and wait for your tap. Prices and quotes never go out on their own.</p></div></div>
-        <div><span class="lock" aria-hidden="true"></span><div><h3>New customers hear from you</h3><p>OwnerDesk finds businesses that fit and drafts the first message. You send each one from your own WhatsApp or email.</p></div></div>
-        <div><span class="lock" aria-hidden="true"></span><div><h3>Replies come from your number</h3><p>Customers get answers from your own WhatsApp, so the conversation stays yours. Your team sees every chat.</p></div></div>
-        <div><span class="lock" aria-hidden="true"></span><div><h3>Every number is counted</h3><p>What the AI did today and this month is counted from your own records. Hours saved is the only estimate, and it says so.</p></div></div>
-        <div><span class="lock" aria-hidden="true"></span><div><h3>Call recordings aren't kept</h3><p>The call coach writes out the call, scores it and deletes the draft within 7 days. The recording itself is never stored.</p></div></div>
-        <div><span class="lock" aria-hidden="true"></span><div><h3>Your know-how stays with you</h3><p>What your key person knows is written down as SOPs and a role card, so the business doesn't stop when one person is away.</p></div></div>
+        <div><span class="switch on" aria-hidden="true"></span><div><h3>Money waits for you</h3><p>Quotations and prices never go out on their own. Payment reminders wait for your tap too, unless you switch on automatic reminders.</p></div></div>
+        <div><span class="switch on" aria-hidden="true"></span><div><h3>New customers hear from you</h3><p>OwnerDesk finds businesses that fit and drafts the first message. You send each one from your own WhatsApp or email.</p></div></div>
+        <div><span class="switch on" aria-hidden="true"></span><div><h3>Replies come from your number</h3><p>Customers get answers from your own WhatsApp, so the conversation stays yours. Your team sees every chat.</p></div></div>
+        <div><span class="switch on" aria-hidden="true"></span><div><h3>Every number is counted</h3><p>What the AI did today and this month is counted from your own records. Hours saved is the only estimate, and it says so.</p></div></div>
+        <div><span class="switch on" aria-hidden="true"></span><div><h3>Call recordings aren't kept</h3><p>The call coach writes out the call and scores it. The recording itself is never stored, and a write-up nobody scored is deleted after 7 days.</p></div></div>
+        <div><span class="switch on" aria-hidden="true"></span><div><h3>Your know-how stays with you</h3><p>What your key person knows is written down as SOPs and a role card, so the business doesn't stop when one person is away.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- Questions owners ask before they start -->
+  <section id="faq" aria-labelledby="faq-h">
+    <div class="wrap faq">
+      <div class="head">
+        <h2 id="faq-h">Questions owners ask before they start.</h2>
+      </div>
+      <div class="faq-list">
+        <details><summary>Who is OwnerDesk for?</summary>
+          <p>Owner-run businesses in India where the owner still answers inquiries, sends quotes, chases payments and keeps the posts going. If most of the business runs through you and your WhatsApp, it's built for you.</p></details>
+        <details><summary>Do I need to be good with technology?</summary>
+          <p>No. You describe your business once, by pasting your website, recording a voice note or typing a few lines. OwnerDesk fills in the rest, and most tools start with a single switch.</p></details>
+        <details><summary>Will it send messages without asking me?</summary>
+          <p>Only the ones you switch on. First replies to new inquiries can go out on their own, so no customer waits. Quotations, prices and messages to new businesses always wait for your tap. Payment reminders wait too, unless you switch on automatic reminders.</p></details>
+        <details><summary>Do customers hear from my own number?</summary>
+          <p>Yes. Once you connect your WhatsApp, replies go from your own number, so the conversation stays with you and your team can see every chat.</p></details>
+        <details><summary>Do I have to use all six engines?</summary>
+          <p>No. The Engine Audit shows which gap costs you the most time. Start there. The other engines are on the same desk, already filled in, whenever you're ready.</p></details>
+        <details><summary>Does it handle GST?</summary>
+          <p>Yes. Quotations become GST invoices, your expenses show the GST you can claim back, and GST set-aside shows roughly what to keep aside for the next payment.</p></details>
       </div>
     </div>
   </section>
@@ -540,11 +616,11 @@ footer{border-top:1px solid var(--gold-deep);padding:64px 0 0;background:linear-
   <!-- Closing -->
   <section class="closing" id="start" aria-labelledby="close-h">
     <div class="wrap">
-      <h2 id="close-h">Switch on the engines your business runs on.</h2>
-      <p class="sub">Tell OwnerDesk about your business once. The Engine Audit shows you which engine to start with, and the rest of the desk is ready when you are.</p>
+      <h2 id="close-h">Stop running the business from memory.</h2>
+      <p class="sub">Tell OwnerDesk about your business once, take the Engine Audit, and switch on the fix that saves you the most time. The rest of the desk is ready when you are.</p>
       <div class="ctas">
         <a class="btn btn-gold" href="/">Get started</a>
-        <a class="btn btn-line" href="#engines">See the six engines again</a>
+        <a class="btn btn-line" href="#gaps">See the six gaps again</a>
       </div>
     </div>
   </section>
@@ -555,7 +631,7 @@ footer{border-top:1px solid var(--gold-deep);padding:64px 0 0;background:linear-
     <div class="foot-grid">
       <div class="foot-brand">
         <img src="/brand/ownerdesk-logo.svg" alt="OwnerDesk" width="229" height="64">
-        <p>The business hub for owner-run businesses in India. Inquiries, follow-ups, invoices, payments, posts and filings, run from one desk.</p>
+        <p>The business hub for owner-run businesses in India. Inquiries, follow-ups, invoices, payments, posts and filings, all run from one desk.</p>
         <a class="btn btn-gold btn-sm" href="/">Get started</a>
       </div>
       <nav class="foot-col" aria-labelledby="f-eng">
@@ -572,11 +648,13 @@ footer{border-top:1px solid var(--gold-deep);padding:64px 0 0;background:linear-
       <nav class="foot-col" aria-labelledby="f-desk">
         <h2 id="f-desk">On your desk</h2>
         <ul>
+          <li><a href="#gaps">The six gaps</a></li>
           <li><a href="#day">Your day</a></li>
           <li><a href="#pipeline">Pipeline fills itself</a></li>
-          <li><a href="#ask">Ask your desk</a></li>
+          <li><a href="#ask">Quick answers</a></li>
           <li><a href="#coach">Call coach</a></li>
           <li><a href="#charge">You're in charge</a></li>
+          <li><a href="#faq">Questions</a></li>
         </ul>
       </nav>
       <nav class="foot-col" aria-labelledby="f-start">
@@ -630,7 +708,7 @@ footer{border-top:1px solid var(--gold-deep);padding:64px 0 0;background:linear-
   var events = [
     {t:"New inquiry from your website", d:"Neha R. wants a modular kitchen for her 3BHK", fx:{inq:1, fu:1}},
     {ai:1, t:"Lead brief ready", d:"Who she is, what she wants and 3 questions for the first call"},
-    {ai:1, t:"First reply sent from your WhatsApp", d:"Site visit booked for Saturday, 11:00. The price waits for you."},
+    {ai:1, t:"First reply sent from your WhatsApp", d:"Two times offered for a site visit. The price waits for you."},
     {t:"Payment received", d:"₹21,240 from Desai Homes. Money owed is updated.", fx:{owed:-21240}},
     {t:"Quotation became an invoice", d:"₹48,500 + GST for the Shah wardrobe, sent the same day"},
     {ai:1, t:"Payment reminder written", d:"₹36,000 is 12 days overdue. Ready for you to send with one tap."},
@@ -677,7 +755,7 @@ footer{border-top:1px solid var(--gold-deep);padding:64px 0 0;background:linear-
 
   /* ───────── The six engines ───────── */
   var ENGINES = [
-    {k:"Lead", b:"Get found, and turn visitors into inquiries.", f:[
+    {k:"Lead", b:"Get found online, and turn visitors into inquiries.", f:[
       ["Website", "Your website with an inquiry form and a Chat on WhatsApp button. Change it by typing what you want."],
       ["Inquiry alerts", "Every inquiry lands in one place, and you get a WhatsApp alert the moment it does."],
       ["Lead magnet", "A guide written for your customers, published on your site with a form that captures their details.", 1],
@@ -721,7 +799,7 @@ footer{border-top:1px solid var(--gold-deep);padding:64px 0 0;background:linear-
       ["Social media", "Posts with images in your colours and a caption, ready to post.", 1],
       ["Content calendar", "A month of posts planned around Indian festivals and occasions.", 1],
       ["Content & company research", "Post ideas from what your competitors do, and a plan to find companies that fit your ideal customer.", 1],
-      ["Competitor Watch", "Every Monday: what changed on your competitors' websites and Google ratings."],
+      ["Competitor Watch", "Every Monday: what changed on your competitors' websites, and what it means for you."],
       ["Brochures", "A business brochure and a products brochure, written from your brand kit.", 1]
     ]},
     {k:"Data", b:"Know where the money goes, and keep what your key people know.", f:[
@@ -733,7 +811,7 @@ footer{border-top:1px solid var(--gold-deep);padding:64px 0 0;background:linear-
       ["Weekly growth line", "Every Monday, one WhatsApp line: businesses found, messages sent, replies and new deals."]
     ]}
   ];
-  var rail = $("rail"), panel = $("enginePanel"), cur = 0, auto = !reduce && !window.matchMedia("(max-width:900px)").matches, timer = null, DUR = 7000, inView = false;
+  var rail = $("rail"), panel = $("enginePanel"), cur = 0, auto = !reduce && !window.matchMedia("(max-width:900px)").matches, timer = null, DUR = 2000, inView = false;
   ENGINES.forEach(function(e, i){
     var b = document.createElement("button");
     b.type = "button"; b.setAttribute("role","tab"); b.id = "eng-" + i; b.setAttribute("aria-controls","enginePanel");
@@ -790,10 +868,11 @@ footer{border-top:1px solid var(--gold-deep);padding:64px 0 0;background:linear-
 
   /* ───────── The day, against the time in India ───────── */
   var SCHED = [
-    {when:"Every morning", at:8*60, what:"Payment reminders are ready", sub:"Polite reminders for overdue money, ready to send with one tap."},
     {when:"Monday 09:00", at:9*60, mon:1, what:"Your weekly growth line", sub:"One WhatsApp line: businesses found, messages sent, replies and new deals."},
-    {when:"Monday", at:9*60, mon:1, what:"Competitor Watch", sub:"What changed on your competitors' websites and Google ratings, and what it means for you."},
+    {when:"Monday", at:9*60, mon:1, what:"Competitor Watch", sub:"What changed on your competitors' websites, and what it means for you."},
     {when:"10:00", at:10*60, what:"Today's follow-ups reach you", sub:"On your Dashboard and on your WhatsApp, so no promised call slips."},
+    {when:"10:00", at:10*60, what:"Payment reminders are ready", sub:"A polite reminder for money past its due date, with how to pay you. Send it with one tap."},
+    {when:"11:00", at:11*60, what:"Quotes are followed up", sub:"Every open quotation is followed up on day 2, 5 and 10, until it's accepted or lost."},
     {when:"Any time", always:1, what:"An inquiry lands", sub:"A first reply from your WhatsApp within 2 minutes, and a brief with 3 questions for your first call."},
     {when:"After a call", always:1, what:"The deal fills itself", sub:"Paste the chat or speak a voice note. The note, next step and follow-up date are filed."},
     {when:"Same day", always:1, what:"Quotes become invoices", sub:"An accepted quotation becomes a GST invoice, and a payment through your gateway is invoiced on its own."}
