@@ -134,6 +134,16 @@ async def breakthrough_page():
     return JSONResponse({"detail": "Frontend not built. Run: cd frontend && npm install && npm run build"}, status_code=503)
 
 
+@app.get("/overview", include_in_schema=False)
+@app.get("/overview/", include_in_schema=False)
+async def overview_page():
+    """The OwnerDesk overview: a standalone marketing page (frontend/public/overview.html) to share with potential clients."""
+    page = DIST / "overview.html"
+    if page.exists():
+        return FileResponse(page, headers={"Cache-Control": "no-cache"})
+    return JSONResponse({"detail": "Frontend not built. Run: cd frontend && npm install && npm run build"}, status_code=503)
+
+
 @app.get("/{path:path}", include_in_schema=False)
 async def spa(path: str):
     if path.startswith("api/"):
